@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="添加成功"
+        app:ctv_hideLeftImage="true"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivBg"
+        android:layout_width="match_parent"
+        android:layout_height="130dp"
+        android:layout_marginHorizontal="24dp"
+        android:elevation="3dp"
+        android:src="@drawable/bg_full_radius_white_7"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivDeviceIcon"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_marginStart="25dp"
+        android:elevation="4dp"
+        android:src="@mipmap/img2"
+        app:layout_constraintBottom_toBottomOf="@id/ivBg"
+        app:layout_constraintStart_toStartOf="@id/ivBg"
+        app:layout_constraintTop_toTopOf="@id/ivBg" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivAddStatus"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="99dp"
+        android:layout_marginTop="13dp"
+        android:elevation="4dp"
+        android:src="@mipmap/success"
+        app:layout_constraintStart_toStartOf="@id/ivBg"
+        app:layout_constraintTop_toTopOf="@id/ivBg" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="31dp"
+        android:elevation="4dp"
+        android:text="可视门铃（Wi-FI）"
+        android:textColor="@color/def_text_color"
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@id/ivDeviceIcon"
+        app:layout_constraintTop_toTopOf="@id/ivDeviceIcon" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivEditName"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="10dp"
+        android:elevation="4dp"
+        android:src="@mipmap/edit"
+        app:layout_constraintBottom_toBottomOf="@id/tvDeviceName"
+        app:layout_constraintStart_toEndOf="@id/tvDeviceName"
+        app:layout_constraintTop_toTopOf="@id/tvDeviceName" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvAddStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:elevation="4dp"
+        android:text="添加成功"
+        android:textColor="@color/green_6d"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@id/tvDeviceName"
+        app:layout_constraintTop_toBottomOf="@id/tvDeviceName" />
+
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTips1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="@string/add_fail_tips_1"
+        android:textColor="@color/black_50_percent"
+        android:textSize="13sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivBg"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTips2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:text="@string/add_fail_tips_2"
+        android:textColor="@color/text_color_99"
+        android:textSize="13sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@id/tvContactCustomerService"
+        app:layout_constraintStart_toStartOf="@id/tvTips1"
+        app:layout_constraintTop_toBottomOf="@id/ivBg"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvContactCustomerService"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:text="@string/contact_customer_service"
+        android:textColor="@color/blue_49"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/tvTips1"
+        app:layout_constraintStart_toEndOf="@id/tvTips2"
+        app:layout_constraintTop_toBottomOf="@id/ivBg"
+        tools:visibility="visible" />
+</androidx.constraintlayout.widget.ConstraintLayout>

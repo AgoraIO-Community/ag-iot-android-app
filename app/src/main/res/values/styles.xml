@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="def_btn_full" parent="TextAppearance.AppCompat.Button">
+        <item name="android:layout_width">90dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:textColor">@color/green_25</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:background">@drawable/bg_def_btn_selector</item>
+    </style>
+
+    <style name="def_btn_empty" parent="def_btn_full">
+        <item name="android:textColor">@color/def_text_color</item>
+        <item name="android:background">@drawable/bg_frame_black_r50</item>
+    </style>
+
+    <style name="title_view">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">70dp</item>
+        <item name="android:paddingTop">38dp</item>
+        <item name="layout_constraintEnd_toEndOf">parent</item>
+        <item name="layout_constraintTop_toTopOf">parent</item>
+        <item name="layout_constraintStart_toStartOf">parent</item>
+    </style>
+
+    <style name="def_et_input">
+        <item name="android:layout_width">285dp</item>
+        <item name="android:layout_height">60dp</item>
+        <item name="android:drawablePadding">15dp</item>
+        <item name="android:paddingStart">27dp</item>
+        <item name="android:elevation">6dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:maxLength">32</item>
+        <item name="android:textColorHint">#C7C7C7</item>
+        <item name="android:background">@drawable/bg_full_radius_white_10_b</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="input_v_code" parent="Widget.AppCompat.EditText">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">57dp</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:inputType">number</item>
+        <item name="android:background">@drawable/bg_full_radius_white_f6_10</item>
+        <item name="android:textColor">@color/def_text_color</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:digits">0123456789</item>
+        <item name="android:maxLength">2</item>
+        <item name="android:layout_marginStart">6dp</item>
+    </style>
+
+    <style name="reset_tip_num_style">
+        <item name="android:layout_width">16dp</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:background">@drawable/bg_full_grey_r50</item>
+        <item name="layout_constraintStart_toStartOf">parent</item>
+    </style>
+
+    <style name="reset_tip_style">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/def_text_color</item>
+        <item name="android:textSize">15sp</item>
+        <item name="layout_constraintStart_toStartOf">parent</item>
+    </style>
+
+    <style name="play_tip_style">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="play_btn_style">
+        <item name="android:layout_width">60dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/white_f8</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:button">@null</item>
+        <item name="android:drawablePadding">8dp</item>
+    </style>
+
+    <style name="cb_change_voice_style">
+        <item name="android:layout_width">80dp</item>
+        <item name="android:layout_height">106dp</item>
+        <item name="android:layout_marginTop">66dp</item>
+        <item name="android:background">@drawable/bg_cb_check_change_voice</item>
+        <item name="android:button">@null</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/def_text_color</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:drawablePadding">6dp</item>
+    </style>
+
+    <style name="popup_window_style_bottom">
+        <item name="android:windowEnterAnimation">@anim/in_from_bottom</item>
+        <item name="android:windowExitAnimation">@anim/out_from_top</item>
+    </style>
+
+    <style name="tv_mine_style">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/def_text_color</item>
+        <item name="android:paddingStart">32dp</item>
+        <item name="android:paddingEnd">32dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:drawableEnd">@mipmap/arrow_right</item>
+        <item name="layout_constraintEnd_toEndOf">parent</item>
+        <item name="layout_constraintStart_toStartOf">parent</item>
+    </style>
+</resources>

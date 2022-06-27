@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="300dp"
+    android:layout_height="258dp"
+    android:background="@drawable/bg_full_radius_white_7">
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="31dp"
+        android:text="@string/important_tips"
+        android:textColor="@color/red_e0"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="50dp"
+        android:layout_marginTop="27dp"
+        android:gravity="center"
+        android:text="升级过程中不能断电，否则会导致升级失败，设备可能无法开机\n\n确认更新？"
+        android:textColor="@color/def_text_color"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnCancel"
+        style="@style/def_btn_empty"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="34dp"
+        android:text="@string/cancel"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnUpdate"
+        app:layout_constraintStart_toStartOf="@id/tvTitle" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnUpdate"
+        style="@style/def_btn_full"
+        android:layout_marginStart="10dp"
+        android:text="@string/update"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        app:layout_constraintEnd_toEndOf="@id/tvTitle"
+        app:layout_constraintStart_toEndOf="@id/btnCancel"
+        app:layout_constraintTop_toTopOf="@id/btnCancel" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.agora.iotlink">
+
+    <!-- 允许应用程序改变任务的z顺序 进行界面跳转 -->
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <!-- 允许程序振动 用于消息通知 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- 允许程序收到广播后快速收到下一个广播 -->
+    <uses-permission android:name="android.permission.BROADCAST_STICKY" />
+    <!-- 忽略电池优化权限以便后台运行 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 29以后程序需要使用全屏通知 -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- 允许系统悬浮窗，用于来电后台拉起APP -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- 访问网络权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 允许程序改变网络连接状态 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- 扩展存储读写权限 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- 摄像头权限 -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 麦克风权限 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 音频设置权限 -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+
+    <!-- Mi推送权限配置 start -->
+    <!-- api 21后被标记为deprecated -->
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <!-- 允许程序在手机屏幕关闭后后台进程仍然运行 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 允许程序开机自动运行 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Mi推送权限配置 end -->
+
+
+    <!-- 魅族推送权限配置 start-->
+    <!-- 兼容 flyme5.0 以下版本，魅族内部集成 pushSDK 必填，不然无法收到消息-->
+    <uses-permission android:name="com.meizu.flyme.push.permission.RECEIVE" />
+    <!-- 兼容 flyme3.0 配置权限-->
+    <uses-permission android:name="com.meizu.c2dm.permission.RECEIVE" />
+    <!-- 魅族推送权限配置 end-->
+
+
+    <!-- Oppo推送权限配置（如果应用无透传权限，则不用配置） start -->
+    <uses-permission android:name="com.coloros.mcs.permission.RECIEVE_MCS_MESSAGE" />
+    <uses-permission android:name="com.heytap.mcs.permission.RECIEVE_MCS_MESSAGE" />
+    <!-- Oppo推送权限配置 end -->
+
+
+    <application
+        android:name=".base.AgoraApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/security_config"
+        android:requestLegacyExternalStorage="true"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AgoraLink">
+        <meta-data
+            android:name="design_width_in_dp"
+            android:value="375" />
+        <meta-data
+            android:name="design_height_in_dp"
+            android:value="812" />
+
+        <activity
+            android:name=".models.welcome.WelcomeActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".models.home.MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="standard"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".models.login.ui.PhoneLoginActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.WebViewActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.PhoneRegisterActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.SelectCountryActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.InputVCodeActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.SetPwdActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep2ResetActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep3SetWifiConfigActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.WifiListActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep6ResultActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.player.living.PlayerPreviewActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.usercenter.UserInfoActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.usercenter.UserEditNicknameActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.GeneralSettingsActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.MessagePushSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.AppUpdateActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.AccountSecurityActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.ChangePasswordActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.SystemPermissionSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.settings.AboutActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.message.MessageActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.player.called.CalledInComingActivity"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep4QRActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep6WifiTimeOutActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep1ScanningActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStep5AddingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceInfoSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceBaseSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.fromshare.ShareDeviceSettingActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceShareToUserListActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceShareUserDetailActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceShareAddUserActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.setting.mydevice.DeviceFirmwareUpgradeActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.album.AlbumActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.album.AlbumViewPhotoActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.player.PlayerPreviewMessageActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
+        <!-- 设置灵隼服务Master Server -->
+        <meta-data
+            android:name="MASTER_SERVER_URL"
+            android:value="@string/MASTER_SERVER_URL" />
+
+        <!-- 设置灵隼服务Slave Server -->
+        <meta-data
+            android:name="SALVE_SERVER_URL"
+            android:value="@string/SALVE_SERVER_URL" />
+
+        <!-- 设置声网应用的AppID -->
+        <meta-data
+            android:name="AGORA_APPID"
+            android:value="@string/AGORA_APPID" />
+
+        <!-- 设置声网应用的ProjectID -->
+        <meta-data
+            android:name="PROJECT_ID"
+            android:value="@string/PROJECT_ID" />
+
+        <!-- 离线推送的账号配置 start -->
+        <!-- 离线消息通道通知 -->
+        <meta-data
+            android:name="EASE_NOTIFIER_NOTIFY_ID"
+            android:value="@integer/EASE_NOTIFIER_MSG_ID" />
+        <meta-data
+            android:name="EASE_NOTIFIER_CHANNEL_ID"
+            android:value="@string/EASE_NOTIFIER_CHANNEL_ID" />
+
+        <!-- 环信账号配置 -->
+        <meta-data
+            android:name="EASEMOB_APPKEY"
+            android:value="@string/EASEMOB_APPKEY" />
+
+        <!-- Firebase账号配置 -->
+        <meta-data
+            android:name="com.fcm.push.enable"
+            android:value="@bool/FCM_ENBALE"/>
+        <meta-data
+            android:name="com.fcm.push.senderid"
+            android:value="@string/FCM_SENDERID"/>
+
+        <!-- Mi账号配置 -->
+        <meta-data
+            android:name="com.mi.push.api_key"
+            android:value="@string/MI_PUSH_APPKEY" />
+        <meta-data
+            android:name="com.mi.push.app_id"
+            android:value="@string/MI_PUSH_APPID" />
+
+        <!-- 魅族账号配置 -->
+        <meta-data
+            android:name="com.meizu.push.api_key"
+            android:value="@string/MEIZU_PUSH_APPKEY" />
+        <meta-data
+            android:name="com.meizu.push.app_id"
+            android:value="@string/MEIZU_PUSH_APPID" />
+
+        <!-- Oppo账号配置 -->
+        <meta-data
+            android:name="com.oppo.push.api_key"
+            android:value="@string/OPPO_PUSH_APPKEY" />
+        <meta-data
+            android:name="com.oppo.push.app_secret"
+            android:value="@string/OPPO_PUSH_APPSECRET" />
+
+        <!-- VIVO账号配置 -->
+        <meta-data
+            android:name="com.vivo.push.api_key"
+            android:value="@string/VIVO_PUSH_APPKEY" />
+        <meta-data
+            android:name="com.vivo.push.app_id"
+            android:value="@integer/VIVO_PUSH_APPID" />
+
+        <!--华为账号配置 -->
+        <meta-data
+            android:name="com.huawei.hms.client.appid"
+            android:value="@string/HUAWEI_PUSH_APPKID" />
+        <meta-data
+            android:name="push_kit_auto_init_enabled"
+            android:value="true"/>
+
+        <!-- 离线推送的账号配置 end -->
+
+    </application>
+    <!-- targetSdkVersion是30或者更高版本时，需要添加<queries>标签，使应用可以访问HMS Core（APK） -->
+    <queries>
+        <intent>
+            <action android:name="com.huawei.hms.core.aidlservice" />
+        </intent>
+    </queries>
+    <!-- HMS Core（APK）访问配置 end-->
+
+</manifest>

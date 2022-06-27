@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/device_code_scanning"
+        app:ctv_hideLeftImage="true"
+        app:ctv_rightText="@string/cancel"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/scanner_tips1"
+        android:textColor="@color/def_text_color"
+        android:textSize="15sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="@string/scanner_tips2"
+        android:textColor="@color/def_text_color"
+        android:textSize="15sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivQR"
+        android:layout_width="310dp"
+        android:layout_height="310dp"
+        android:layout_marginTop="70dp"
+        android:src="@drawable/ic_seize_seat"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:src="@mipmap/illuimg2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivQR" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="90dp"
+        android:text="@string/scanner_tips3"
+        android:textColor="@color/yellow_f7"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivQR" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="120dp"
+        android:text="@string/scanner_tips4"
+        android:textColor="@color/yellow_f7"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivQR" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnNextStep"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="59dp"
+        android:layout_marginTop="160dp"
+        android:text="@string/hear_the_tone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivQR" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

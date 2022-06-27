@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="智能门铃"
+        app:ctv_centerTextColor="@color/white"
+        tools:ignore="MissingConstraints" />
+
+    <SurfaceView
+        android:id="@+id/svDeviceView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/deviceBg"
+        android:layout_width="0dp"
+        android:layout_height="47dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_frame_black_3d_r4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/svDeviceView" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="19dp"
+        android:src="@mipmap/diamond"
+        app:layout_constraintBottom_toBottomOf="@id/deviceBg"
+        app:layout_constraintStart_toStartOf="@id/deviceBg"
+        app:layout_constraintTop_toTopOf="@id/deviceBg" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="40dp"
+        android:text="@string/device_name_is"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toBottomOf="@id/deviceBg"
+        app:layout_constraintStart_toStartOf="@id/deviceBg"
+        app:layout_constraintTop_toTopOf="@id/deviceBg" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceNameValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="创米小白可视门铃D1"
+        android:textColor="@color/grey_e1"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toBottomOf="@id/deviceBg"
+        app:layout_constraintStart_toEndOf="@id/tvDeviceName"
+        app:layout_constraintTop_toTopOf="@id/deviceBg" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvCallType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="119dp"
+        android:text="有人按门铃…"
+        android:textColor="@color/grey_dc"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/deviceBg" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvRingOff"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="54dp"
+        android:drawableTop="@mipmap/hangup"
+        android:drawablePadding="10dp"
+        android:gravity="center_horizontal"
+        android:text="@string/ring_off"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toStartOf="@id/tvAnswer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvCallType" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvAnswer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:drawableTop="@mipmap/answer"
+        android:drawablePadding="10dp"
+        android:gravity="center_horizontal"
+        android:text="@string/answer"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tvRingOff"
+        app:layout_constraintTop_toTopOf="@id/tvRingOff" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvChangeVoice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginTop="34dp"
+        android:drawableTop="@drawable/bg_player_function_change_voice"
+        android:drawablePadding="10dp"
+        android:gravity="center_horizontal"
+        android:text="@string/change_voice_call"
+        android:textColor="@color/grey_dc"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvRingOff" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

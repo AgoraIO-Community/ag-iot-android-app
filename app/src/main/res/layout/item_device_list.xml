@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="130dp"
+    android:layout_marginHorizontal="25dp"
+    android:layout_marginBottom="16dp"
+    android:background="@drawable/bg_full_radius_white_10"
+    android:elevation="1dp">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivDeviceIcon"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_marginStart="25dp"
+        android:src="@mipmap/img1"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="21dp"
+        android:text="可视门铃（wifi）"
+        android:textColor="@color/def_text_color"
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@id/ivDeviceIcon"
+        app:layout_constraintTop_toTopOf="@id/ivDeviceIcon" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="移动的侦测"
+        android:textColor="@color/black_50_percent"
+        android:textSize="13sp"
+        app:layout_constraintStart_toStartOf="@id/tvDeviceName"
+        app:layout_constraintTop_toBottomOf="@id/tvDeviceName" />
+</androidx.constraintlayout.widget.ConstraintLayout>

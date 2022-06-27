@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/firmware_upgrade"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTips1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="190dp"
+        android:text="@string/updating"
+        android:textColor="@color/def_text_color"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTips2"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="70dp"
+        android:layout_marginTop="240dp"
+        android:text="@string/important_tips1"
+        android:textColor="@color/red_e0"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnCheckUpdate"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="106dp"
+        android:text="@string/check_update"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

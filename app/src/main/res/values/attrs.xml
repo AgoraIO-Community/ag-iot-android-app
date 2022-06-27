@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="titleView">
+        <attr name="ctv_leftImageSrc" format="reference" />
+        <attr name="ctv_hideLeftImage" format="boolean" />
+        <attr name="ctv_leftText" format="string" />
+        <attr name="ctv_centerText" format="string" />
+        <attr name="ctv_centerTextColor" format="color" />
+        <attr name="ctv_rightText" format="string" />
+        <attr name="ctv_rightImageSrc" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="ViewfinderView">
+        <attr name="scan_rect_corner_width" format="dimension" /><!--四个角的宽度-->
+        <attr name="scan_rect_corner_length" format="dimension" /><!--四个角的长度-->
+        <attr name="scan_rect_corner_color" format="color" /><!--四个角的颜色-->
+        <attr name="scan_line_color" format="color" /><!--扫描线的颜色-->
+        <attr name="scan_line_res" format="reference" /><!--扫描线的资源-->
+        <attr name="scan_line_move_speed" format="integer" /><!--扫描线的移动速度-->
+        <attr name="scan_tip_text" format="string" /><!--扫码界面的文本-->
+        <attr name="scan_tip_text_size" format="dimension" /><!--扫码界面的文本字体大小-->
+        <attr name="scan_text_above_rect" format="boolean" /><!--扫码界面的文本是否处于扫码框的上面-->
+        <attr name="scan_text_padding_rect" format="dimension" /><!--扫码框与文本的距离-->
+        <attr name="scan_view_title_text" format="string" /><!--扫码界面的标题-->
+        <attr name="scan_rect_padding_top" format="string" /><!--扫码界面的标题-->
+    </declare-styleable>
+</resources>

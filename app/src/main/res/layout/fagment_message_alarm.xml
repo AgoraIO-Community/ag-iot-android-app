@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnSelectDate"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginStart="22dp"
+        android:layout_marginTop="17dp"
+        android:background="@drawable/bg_frame_grey_r50"
+        android:drawableEnd="@mipmap/downarrow"
+        android:drawablePadding="6dp"
+        android:minWidth="64dp"
+        android:paddingHorizontal="12dp"
+        android:text="@string/today"
+        android:textColor="@color/black_50_percent"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnSelectType"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/bg_frame_grey_r50"
+        android:drawableEnd="@mipmap/downarrow"
+        android:drawablePadding="6dp"
+        android:minWidth="90dp"
+        android:paddingHorizontal="14dp"
+        android:text="@string/all_type"
+        android:textColor="@color/black_50_percent"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@id/btnSelectDate"
+        app:layout_constraintStart_toEndOf="@id/btnSelectDate"
+        app:layout_constraintTop_toTopOf="@id/btnSelectDate" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnSelectDevice"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/bg_frame_grey_r50"
+        android:drawableEnd="@mipmap/downarrow"
+        android:drawablePadding="6dp"
+        android:minWidth="64dp"
+        android:paddingHorizontal="12dp"
+        android:text="@string/device"
+        android:textColor="@color/black_50_percent"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@id/btnSelectType"
+        app:layout_constraintStart_toEndOf="@id/btnSelectType"
+        app:layout_constraintTop_toTopOf="@id/btnSelectType" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvMessageNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="183dp"
+        android:text="@string/message_no"
+        android:textColor="@color/black_50_percent"
+        android:textSize="21sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/btnEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="22dp"
+        android:text="@string/edit"
+        android:textColor="@color/blue_1d"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/btnSelectDate"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnSelectDate" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rlMsgList"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="62dp"
+        android:overScrollMode="never"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/bgBottomDel"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/white"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible">
+
+        <CheckBox
+            android:id="@+id/cbAllSelect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="35dp"
+            android:layout_marginTop="30dp"
+            android:button="@drawable/bg_cb_check_status"
+            android:paddingStart="10dp"
+            android:text="@string/all_select"
+            android:textColor="@color/def_text_color"
+            android:textSize="17sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDoDelete"
+            style="@style/def_btn_full"
+            android:layout_width="81dp"
+            android:layout_height="36dp"
+            android:layout_marginTop="21dp"
+            android:layout_marginEnd="55dp"
+            android:text="@string/delete"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/selectBg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black_70_percent"
+        android:clickable="true"
+        android:elevation="3dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <CalendarView
+            android:id="@+id/calendarView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_full_radius_white_10"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

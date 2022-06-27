@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/general_settings"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvMsgPush"
+        style="@style/tv_mine_style"
+        android:layout_height="59dp"
+        android:text="@string/msg_push"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivNewMsg"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_marginEnd="60dp"
+        android:src="@drawable/bg_red_round"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/tvMsgPush"
+        app:layout_constraintEnd_toEndOf="@id/tvMsgPush"
+        app:layout_constraintTop_toTopOf="@id/tvMsgPush" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="10dp"
+        android:background="@color/grey_ee"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvMsgPush" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvCheckUpdate"
+        style="@style/tv_mine_style"
+        android:layout_height="59dp"
+        android:layout_marginTop="1dp"
+        android:text="@string/check_app_update"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvMsgPush"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivCheckUpdate"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_marginEnd="60dp"
+        android:src="@drawable/bg_red_round"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/tvCheckUpdate"
+        app:layout_constraintEnd_toEndOf="@id/tvCheckUpdate"
+        app:layout_constraintTop_toTopOf="@id/tvCheckUpdate" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="10dp"
+        android:background="@color/grey_ee"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvCheckUpdate" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvAccountSecurity"
+        style="@style/tv_mine_style"
+        android:layout_height="59dp"
+        android:layout_marginTop="1dp"
+        android:text="@string/account_security"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvCheckUpdate"
+        tools:ignore="MissingConstraints" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="10dp"
+        android:background="@color/grey_ee"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAccountSecurity" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvSystemPermissionSetting"
+        style="@style/tv_mine_style"
+        android:layout_height="59dp"
+        android:layout_marginTop="1dp"
+        android:text="@string/system_permission_setting"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvAccountSecurity"
+        tools:ignore="MissingConstraints" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="10dp"
+        android:background="@color/grey_ee"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAccountSecurity" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnLogout"
+        style="@style/def_btn_empty"
+        android:layout_width="120dp"
+        android:layout_marginBottom="50dp"
+        android:text="@string/logout"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

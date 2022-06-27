@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:descendantFocusability="afterDescendants">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="31dp"
+        android:layout_marginTop="88dp"
+        android:text="@string/please_input_v_code"
+        android:textColor="@color/def_text_color"
+        android:textSize="28sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode1"
+        style="@style/input_v_code"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="25dp"
+        app:layout_constraintStart_toStartOf="@id/tvTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode2"
+        style="@style/input_v_code"
+        android:enabled="false"
+        app:layout_constraintStart_toEndOf="@id/etCode1"
+        app:layout_constraintTop_toTopOf="@id/etCode1" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode3"
+        style="@style/input_v_code"
+        android:enabled="false"
+        app:layout_constraintStart_toEndOf="@id/etCode2"
+        app:layout_constraintTop_toTopOf="@id/etCode2" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode4"
+        style="@style/input_v_code"
+        android:enabled="false"
+        app:layout_constraintStart_toEndOf="@id/etCode3"
+        app:layout_constraintTop_toTopOf="@id/etCode3" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode5"
+        style="@style/input_v_code"
+        android:enabled="false"
+        app:layout_constraintStart_toEndOf="@id/etCode4"
+        app:layout_constraintTop_toTopOf="@id/etCode4" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etCode6"
+        style="@style/input_v_code"
+        android:enabled="false"
+        app:layout_constraintStart_toEndOf="@id/etCode5"
+        app:layout_constraintTop_toTopOf="@id/etCode5" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTimeCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:textColor="@color/yellow_e7"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="@id/etCode1"
+        app:layout_constraintTop_toBottomOf="@id/etCode1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnFinish"
+        style="@style/def_btn_full"
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:text="@string/finish"
+        android:textColor="@color/blue"
+        android:textSize="18sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etCode1" />
+</androidx.constraintlayout.widget.ConstraintLayout>

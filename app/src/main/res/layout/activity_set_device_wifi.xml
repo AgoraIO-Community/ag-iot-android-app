@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/connect_wifi"
+        app:ctv_hideLeftImage="true"
+        app:ctv_rightText="@string/cancel"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/set_wifi_tips_1"
+        android:textColor="@color/def_text_color"
+        android:textSize="15sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:text="@string/set_wifi_tips_2"
+        android:textColor="@color/yellow_e7"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view"
+        tools:ignore="MissingConstraints" />
+
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivDeviceIcon"
+        android:layout_width="225dp"
+        android:layout_height="137dp"
+        android:layout_marginTop="110dp"
+        android:src="@mipmap/illuimg1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvSelectWifi"
+        style="@style/def_et_input"
+        android:layout_marginTop="60dp"
+        android:drawableStart="@mipmap/wifi"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:hint="@string/please_select_wifi"
+        android:paddingEnd="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivDeviceIcon" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etInputPWD"
+        style="@style/def_et_input"
+        android:layout_marginTop="20dp"
+        android:drawableStart="@mipmap/password"
+        android:hint="@string/please_input_pwd"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSelectWifi" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnNextStep"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="59dp"
+        android:layout_marginTop="72dp"
+        android:enabled="false"
+        android:text="@string/next_step"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etInputPWD" />
+</androidx.constraintlayout.widget.ConstraintLayout>

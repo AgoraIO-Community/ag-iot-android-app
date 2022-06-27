@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="智能门铃"
+        app:ctv_centerTextColor="@color/white"
+        app:ctv_rightImageSrc="@mipmap/setting"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="1dp"
+        app:layout_constraintBottom_toTopOf="@id/radioGroup"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/grey_5B"
+        app:layout_constraintBottom_toTopOf="@id/radioGroup" />
+
+    <RadioGroup
+        android:id="@+id/radioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/lineCheck"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/rBtnFunction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="36dp"
+            android:button="@null"
+            android:checked="true"
+            android:text="@string/function"
+            android:textColor="@color/grey_to_white"
+            android:textSize="16sp" />
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/rBtnMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="36dp"
+            android:button="@null"
+            android:text="@string/message"
+            android:textColor="@color/grey_to_white"
+            android:textSize="16sp" />
+    </RadioGroup>
+
+    <View
+        android:id="@+id/lineCheck"
+        android:layout_width="16dp"
+        android:layout_height="3dp"
+        android:background="@drawable/bg_full_blue_2d_r1_5"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/default_margin"
+        android:layout_marginTop="88dp"
+        android:text="@string/set_pwd"
+        android:textColor="@color/def_text_color"
+        android:textSize="28sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etPwd"
+        style="@style/def_et_input"
+        android:layout_marginTop="28dp"
+        android:drawableStart="@mipmap/password"
+        android:hint="@string/please_input_pwd"
+        android:paddingEnd="80dp"
+        android:inputType="textPassword"
+        android:maxLength="20"
+        app:layout_constraintStart_toStartOf="@id/tvTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <androidx.appcompat.widget.AppCompatCheckBox
+        android:id="@+id/iBtnEye"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:button="@drawable/bg_cb_show_pwd"
+        android:elevation="6dp"
+        app:layout_constraintBottom_toBottomOf="@id/etPwd"
+        app:layout_constraintEnd_toEndOf="@id/etPwd"
+        app:layout_constraintTop_toTopOf="@id/etPwd"  />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/iBtnClear"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:elevation="6dp"
+        android:src="@mipmap/close"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/etPwd"
+        app:layout_constraintEnd_toStartOf="@id/iBtnEye"
+        app:layout_constraintTop_toTopOf="@id/etPwd"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvErrorTips"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="54dp"
+        android:layout_marginTop="3dp"
+        android:text="@string/error_pwd_tip"
+        android:textColor="@color/red_e0"
+        android:textSize="13sp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/etPwd"
+        app:layout_constraintTop_toBottomOf="@id/etPwd" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnFinish"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="52dp"
+        android:text="@string/finish"
+        app:layout_constraintEnd_toEndOf="@id/etPwd"
+        app:layout_constraintStart_toStartOf="@id/etPwd"
+        app:layout_constraintTop_toBottomOf="@id/etPwd" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

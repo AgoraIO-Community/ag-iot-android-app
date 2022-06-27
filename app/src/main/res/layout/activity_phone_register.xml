@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvRegister"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="88dp"
+        android:text="@string/register_account"
+        android:textColor="@color/def_text_color"
+        android:textSize="28sp"
+        app:layout_constraintStart_toStartOf="@id/tvSelectCountry"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvInputTips"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="13dp"
+        android:text="@string/please_input_accounts"
+        android:textColor="@color/black_50_percent"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/tvRegister"
+        app:layout_constraintTop_toBottomOf="@id/tvRegister" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvSelectCountry"
+        style="@style/def_et_input"
+        android:layout_marginTop="28dp"
+        android:drawableStart="@mipmap/area"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:hint="@string/please_select_country"
+        android:paddingEnd="29dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvInputTips"
+        tools:ignore="RtlSymmetry" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etAccounts"
+        style="@style/def_et_input"
+        android:layout_marginTop="26dp"
+        android:drawableStart="@mipmap/user"
+        android:enabled="false"
+        android:hint="@string/please_input_account"
+        android:inputType="text"
+        app:layout_constraintEnd_toEndOf="@id/tvSelectCountry"
+        app:layout_constraintStart_toStartOf="@id/tvSelectCountry"
+        app:layout_constraintTop_toBottomOf="@id/tvSelectCountry" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/iBtnClearAccount"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:elevation="6dp"
+        android:src="@mipmap/close"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/etAccounts"
+        app:layout_constraintEnd_toEndOf="@id/etAccounts"
+        app:layout_constraintTop_toTopOf="@id/etAccounts"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnGetVCode"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="52dp"
+        android:enabled="false"
+        android:text="@string/get_v_code"
+        app:layout_constraintEnd_toEndOf="@id/etAccounts"
+        app:layout_constraintStart_toStartOf="@id/etAccounts"
+        app:layout_constraintTop_toBottomOf="@id/etAccounts" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

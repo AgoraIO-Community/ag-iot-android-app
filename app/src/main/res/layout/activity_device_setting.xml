@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/settings"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="34dp"
+        android:text="@string/device_info"
+        android:textColor="@color/black_50_percent"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivDeviceIcon"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_marginStart="34dp"
+        android:layout_marginTop="33dp"
+        android:src="@mipmap/img2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceName"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="42dp"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:gravity="center_vertical"
+        android:text="可视门铃"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivDeviceIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/ivDeviceIcon"
+        app:layout_constraintTop_toTopOf="@id/ivDeviceIcon" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivDeviceIcon" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvBaseSetting"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="39dp"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:gravity="center_vertical"
+        android:text="@string/base_setting"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="@id/tvDeviceName"
+        app:layout_constraintStart_toStartOf="@id/ivDeviceIcon"
+        app:layout_constraintTop_toBottomOf="@id/ivDeviceIcon" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvBaseSetting" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDetectionAlarmSetting"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:gravity="center_vertical"
+        android:text="@string/detection_alarm_setting"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="@id/tvBaseSetting"
+        app:layout_constraintStart_toStartOf="@id/tvBaseSetting"
+        app:layout_constraintTop_toBottomOf="@id/tvBaseSetting" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDetectionAlarmSetting" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvShareDevice"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:gravity="center_vertical"
+        android:text="@string/share_device"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="@id/tvDetectionAlarmSetting"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@id/tvDetectionAlarmSetting"
+        app:layout_constraintTop_toBottomOf="@id/tvDetectionAlarmSetting" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvShareDevice" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceFirmwareUpgrade"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:drawableEnd="@mipmap/arrow_right"
+        android:gravity="center_vertical"
+        android:text="@string/device_firmware_upgrade"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="@id/tvShareDevice"
+        app:layout_constraintStart_toStartOf="@id/tvShareDevice"
+        app:layout_constraintTop_toBottomOf="@id/tvShareDevice" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvIsLastVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="26dp"
+        android:text="@string/is_the_latest_version"
+        android:textColor="@color/black_50_percent"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/tvDeviceFirmwareUpgrade"
+        app:layout_constraintEnd_toEndOf="@id/tvDeviceFirmwareUpgrade"
+        app:layout_constraintTop_toTopOf="@id/tvDeviceFirmwareUpgrade" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDeviceFirmwareUpgrade" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvRebootDevice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="56dp"
+        android:text="@string/reboot_device"
+        android:textColor="@color/black_30_percent"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/tvRemoveDevice"
+        style="@style/def_btn_empty"
+        android:layout_width="120dp"
+        android:layout_height="40dp"
+        android:layout_marginBottom="21dp"
+        android:text="@string/remove_device"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/tvRebootDevice"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

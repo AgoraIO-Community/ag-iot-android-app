@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.agora.iotlink.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        app:ctv_centerText="@string/base_setting"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDeviceStatusIndicator"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="34dp"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:text="@string/status_indicator"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatCheckBox
+        android:id="@+id/cbChangeStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="42dp"
+        android:button="@drawable/cb_def_selector"
+        android:textColor="@color/black_50_percent"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/tvDeviceStatusIndicator"
+        app:layout_constraintEnd_toEndOf="@id/tvDeviceStatusIndicator"
+        app:layout_constraintTop_toTopOf="@id/tvDeviceStatusIndicator" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="@color/white_ef"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDeviceStatusIndicator" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
