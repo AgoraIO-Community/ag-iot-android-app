@@ -17,3 +17,17 @@ Software architecture description
 4. 告警管理：设备端的声音检测、移动侦测、红外侦测、按钮报警记录的管理
 
 5. 设备系统消息管理：设备上线、下线、绑定、解绑等系统事件管理
+
+#### 编译调试
+
+1. 安装最新版本的 Android Studio开发工具，尽量使用 Chipmunk版本
+
+2. 在'灵隼'官网平台申请相应的开发者账号，获取相关信息
+    
+3. 使用获取到的开发者账号信息，更新 /app/src/main/res/values/config.xml 配置文件
+
+4. 使用Android Studio打开整个项目工程，进行编译和调试
+
+
+
+
