@@ -22,26 +22,26 @@
 
     <!-- 配置Firebase离线推送参数 -->
     <bool name="FCM_ENBALE">false</bool>
-    <string name="FCM_SENDERID">73974497007</string>
+    <string name="FCM_SENDERID">00000000</string>
 
     <!-- 配置小米手机离线推送参数 -->
-    <string name="MI_PUSH_APPID">2882303761520031708</string>
-    <string name="MI_PUSH_APPKEY">5932003199708</string>
+    <string name="MI_PUSH_APPID"></string>
+    <string name="MI_PUSH_APPKEY"></string>
 
     <!-- 配置魅族手机离线推送参数 -->
-    <string name="MEIZU_PUSH_APPID">144173</string>
-    <string name="MEIZU_PUSH_APPKEY">284210d0be8d49e89e2624a2daf66701</string>
+    <string name="MEIZU_PUSH_APPID"></string>
+    <string name="MEIZU_PUSH_APPKEY"></string>
 
     <!-- 配置OPPO手机离线推送参数 -->
-    <string name="OPPO_PUSH_APPKEY">af6cb96b36164bf4aec018a30a54f114</string>
-    <string name="OPPO_PUSH_APPSECRET">35cd1752fd6d4c3fba3d4deb9491b72c</string>
+    <string name="OPPO_PUSH_APPKEY"></string>
+    <string name="OPPO_PUSH_APPSECRET"></string>
 
     <!-- 配置VIVIO手机离线推送参数  -->
-    <integer name="VIVO_PUSH_APPID">104510674</integer>
-    <string name="VIVO_PUSH_APPKEY">10451067442351313131a</string>
+    <integer name="VIVO_PUSH_APPID">0</integer>
+    <string name="VIVO_PUSH_APPKEY"></string>
 
     <!-- 配置华为手机离线推送参数，注意‘appid=’不要删除 -->
-    <string name="HUAWEI_PUSH_APPKID">appid=104676201</string>
+    <string name="HUAWEI_PUSH_APPKID">appid=</string>
 
 
 </resources>
