@@ -47,19 +47,34 @@ public class HomeIndexViewModel extends BaseViewModel implements IDeviceMgr.ICal
      * 请求sdk 获取设备列表 onDeviceQueryAllDone
      */
     public void requestDeviceList() {
-        AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllDevices();
+        IDeviceMgr deviceMgr= AIotAppSdkFactory.getInstance().getDeviceMgr();
+        if (deviceMgr != null) {
+            deviceMgr.queryAllDevices();
+        }
     }
 
     public void onStart() {
         // 注册账号管理监听
-        AIotAppSdkFactory.getInstance().getDeviceMgr().registerListener(this);
-        AIotAppSdkFactory.getInstance().getCallkitMgr().registerListener(this);
+        IDeviceMgr deviceMgr= AIotAppSdkFactory.getInstance().getDeviceMgr();
+        ICallkitMgr callkitMgr= AIotAppSdkFactory.getInstance().getCallkitMgr();
+        if (deviceMgr != null) {
+            deviceMgr.registerListener(this);
+        }
+        if (callkitMgr != null) {
+            callkitMgr.registerListener(this);
+        }
     }
 
     public void onStop() {
-        // 注册账号管理监听
-        AIotAppSdkFactory.getInstance().getDeviceMgr().unregisterListener(this);
-        AIotAppSdkFactory.getInstance().getCallkitMgr().unregisterListener(this);
+        // 注销账号管理监听
+        IDeviceMgr deviceMgr= AIotAppSdkFactory.getInstance().getDeviceMgr();
+        ICallkitMgr callkitMgr= AIotAppSdkFactory.getInstance().getCallkitMgr();
+        if (deviceMgr != null) {
+            deviceMgr.unregisterListener(this);
+        }
+        if (callkitMgr != null) {
+            callkitMgr.unregisterListener(this);
+        }
     }
 
     @Override

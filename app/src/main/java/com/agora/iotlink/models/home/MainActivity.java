@@ -1,10 +1,12 @@
 package com.agora.iotlink.models.home;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.ActivityKt;
 import androidx.navigation.NavController;
@@ -16,6 +18,7 @@ import com.agora.iotlink.base.BaseViewBindingActivity;
 import com.agora.iotlink.databinding.ActivityMainBinding;
 import com.agora.iotlink.manager.PagePathConstant;
 import com.agora.iotlink.manager.PagePilotManager;
+import com.agora.iotlink.models.home.homeindex.HomeIndexFragment;
 import com.alibaba.android.arouter.facade.annotation.Route;
 
 /**
@@ -23,6 +26,7 @@ import com.alibaba.android.arouter.facade.annotation.Route;
  */
 @Route(path = PagePathConstant.pageMainHome)
 public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
+    private static final String TAG = "LINK/MainActivity";
     private NavController navController;
     /**
      * 主页接收消息
@@ -62,10 +66,12 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
         mainViewModel.setISingleCallback((type, data) -> {
             if (type == 0) {
                 if (isStop) {
+                    Log.d(TAG, "<setISingleCallback> [INCOMING] makeMainTaskToFront");
                     getWindow().getDecorView().post(() -> {
                         mainViewModel.makeMainTaskToFront(this);
                     });
                 } else {
+                    Log.d(TAG, "<setISingleCallback> [INCOMING] siwtch to incoming page");
                     PagePilotManager.pageCalled();
                 }
             }
@@ -104,4 +110,17 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
         super.onDestroy();
         mainViewModel.onStop();
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        Log.d(TAG, "<onRequestPermissionsResult> requestCode=" + requestCode);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        HomeIndexFragment devListFrag = (HomeIndexFragment)getFragment(HomeIndexFragment.class);
+        if (devListFrag != null) {
+            devListFrag.onFragRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
 }

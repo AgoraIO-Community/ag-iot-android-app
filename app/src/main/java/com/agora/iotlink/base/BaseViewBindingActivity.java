@@ -16,10 +16,13 @@ import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.viewbinding.ViewBinding;
 
 import com.agora.baselibrary.base.BaseBindingActivity;
@@ -29,6 +32,8 @@ import com.agora.iotlink.dialog.CommonDialog;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 import kotlin.jvm.internal.Intrinsics;
 
@@ -55,28 +60,11 @@ public abstract class BaseViewBindingActivity<T extends ViewBinding> extends Bas
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        initializePermList();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WindowManager.LayoutParams params = getWindow().getAttributes();
-            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            getWindow().setAttributes(params);
-        }
     }
 
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-        new Handler().postDelayed(() -> {
-            if (isFinishing()) {
-                return;
-            }
-            // 检测是否要动态申请相应的权限
-            int reqIndex = requestNextPermission();
-            if (reqIndex < 0) {
-                getPermissions();
-            }
-        }, 200);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -86,40 +74,32 @@ public abstract class BaseViewBindingActivity<T extends ViewBinding> extends Bas
 
     public static final int PERM_REQID_RECORD_AUDIO = 0x1001;
     public static final int PERM_REQID_CAMERA = 0x1002;
-    public static final int PERM_REQID_RDSTORAGE = 0x1003;
-    public static final int PERM_REQID_WRSTORAGE = 0x1004;
-    public static final int PERM_REQID_MGSTORAGE = 0x1005;
     public static final int PERM_REQID_WIFISTATE = 0x1006;
     public static final int PERM_REQID_FINELOCAL = 0x1007;
 
     protected void initializePermList() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            mPermissionArray = new PermissionItem[5];
+            mPermissionArray = new PermissionItem[4];
             for (PermissionItem item : mPermissionArray) {
                 item.granted = true;
             }
 
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            mPermissionArray = new PermissionItem[6];
+            mPermissionArray = new PermissionItem[4];
             mPermissionArray[0] = new PermissionItem(Manifest.permission.RECORD_AUDIO, PERM_REQID_RECORD_AUDIO);
             mPermissionArray[1] = new PermissionItem(Manifest.permission.CAMERA, PERM_REQID_CAMERA);
-            mPermissionArray[2] = new PermissionItem(Manifest.permission.READ_EXTERNAL_STORAGE, PERM_REQID_RDSTORAGE);
-            mPermissionArray[3] = new PermissionItem(Manifest.permission.WRITE_EXTERNAL_STORAGE, PERM_REQID_WRSTORAGE);
-            mPermissionArray[4] = new PermissionItem(Manifest.permission.ACCESS_WIFI_STATE, PERM_REQID_WIFISTATE);
-            mPermissionArray[5] = new PermissionItem(Manifest.permission.ACCESS_FINE_LOCATION, PERM_REQID_FINELOCAL);
+            mPermissionArray[2] = new PermissionItem(Manifest.permission.ACCESS_WIFI_STATE, PERM_REQID_WIFISTATE);
+            mPermissionArray[3] = new PermissionItem(Manifest.permission.ACCESS_FINE_LOCATION, PERM_REQID_FINELOCAL);
             for (PermissionItem item : mPermissionArray) {
                 item.granted = (ContextCompat.checkSelfPermission(this, item.permissionName) == PackageManager.PERMISSION_GRANTED);
             }
 
         } else {
-            mPermissionArray = new PermissionItem[6];
+            mPermissionArray = new PermissionItem[4];
             mPermissionArray[0] = new PermissionItem(Manifest.permission.RECORD_AUDIO, PERM_REQID_RECORD_AUDIO);
             mPermissionArray[1] = new PermissionItem(Manifest.permission.CAMERA, PERM_REQID_CAMERA);
-            mPermissionArray[2] = new PermissionItem(Manifest.permission.READ_EXTERNAL_STORAGE, PERM_REQID_RDSTORAGE);
-            mPermissionArray[3] = new PermissionItem(Manifest.permission.WRITE_EXTERNAL_STORAGE, PERM_REQID_WRSTORAGE);
-            //mPermissionArray[4] = new PermissionItem(Manifest.permission.MANAGE_EXTERNAL_STORAGE, PERM_REQID_MGSTORAGE);
-            mPermissionArray[4] = new PermissionItem(Manifest.permission.ACCESS_WIFI_STATE, PERM_REQID_WIFISTATE);
-            mPermissionArray[5] = new PermissionItem(Manifest.permission.ACCESS_FINE_LOCATION, PERM_REQID_FINELOCAL);
+            mPermissionArray[2] = new PermissionItem(Manifest.permission.ACCESS_WIFI_STATE, PERM_REQID_WIFISTATE);
+            mPermissionArray[3] = new PermissionItem(Manifest.permission.ACCESS_FINE_LOCATION, PERM_REQID_FINELOCAL);
             for (PermissionItem item : mPermissionArray) {
                 item.granted = (ContextCompat.checkSelfPermission(this, item.permissionName) == PackageManager.PERMISSION_GRANTED);
             }
@@ -144,26 +124,26 @@ public abstract class BaseViewBindingActivity<T extends ViewBinding> extends Bas
         return -1;
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            setPermGrantedByReqId(requestCode);
-
-        } else { // 拒绝了该权限
-            finish();
-            return;
-        }
-
-        // 检测是否要动态申请相应的权限
-        int reqIndex = requestNextPermission();
-        if (reqIndex < 0) {
-            getPermissions();
-            return;
-        }
-    }
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+//                                           @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//
+//        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//            setPermGrantedByReqId(requestCode);
+//
+//        } else { // 拒绝了该权限
+//            finish();
+//            return;
+//        }
+//
+//        // 检测是否要动态申请相应的权限
+//        int reqIndex = requestNextPermission();
+//        if (reqIndex < 0) {
+//            getPermissions();
+//            return;
+//        }
+//    }
 
     /*
      * @brief 根据requestId 标记相应的 PermissionItem 权限已经获得
@@ -290,4 +270,33 @@ public abstract class BaseViewBindingActivity<T extends ViewBinding> extends Bas
                             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);//| View.SYSTEM_UI_FLAG_FULLSCREEN
         }
     }
+
+
+    protected void popupMessage(String message)
+    {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    protected void popupMessageLongTime(String message)
+    {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    public Fragment getFragment(Class<?> clazz) {
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        if (fragments!= null && fragments.size() > 0) {
+            NavHostFragment navHostFragment = (NavHostFragment) fragments.get(0);
+            List<Fragment> childfragments = navHostFragment.getChildFragmentManager().getFragments();
+            if(childfragments != null && childfragments.size() > 0){
+                for (int j = 0; j < childfragments.size(); j++) {
+                    Fragment fragment = childfragments.get(j);
+                    if(fragment.getClass().isAssignableFrom(clazz)){
+                        return fragment;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
 }

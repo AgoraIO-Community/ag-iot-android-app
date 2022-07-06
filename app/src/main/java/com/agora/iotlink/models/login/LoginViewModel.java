@@ -39,12 +39,18 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
 
     public void onStart() {
         // 注册账号管理监听
-        AIotAppSdkFactory.getInstance().getAccountMgr().registerListener(this);
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr != null) {
+            accountMgr.registerListener(this);
+        }
     }
 
     public void onStop() {
         // 注册账号管理监听
-        AIotAppSdkFactory.getInstance().getAccountMgr().unregisterListener(this);
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr != null) {
+            accountMgr.unregisterListener(this);
+        }
     }
 
     /**

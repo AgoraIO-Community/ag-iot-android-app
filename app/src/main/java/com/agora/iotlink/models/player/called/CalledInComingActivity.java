@@ -1,6 +1,7 @@
 package com.agora.iotlink.models.player.called;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 
 import androidx.annotation.NonNull;
@@ -9,8 +10,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
+import com.agora.iotlink.R;
 import com.agora.iotlink.base.AgoraApplication;
 import com.agora.iotlink.base.BaseViewBindingActivity;
+import com.agora.iotlink.base.PermissionHandler;
+import com.agora.iotlink.base.PermissionItem;
 import com.agora.iotlink.common.Constant;
 import com.agora.iotlink.databinding.ActivityCalledBinding;
 import com.agora.iotlink.dialog.ChangeOfVoiceDialog;
@@ -23,7 +27,9 @@ import com.alibaba.android.arouter.facade.annotation.Route;
  * 被叫
  */
 @Route(path = PagePathConstant.pageCalled)
-public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCalledBinding> {
+public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCalledBinding>
+    implements PermissionHandler.ICallback  {
+    private static final String TAG = "LINK/CallInComeAct";
     private CalledInComingViewModel calledInComingViewModel;
 
     /**
@@ -32,6 +38,8 @@ public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCall
     private ChangeOfVoiceDialog changeOfVoiceDialog;
 
     private boolean isCallHangup = false;
+
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
 
     @Override
     protected ActivityCalledBinding getViewBinding(@NonNull LayoutInflater inflater) {
@@ -57,10 +65,7 @@ public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCall
             }
         });
         getBinding().tvAnswer.setOnClickListener(view -> {
-            isCallHangup = true;
-            calledInComingViewModel.callAnswer();
-            PagePilotManager.pagePreviewPlay();
-            mHealthActivityManager.popActivity();
+            onBtnAnswer();
         });
         getBinding().tvRingOff.setOnClickListener(view -> {
             isCallHangup = true;
@@ -107,5 +112,51 @@ public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCall
             calledInComingViewModel.callHangup();
         }
         calledInComingViewModel.onStop();
+    }
+
+
+    void onBtnAnswer() {
+        //
+        // RECORD_AUDIO 权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_RECORD_AUDIO;
+        mPermHandler = new PermissionHandler(this, this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnAnswer> requesting permission...");
+            mPermHandler.requestNextPermission();
+
+        } else {
+            Log.d(TAG, "<onBtnAnswer> permission granted, goto WIFI activity");
+            isCallHangup = true;
+            calledInComingViewModel.callAnswer();
+            PagePilotManager.pagePreviewPlay();
+            mHealthActivityManager.popActivity();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        Log.d(TAG, "<onRequestPermissionsResult> requestCode=" + requestCode);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (allGranted) {
+            isCallHangup = true;
+            calledInComingViewModel.callAnswer();
+            PagePilotManager.pagePreviewPlay();
+            mHealthActivityManager.popActivity();
+
+        } else {
+            popupMessage(getString(R.string.no_permission));
+        }
     }
 }

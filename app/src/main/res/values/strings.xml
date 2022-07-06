@@ -193,4 +193,5 @@
     <string name="select_devices">选择设备</string>
     <string name="flashlight">手电筒</string>
     <string name="delete_success">删除成功</string>
+    <string name="no_permission">没有相应的操作权限</string>
 </resources>

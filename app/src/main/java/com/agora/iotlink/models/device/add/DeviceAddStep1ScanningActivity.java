@@ -5,6 +5,7 @@ import static com.huawei.hms.hmsscankit.RemoteView.REQUEST_CODE_PHOTO;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -19,8 +20,11 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import com.agora.baselibrary.utils.GsonUtil;
 import com.agora.baselibrary.utils.SPUtil;
 import com.agora.baselibrary.utils.ToastUtils;
+import com.agora.iotlink.R;
 import com.agora.iotlink.api.bean.QRBean;
 import com.agora.iotlink.base.BaseViewBindingActivity;
+import com.agora.iotlink.base.PermissionHandler;
+import com.agora.iotlink.base.PermissionItem;
 import com.agora.iotlink.common.Constant;
 import com.agora.iotlink.databinding.ActivityAddDeviceBinding;
 import com.agora.iotlink.manager.PagePathConstant;
@@ -39,8 +43,12 @@ import java.io.IOException;
  * 添加设备第一步
  */
 @Route(path = PagePathConstant.pageDeviceAddScanning)
-public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<ActivityAddDeviceBinding> {
+public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<ActivityAddDeviceBinding>
+    implements PermissionHandler.ICallback  {
+    private static final String TAG = "LINK/DevAddStep1Act";
+
     private RemoteView remoteView;
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
 
     @Override
     protected ActivityAddDeviceBinding getViewBinding(@NonNull LayoutInflater inflater) {
@@ -64,20 +72,51 @@ public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<Acti
     public void initListener() {
         remoteView.setOnLightVisibleCallback(b -> isLight = b);
         getBinding().tvAlbum.setOnClickListener(view -> {
-            requestAppPermissions(
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-            );
+            onBtnGallery();
         });
-        getBinding().cbLight.setOnCheckedChangeListener((compoundButton, b) -> {
-                    remoteView.switchLight();
-                }
-        );
 
+        getBinding().cbLight.setOnCheckedChangeListener((compoundButton, b) -> {
+            remoteView.switchLight();
+        });
+    }
+
+    void onBtnGallery() {
+        // requestAppPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        //
+        // Gallery权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_READ_STORAGE;
+        mPermHandler = new PermissionHandler(this, this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnGallery> requesting permission...");
+            mPermHandler.requestNextPermission();
+        } else {
+            Log.d(TAG, "<onBtnGallery> permission granted, openAlbum");
+            openAlbum();
+        }
     }
 
     @Override
-    public void getAlonePermissions() {
-        openAlbum();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                               @NonNull int[] grantResults) {
+        Log.d(TAG, "<onRequestPermissionsResult> requestCode=" + requestCode);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (allGranted) {
+            openAlbum();
+        } else {
+            popupMessage(getString(R.string.no_permission));
+        }
     }
 
     private void openAlbum() {

@@ -1,5 +1,7 @@
 package com.agora.iotlink.models.home.homeindex;
 
+import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +18,10 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.agora.baselibrary.utils.NetUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 import com.agora.baselibrary.utils.UiUtils;
+import com.agora.iotlink.R;
 import com.agora.iotlink.base.BaseViewBindingFragment;
+import com.agora.iotlink.base.PermissionHandler;
+import com.agora.iotlink.base.PermissionItem;
 import com.agora.iotlink.databinding.FragmentHomeIndexBinding;
 import com.agora.iotlink.manager.DevicesListManager;
 import com.agora.iotlink.manager.PagePilotManager;
@@ -29,7 +34,11 @@ import com.agora.iotsdk20.IotDevice;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndexBinding> {
+public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndexBinding>
+        implements PermissionHandler.ICallback  {
+
+    private static final String TAG = "LINK/HomeIndexFrag";
+
     /**
      * 首页viewModel
      */
@@ -44,6 +53,10 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
     private AppCompatButton btnAddDevice;
 
     private ArrayList<IotDevice> devices = new ArrayList<>();
+
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
+    private IotDevice mSelectedDev;
+
 
     @NonNull
     @Override
@@ -115,9 +128,79 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
 
     private void startAddDevice() {
         if (UserManager.isLogin() && !UiUtils.INSTANCE.isFastClick()) {
-            PagePilotManager.pageDeviceAddScanning();
+            // PagePilotManager.pageDeviceAddScanning();
+
+            //
+            // Camera权限判断处理
+            //
+            int[] permIdArray = new int[1];
+            permIdArray[0] = PermissionHandler.PERM_ID_CAMERA;
+            mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+            if (!mPermHandler.isAllPermissionGranted()) {
+                Log.d(TAG, "<startAddDevice> requesting permission...");
+                mPermHandler.requestNextPermission();
+            } else {
+                Log.d(TAG, "<startAddDevice> swith page");
+                PagePilotManager.pageDeviceAddScanning();
+            }
         }
     }
+
+    void onBtnDevItemClick(View view, int position, IotDevice iotDevice) {
+        //
+        // Microphone权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_RECORD_AUDIO;
+        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnDevItemClick> requesting permission...");
+            mSelectedDev = iotDevice;
+            mPermHandler.requestNextPermission();
+        } else {
+            Log.d(TAG, "<onBtnDevItemClick> permission ready");
+            doCallDial(iotDevice);
+        }
+    }
+
+    void doCallDial(IotDevice iotDevice) {
+        showLoadingView();
+        int errCode = homeIndexViewModel.callDial(iotDevice, "home list call");
+        if (errCode != ErrCode.XOK) {
+            hideLoadingView();
+            ErrorToastUtils.showCallError(errCode);
+        }
+    }
+
+    public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        Log.d(TAG, "<onFragRequestPermissionsResult> requestCode=" + requestCode);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (permItems[0].requestId == PermissionHandler.PERM_ID_CAMERA) {  // Camera权限结果
+            if (allGranted) {
+                PagePilotManager.pageDeviceAddScanning();
+            } else {
+                popupMessage(getString(R.string.no_permission));
+            }
+
+        } else if (permItems[0].requestId == PermissionHandler.PERM_ID_RECORD_AUDIO) { // 麦克风权限结果
+            if (allGranted) {
+                doCallDial(mSelectedDev);
+            } else {
+                popupMessage(getString(R.string.no_permission));
+            }
+        }
+    }
+
 
     private void initAdapter() {
         if (mAdapter == null) {
@@ -125,12 +208,7 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
             getBinding().rvDevices.setLayoutManager(new LinearLayoutManager(getActivity()));
             getBinding().rvDevices.setAdapter(mAdapter);
             mAdapter.setMRVItemClickListener((view, position, data) -> {
-                showLoadingView();
-                int errCode = homeIndexViewModel.callDial(data, "home list call");
-                if (errCode != ErrCode.XOK) {
-                    hideLoadingView();
-                    ErrorToastUtils.showCallError(errCode);
-                }
+                onBtnDevItemClick(view, position, data);
             });
         }
     }

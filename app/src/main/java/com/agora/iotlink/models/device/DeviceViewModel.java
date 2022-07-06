@@ -57,16 +57,25 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     public void onStart() {
         // 注册设备管理监听
-        AIotAppSdkFactory.getInstance().getDeviceMgr().registerListener(this);
+        IDeviceMgr deviceMgr = AIotAppSdkFactory.getInstance().getDeviceMgr();
+        if (deviceMgr != null) {
+            deviceMgr.registerListener(this);
+        }
     }
 
     public void onStop() {
-        // 注册设备管理监听
-        AIotAppSdkFactory.getInstance().getDeviceMgr().unregisterListener(this);
+        // 注销设备管理监听
+        IDeviceMgr deviceMgr = AIotAppSdkFactory.getInstance().getDeviceMgr();
+        if (deviceMgr != null) {
+            deviceMgr.unregisterListener(this);
+        }
     }
 
     public void editDeviceName(IotDevice device, String newName) {
-        AIotAppSdkFactory.getInstance().getDeviceMgr().renameDevice(device, newName);
+        IDeviceMgr deviceMgr = AIotAppSdkFactory.getInstance().getDeviceMgr();
+        if (deviceMgr != null) {
+            deviceMgr.renameDevice(device, newName);
+        }
     }
 
     @Override

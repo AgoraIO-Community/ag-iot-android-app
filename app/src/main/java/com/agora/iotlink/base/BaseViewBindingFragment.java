@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.Toast;
 
 import androidx.viewbinding.ViewBinding;
 
@@ -41,5 +42,15 @@ public abstract class BaseViewBindingFragment<T extends ViewBinding> extends Bas
             loadingView.removeCallbacks(null);
             loadingView.post(() -> loadingView.setVisibility(View.GONE));
         }
+    }
+
+    protected void popupMessage(String message)
+    {
+        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    protected void popupMessageLongTime(String message)
+    {
+        Toast.makeText(getActivity(), message, Toast.LENGTH_LONG).show();
     }
 }

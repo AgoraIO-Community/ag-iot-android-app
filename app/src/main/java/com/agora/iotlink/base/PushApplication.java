@@ -10,14 +10,17 @@
 package com.agora.iotlink.base;
 
 import android.app.ActivityManager;
+import android.app.Application;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.util.Log;
 
 import com.agora.baselibrary.base.BaseApplication;
+//import com.agora.iotlink.huanxin.EmAgent;
 import com.agora.iotlink.utils.AppStorageUtil;
 import com.agora.iotsdk20.AIotAppSdkFactory;
 import com.agora.iotsdk20.IAgoraIotAppSdk;
@@ -30,6 +33,7 @@ import java.util.List;
  * 原封引用sdk demo中的代码
  */
 public class PushApplication extends BaseApplication {
+    private static final String TAG = "LINK/PushApp";
     private static PushApplication instance = null;
     private static ActivityLifecycleCallback mLifeCycleCallbk = new ActivityLifecycleCallback();
 
@@ -66,6 +70,9 @@ public class PushApplication extends BaseApplication {
         //偏好设置初始化
         PreferenceManager.init(this);
 
+        //注册Activity回调
+        registerActivityLifecycleCallbacks(mLifeCycleCallbk);
+
         //仅主进程运行一次
         if (isMainProcess(this)) {
             //获取applicationInfo标签内的数据
@@ -74,14 +81,36 @@ public class PushApplication extends BaseApplication {
                 ApplicationInfo applicationInfo =
                         packageManager.getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
                 mMetaData = applicationInfo.metaData;
+                Log.d(TAG, "<onCreate> get meta data");
+
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
                 return;
             }
         }
 
-        //注册Activity回调
-//        registerActivityLifecycleCallbacks(mLifeCycleCallbk);
+
+//        //初始化离线/后台运行通知
+//        EaseNotifier.getInstance().init(this, mMetaData);
+//
+//        //
+//        // 初始化环信的离线推送
+//        //
+//        if (mMetaData != null)
+//        {
+//            EmAgent.EmPushParam  pushParam = new EmAgent.EmPushParam();
+//            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
+//            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
+//            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
+//            pushParam.mMeizuAppId = mMetaData.getString("com.meizu.push.app_id", "");
+//            pushParam.mMeizuAppKey =mMetaData.getString("com.meizu.push.api_key", "");
+//            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
+//            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
+//            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
+//            pushParam.mVivoAppKey = mMetaData.getString("com.vivo.push.api_key", "");
+//            pushParam.mHuaweiAppId = mMetaData.getString("com.huawei.hms.client.appid", "");
+//            EmAgent.getInstance().initialize(this,  pushParam);
+//        }
     }
 
 
@@ -89,25 +118,22 @@ public class PushApplication extends BaseApplication {
     private boolean isMainProcess(Context context) {
         int pid = Process.myPid();
         String pkgName = context.getApplicationInfo().packageName;
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> runningProcList = activityManager.getRunningAppProcesses();
 
-        for (ActivityManager.RunningAppProcessInfo appProcess : runningProcList) {
-            if (appProcess.pid == pid) {
-                return (pkgName.compareToIgnoreCase(appProcess.processName) == 0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            String processName = Application.getProcessName();
+            return (pkgName.compareToIgnoreCase(processName) == 0);
+
+        } else {
+            ActivityManager activityManager = (ActivityManager)context.getSystemService(ACTIVITY_SERVICE);
+            List<ActivityManager.RunningAppProcessInfo> runningProcList = activityManager.getRunningAppProcesses();
+            for (ActivityManager.RunningAppProcessInfo appProcess : runningProcList) {
+                if (appProcess.pid == pid) {
+                    return (pkgName.compareToIgnoreCase(appProcess.processName) == 0);
+                }
             }
         }
 
         return false;
-    }
-
-
-    public void setAudioCodecIndex(int index) {
-        mAudCodecIndex = index;
-    }
-
-    public int getAudioCodecIndex() {
-        return mAudCodecIndex;
     }
 
     public void initializeEngine() {
@@ -124,18 +150,15 @@ public class PushApplication extends BaseApplication {
         initParam.mProjectID = mMetaData.getString("PROJECT_ID", "");
         initParam.mMasterServerUrl = mMetaData.getString("MASTER_SERVER_URL", "");
         initParam.mSlaveServerUrl = mMetaData.getString("SALVE_SERVER_URL", "");
-
-        //String storageRootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-        //initParam.mLogFilePath = storageRootPath + "/callkit.log";
+        // initParam.mPusherId = EmAgent.getInstance().getEid();  // 设置离线推送Id
         initParam.mPublishVideo = false;
         initParam.mPublishAudio = false;
         initParam.mSubscribeAudio = true;
         initParam.mSubscribeVideo = true;
+        //String storageRootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+        //initParam.mLogFilePath = storageRootPath + "/callkit.log";
 
         int ret = AIotAppSdkFactory.getInstance().initialize(initParam);
-
-        //初始化离线/后台运行通知
-        EaseNotifier.getInstance().init(this, mMetaData);
 
         mIotAppSdkReady = true;
     }

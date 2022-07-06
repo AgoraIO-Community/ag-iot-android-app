@@ -15,6 +15,7 @@ import com.agora.iotlink.models.player.living.PlayerPreviewActivity;
 import com.agora.iotsdk20.AIotAppSdkFactory;
 import com.agora.iotsdk20.IAccountMgr;
 import com.agora.iotsdk20.ICallkitMgr;
+import com.agora.iotsdk20.IDeviceMgr;
 import com.agora.iotsdk20.IotDevice;
 
 import org.greenrobot.eventbus.EventBus;
@@ -25,15 +26,30 @@ import java.util.List;
  * 主页接收消息 viewModel
  */
 public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallback, IAccountMgr.ICallback {
+    private final static String TAG = "LINK/MainViewModel";
 
     public void onStart() {
-        AIotAppSdkFactory.getInstance().getCallkitMgr().registerListener(this);
-        AIotAppSdkFactory.getInstance().getAccountMgr().registerListener(this);
+        // 注册管理监听
+        ICallkitMgr callkitMgr= AIotAppSdkFactory.getInstance().getCallkitMgr();
+        if (callkitMgr != null) {
+            callkitMgr.registerListener(this);
+        }
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr != null) {
+            accountMgr.registerListener(this);
+        }
     }
 
     public void onStop() {
-        AIotAppSdkFactory.getInstance().getCallkitMgr().unregisterListener(this);
-        AIotAppSdkFactory.getInstance().getAccountMgr().unregisterListener(this);
+        // 注销管理监听
+        ICallkitMgr callkitMgr= AIotAppSdkFactory.getInstance().getCallkitMgr();
+        if (callkitMgr != null) {
+            callkitMgr.unregisterListener(this);
+        }
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr != null) {
+            accountMgr.unregisterListener(this);
+        }
     }
 
     /**
@@ -44,7 +60,8 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
      */
     @Override
     public void onPeerIncoming(IotDevice iotDevice, String attachMsg) {
-        Log.d("cwtsw", "onPeerIncoming attachMsg = " + attachMsg);
+        Log.d(TAG, "<onPeerIncoming> iotDevice=" + iotDevice.mDeviceName
+                    + ", attachMsg=" + attachMsg);
         AgoraApplication.getInstance().setLivingDevice(iotDevice);
         getISingleCallback().onSingleCallback(0, null);
     }
@@ -53,7 +70,7 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         List<ActivityManager.RunningTaskInfo> runningTasks = manager.getRunningTasks(20);
         for (ActivityManager.RunningTaskInfo taskInfo : runningTasks) {
-            Log.d("cwtsw", "taskInfo.baseActivity.getPackageName() = " + taskInfo.baseActivity.getPackageName());
+            Log.d(TAG, "<makeMainTaskToFront> taskInfo.baseActivity.getPackageName() = " + taskInfo.baseActivity.getPackageName());
             //判断是否是相同的包名
             if (taskInfo.baseActivity.getPackageName().equals(AgoraApplication.mInstance.getPackageName())) {
                 int taskId;
@@ -72,7 +89,7 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
 //                intent.setComponent(new ComponentName(AgoraApplication.mInstance.getPackageName(),
 //                        "com.agora.iotlink.models.player.called.CalledInComingActivity"));
 //                context.startActivity(intent);
-                Log.d("cwtsw", "makeMainTaskToFront taskId =" + taskId);
+                Log.d(TAG, "<makeMainTaskToFront> taskId =" + taskId);
                 return;
             }
         }

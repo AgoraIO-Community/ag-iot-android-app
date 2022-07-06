@@ -11,8 +11,8 @@ android {
         applicationId "com.agora.iotlink"
         minSdkVersion rootProject.ext.android.minSdkVersion
         targetSdkVersion rootProject.ext.android.targetSdkVersion
-        versionCode 15
-        versionName "1.0.1.5"
+        versionCode 16
+        versionName "1.0.1.6"
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
@@ -63,22 +63,8 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-//    implementation project(':Baselibrary')
     kapt rootProject.ext.deps.arouter_kapt
     implementation rootProject.ext.deps.arouter
-
-    //glide 图片加载
-    api rootProject.ext.deps.glide
-    kapt rootProject.ext.deps.glide_compiler
-
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.4.2'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.4.2'
-
-
-    implementation 'com.huawei.hms:scanplus:1.3.2.300'  // 华为SDK
-    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信SDK
-
     implementation rootProject.ext.deps.appcompat
     implementation rootProject.ext.deps.multidex
     implementation rootProject.ext.deps.constraintlayout
@@ -87,12 +73,34 @@ dependencies {
     implementation rootProject.ext.deps.gson
     implementation rootProject.ext.deps.eventbus
 
-    // Google firebase cloud messaging
-    implementation 'com.google.android.gms:play-services-base:11.4.0'
-    implementation 'com.google.firebase:firebase-messaging:11.4.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.4.2'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.4.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
 
-    //二维码
+
+    // Glide 图片加载
+    api rootProject.ext.deps.glide
+    kapt rootProject.ext.deps.glide_compiler
+
+
+    // 华为SDK二维码扫描
+    implementation 'com.huawei.hms:scanplus:1.3.2.300'
+
+    // 二维码解析
     implementation files('libs/core-3.5.0.jar')
+
+//    // 各手机厂商离线推送SDK
+//    //implementation(name: 'oppo_push_v2.1.0', ext: 'aar')
+//    implementation 'com.huawei.hms:push:4.0.2.300'
+//    implementation files('libs/mi_push_v3.6.12.jar')
+//    implementation files('libs/vivo_push_v2.3.1.jar')
+//    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信
+//
+//    // Google firebase 离线推送
+//    implementation 'com.google.android.gms:play-services-base:11.4.0'
+//    implementation 'com.google.firebase:firebase-messaging:11.4.0'
+
 
     //播放器
     implementation 'com.shuyu:GSYVideoPlayer:8.1.2'
