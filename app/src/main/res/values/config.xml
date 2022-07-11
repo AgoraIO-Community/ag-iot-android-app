@@ -1,15 +1,12 @@
 <resources>
     <!-- 配置声网RTC的AppId -->
-    <string name="AGORA_APPID">e08e7b6fe4c042fc820728fec2def5bb</string>
+    <string name="AGORA_APPID">your_app_id</string>
 
     <!-- 配置声网RTC的ProjectID -->
-    <string name="PROJECT_ID">WtfBfGiRV</string>
+    <string name="PROJECT_ID">your_project_id</string>
 
     <!-- Demo固定使用的productkey -->
-    <string name="PRODUCT_KEY">EJIJJhlJ4408lKESK</string>
-
-    <!-- 配置环信SDK的AppId -->
-    <string name="EASEMOB_APPKEY">81315488#963933</string>
+    <string name="PRODUCT_KEY">your_product_key</string>
 
     <!-- 配置灵隼服务Master Server -->
     <string name="MASTER_SERVER_URL">https://app.agoralink-iot-cn.sd-rtn.com</string>
@@ -17,34 +14,7 @@
     <!-- 配置灵隼服务Slave Server -->
     <string name="SALVE_SERVER_URL">https://api.agora.io/agoralink/cn/api</string>
 
-    <!-- 离线推送消息ID -->
-    <integer name="EASE_NOTIFIER_MSG_ID">0506</integer>
 
-    <!-- 离线推送消息通道名 -->
-    <string name="EASE_NOTIFIER_CHANNEL_ID">high_system</string>
-
-    <!-- 配置Firebase离线推送参数 -->
-    <bool name="FCM_ENBALE">false</bool>
-    <string name="FCM_SENDERID">73974497007</string>
-
-    <!-- 配置小米手机离线推送参数 -->
-    <string name="MI_PUSH_APPID">2882303761520031708</string>
-    <string name="MI_PUSH_APPKEY">5932003199708</string>
-
-    <!-- 配置魅族手机离线推送参数 -->
-    <string name="MEIZU_PUSH_APPID">144173</string>
-    <string name="MEIZU_PUSH_APPKEY">284210d0be8d49e89e2624a2daf66701</string>
-
-    <!-- 配置OPPO手机离线推送参数 -->
-    <string name="OPPO_PUSH_APPKEY">af6cb96b36164bf4aec018a30a54f114</string>
-    <string name="OPPO_PUSH_APPSECRET">35cd1752fd6d4c3fba3d4deb9491b72c</string>
-
-    <!-- 配置VIVIO手机离线推送参数  -->
-    <integer name="VIVO_PUSH_APPID">104510674</integer>
-    <string name="VIVO_PUSH_APPKEY">10451067442351313131a</string>
-
-    <!-- 配置华为手机离线推送参数，注意‘appid=’不要删除 -->
-    <string name="HUAWEI_PUSH_APPKID">appid=104676201</string>
 
 
 </resources>
