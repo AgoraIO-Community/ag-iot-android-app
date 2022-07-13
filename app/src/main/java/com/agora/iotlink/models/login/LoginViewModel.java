@@ -199,7 +199,7 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
         if (errCode == ErrCode.XOK) {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_SUCCESS, account);
         } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL, errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL, account);
             ErrorToastUtils.showLoginError(errCode);
         }
     }
