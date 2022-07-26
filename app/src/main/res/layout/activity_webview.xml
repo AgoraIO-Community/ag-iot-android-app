@@ -6,14 +6,14 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.agora.iotlink.widget.CommonTitleView
+    <io.agora.iotlinkdemo.widget.CommonTitleView
         android:id="@+id/title_view"
         style="@style/title_view"
         app:ctv_centerText="隐私政策与用户协议"
         tools:ignore="MissingConstraints" />
 
 
-    <com.agora.iotlink.widget.CustomWebView
+    <io.agora.iotlinkdemo.widget.CustomWebView
         android:id="@+id/webView"
         android:layout_width="0dp"
         android:layout_height="0dp"

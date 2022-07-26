@@ -8,7 +8,7 @@ android {
     compileSdkVersion rootProject.ext.android.compileSdkVersion
 
     defaultConfig {
-        applicationId "com.agora.iotlink"
+        applicationId "io.agora.iotlinkdemo"
         minSdkVersion rootProject.ext.android.minSdkVersion
         targetSdkVersion rootProject.ext.android.targetSdkVersion
         versionCode 17
@@ -24,10 +24,10 @@ android {
     }
     signingConfigs {
         myConfig {
-            storeFile file('../keystore.key')
-            storePassword "965606"
-            keyAlias "agora"
-            keyPassword "965606"
+            storeFile file('../iot.jks')
+            keyAlias 'FalconDemo'
+            keyPassword 'Agora123456'
+            storePassword 'Agora123456'
         }
     }
     buildTypes {
@@ -76,7 +76,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1'
     implementation 'androidx.navigation:navigation-fragment-ktx:2.4.2'
     implementation 'androidx.navigation:navigation-ui-ktx:2.4.2'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 
 
     // Glide 图片加载
@@ -98,8 +98,8 @@ dependencies {
 //    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信
 //
 //    // Google firebase 离线推送
-//    implementation 'com.google.android.gms:play-services-base:11.4.0'
-//    implementation 'com.google.firebase:firebase-messaging:11.4.0'
+//    implementation 'com.google.android.gms:play-services-base:18.1.0'
+//    implementation 'com.google.firebase:firebase-messaging:23.0.6'
 
 
     //播放器

@@ -7,13 +7,13 @@
 
     <fragment
         android:id="@+id/navigation_home"
-        android:name="com.agora.iotlink.models.home.homeindex.HomeIndexFragment"
+        android:name="io.agora.iotlinkdemo.models.home.homeindex.HomeIndexFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home_index" />
 
     <fragment
         android:id="@+id/navigation_mine"
-        android:name="com.agora.iotlink.models.home.homemine.MineFragment"
+        android:name="io.agora.iotlinkdemo.models.home.homemine.MineFragment"
         android:label="@string/title_mine"
         tools:layout="@layout/fragment_home_mine" />
 

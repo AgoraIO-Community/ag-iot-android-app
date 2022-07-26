@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.agora.iotlink">
+    package="io.agora.iotlinkdemo">
 
     <!-- 从扩展存储读取权限，添加设备时访问系统图库需要 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -20,32 +20,36 @@
 
 
 <!--    &lt;!&ndash; ==================== 离线推送权限 BEGIN ==================== &ndash;&gt;-->
-<!--        &lt;!&ndash; 允许程序振动 用于消息通知 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.VIBRATE" />-->
-<!--        &lt;!&ndash; 允许程序收到广播后快速收到下一个广播 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.BROADCAST_STICKY" />-->
-<!--        &lt;!&ndash; 忽略电池优化权限以便后台运行 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />-->
-<!--        &lt;!&ndash; 29以后程序需要使用全屏通知 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />-->
-<!--        &lt;!&ndash; 允许系统悬浮窗，用于来电后台拉起APP &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />-->
-
 <!--        &lt;!&ndash; Mi推送权限配置 start &ndash;&gt;-->
-<!--        &lt;!&ndash; api 21后被标记为deprecated &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.GET_TASKS" />-->
-<!--        &lt;!&ndash; 允许程序在手机屏幕关闭后后台进程仍然运行 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.WAKE_LOCK" />-->
-<!--        &lt;!&ndash; 允许程序开机自动运行 &ndash;&gt;-->
-<!--        <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />-->
+<!--        <permission-->
+<!--            android:name="${applicationId}.permission.MIPUSH_RECEIVE"-->
+<!--            android:protectionLevel="signature" />-->
+<!--        <uses-permission android:name="${applicationId}.permission.MIPUSH_RECEIVE" />-->
+<!--        <uses-permission android:name="android.permission.GET_TASKS"/>-->
 <!--        &lt;!&ndash; Mi推送权限配置 end &ndash;&gt;-->
 
-<!--        &lt;!&ndash; Oppo推送权限配置（如果应用无透传权限，则不用配置） start &ndash;&gt;-->
-<!--        <uses-permission android:name="com.coloros.mcs.permission.RECIEVE_MCS_MESSAGE" />-->
-<!--        <uses-permission android:name="com.heytap.mcs.permission.RECIEVE_MCS_MESSAGE" />-->
-<!--        &lt;!&ndash; Oppo推送权限配置 end &ndash;&gt;-->
-<!--    &lt;!&ndash; ==================== 离线推送权限 END ==================== &ndash;&gt;-->
+<!--        &lt;!&ndash; HUAWEI 推送权限配置 start &ndash;&gt;-->
+<!--        <uses-permission android:name="android.permission.WAKE_LOCK" />-->
+<!--        &lt;!&ndash; HUAWEI 推送权限配置 end &ndash;&gt;-->
 
+<!--        &lt;!&ndash; 魅族推送权限配置 start&ndash;&gt;-->
+<!--        <uses-permission android:name="com.meizu.flyme.push.permission.RECEIVE" />-->
+<!--        <permission-->
+<!--            android:name="${applicationId}.push.permission.MESSAGE"-->
+<!--            android:protectionLevel="signature" />-->
+<!--        <uses-permission android:name="${applicationId}.push.permission.MESSAGE" />-->
+<!--        <uses-permission android:name="com.meizu.c2dm.permission.RECEIVE" />-->
+<!--        <permission-->
+<!--            android:name="${applicationId}.permission.C2D_MESSAGE"-->
+<!--            android:protectionLevel="signature" />-->
+<!--        <uses-permission android:name="${applicationId}.permission.C2D_MESSAGE" />-->
+<!--        &lt;!&ndash; 魅族推送权限配置 end&ndash;&gt;-->
+
+<!--        &lt;!&ndash; OPPO推送权限配置 start &ndash;&gt;-->
+<!--        <uses-permission android:name="com.coloros.mcs.permission.RECIEVE_MCS_MESSAGE"/>-->
+<!--        <uses-permission android:name="com.heytap.mcs.permission.RECIEVE_MCS_MESSAGE"/>-->
+<!--        &lt;!&ndash; OPPO推送权限配置 end &ndash;&gt;-->
+<!--    &lt;!&ndash; ==================== 离线推送权限 END ==================== &ndash;&gt;-->
 
 
     <application
@@ -229,14 +233,6 @@
 
 
 <!--        &lt;!&ndash; ==================== 离线推送账号配置 BEGIN ==================== &ndash;&gt;-->
-<!--            &lt;!&ndash; 离线消息通道通知 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="EASE_NOTIFIER_NOTIFY_ID"-->
-<!--                android:value="@integer/EASE_NOTIFIER_MSG_ID" />-->
-<!--            <meta-data-->
-<!--                android:name="EASE_NOTIFIER_CHANNEL_ID"-->
-<!--                android:value="@string/EASE_NOTIFIER_CHANNEL_ID" />-->
-
 <!--            &lt;!&ndash; 环信账号配置 &ndash;&gt;-->
 <!--            <meta-data-->
 <!--                android:name="EASEMOB_APPKEY"-->
@@ -249,6 +245,22 @@
 <!--            <meta-data-->
 <!--                android:name="com.mi.push.app_id"-->
 <!--                android:value="@string/MI_PUSH_APPID" />-->
+
+<!--            &lt;!&ndash;华为账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.huawei.hms.client.appid"-->
+<!--                android:value="@string/HUAWEI_PUSH_APPKID" />-->
+<!--            <meta-data-->
+<!--                android:name="push_kit_auto_init_enabled"-->
+<!--                android:value="true"/>-->
+
+<!--            &lt;!&ndash; MEIZU账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.meizu.push.api_key"-->
+<!--                android:value="@string/MEIZU_PUSH_APPKEY" />-->
+<!--            <meta-data-->
+<!--                android:name="com.meizu.push.app_id"-->
+<!--                android:value="@string/MEIZU_PUSH_APPID" />-->
 
 <!--            &lt;!&ndash; Oppo账号配置 &ndash;&gt;-->
 <!--            <meta-data-->
@@ -265,26 +277,11 @@
 <!--            <meta-data-->
 <!--                android:name="com.vivo.push.app_id"-->
 <!--                android:value="@integer/VIVO_PUSH_APPID" />-->
-
-<!--            &lt;!&ndash;华为账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.huawei.hms.client.appid"-->
-<!--                android:value="@string/HUAWEI_PUSH_APPKID" />-->
-<!--            <meta-data-->
-<!--                android:name="push_kit_auto_init_enabled"-->
-<!--                android:value="true"/>-->
 <!--        &lt;!&ndash; ==================== 离线推送账号配置 END ==================== &ndash;&gt;-->
 
-<!--        &lt;!&ndash; ==================== 离线推送服务 BEGIN ==================== &ndash;&gt;-->
-<!--            &lt;!&ndash; 环信推送服务配置 start &ndash;&gt;-->
-<!--            <receiver android:name="com.agora.iotlink.huanxin.EmReceiver" android:exported="false">-->
-<!--                <intent-filter>-->
-<!--                    <action android:name="com.hyphenate.notification.intent.RECEIVE_MESSAGE"/>-->
-<!--                    <category android:name="${applicationId}"/>-->
-<!--                </intent-filter>-->
-<!--            </receiver>-->
-<!--            &lt;!&ndash; 环信推送服务配置 end &ndash;&gt;-->
 
+
+<!--        &lt;!&ndash; ==================== 离线推送服务 BEGIN ==================== &ndash;&gt;-->
 <!--            &lt;!&ndash; Mi推送服务配置 start &ndash;&gt;-->
 <!--            <service-->
 <!--                android:name="com.xiaomi.push.service.XMPushService"-->
@@ -315,12 +312,12 @@
 <!--                android:name="com.xiaomi.push.service.receivers.PingReceiver"-->
 <!--                android:exported="false"-->
 <!--                android:process=":pushservice">-->
+
 <!--                <intent-filter>-->
 <!--                    <action android:name="com.xiaomi.push.PING_TIMER" />-->
 <!--                </intent-filter>-->
 <!--            </receiver>-->
-<!--            <receiver-->
-<!--                android:name="com.hyphenate.push.platform.mi.EMMiMsgReceiver" android:exported="false">-->
+<!--            <receiver android:name="com.hyphenate.push.platform.mi.EMMiMsgReceiver">-->
 <!--                <intent-filter>-->
 <!--                    <action android:name="com.xiaomi.mipush.RECEIVE_MESSAGE" />-->
 <!--                </intent-filter>-->
@@ -332,6 +329,28 @@
 <!--                </intent-filter>-->
 <!--            </receiver>-->
 <!--            &lt;!&ndash; Mi推送服务配置 end&ndash;&gt;-->
+
+<!--            &lt;!&ndash; HuaWei 推送服务配置 start &ndash;&gt;-->
+<!--            <service android:name="io.agora.iotlinkdemo.huanxin.HMSPushService"-->
+<!--                android:exported="false">-->
+<!--                <intent-filter>-->
+<!--                    <action android:name="com.huawei.push.action.MESSAGING_EVENT" />-->
+<!--                </intent-filter>-->
+<!--            </service>-->
+<!--            &lt;!&ndash; HuaWei 推送服务配置 end &ndash;&gt;-->
+
+<!--            &lt;!&ndash; MEIZU推送服务配置 start &ndash;&gt;-->
+<!--            <receiver android:name="com.hyphenate.push.platform.meizu.EMMzMsgReceiver">-->
+<!--                <intent-filter>-->
+<!--                <action android:name="com.meizu.flyme.push.intent.MESSAGE"/>-->
+<!--                <action android:name="com.meizu.flyme.push.intent.REGISTER.FEEDBACK" />-->
+<!--                <action android:name="com.meizu.flyme.push.intent.UNREGISTER.FEEDBACK"/>-->
+<!--                <action android:name="com.meizu.c2dm.intent.REGISTRATION"/>-->
+<!--                <action android:name="com.meizu.c2dm.intent.RECEIVE" />-->
+<!--                <category android:name="${applicationId}"></category>-->
+<!--                </intent-filter>-->
+<!--            </receiver>-->
+<!--            &lt;!&ndash; MEIZU推送服务配置 end &ndash;&gt;-->
 
 <!--            &lt;!&ndash; Oppo推送服务配置 start &ndash;&gt;-->
 <!--            <service-->
@@ -353,7 +372,6 @@
 <!--            </service> &lt;!&ndash;兼容Q版本&ndash;&gt;-->
 <!--            &lt;!&ndash; Oppo推送服务配置 end &ndash;&gt;-->
 
-
 <!--            &lt;!&ndash; VIVO推送服务配置 start &ndash;&gt;-->
 <!--            <service-->
 <!--                android:name="com.vivo.push.sdk.service.CommandClientService"-->
@@ -372,30 +390,18 @@
 <!--                </intent-filter>-->
 <!--            </receiver>-->
 <!--            &lt;!&ndash; VIVO推送服务配置 end &ndash;&gt;-->
-
-<!--            &lt;!&ndash; 华为推送服务配置 end &ndash;&gt;-->
-<!--            &lt;!&ndash;            <service&ndash;&gt;-->
-<!--            &lt;!&ndash;                android:name="com.agora.agorasdkdemo.service.HMSPushService"&ndash;&gt;-->
-<!--            &lt;!&ndash;                android:exported="false">   &lt;!&ndash; 设置为false，限制其他应用的组件唤醒该service &ndash;&gt;&ndash;&gt;-->
-<!--            &lt;!&ndash;                <intent-filter>&ndash;&gt;-->
-<!--            &lt;!&ndash;                    <action android:name="com.huawei.push.action.MESSAGING_EVENT" />&ndash;&gt;-->
-<!--            &lt;!&ndash;                </intent-filter>&ndash;&gt;-->
-<!--            &lt;!&ndash;            </service>&ndash;&gt;-->
-<!--            &lt;!&ndash; 华为推送服务配置 end &ndash;&gt;-->
-
 <!--        &lt;!&ndash; ==================== 离线推送服务 END ==================== &ndash;&gt;-->
 
     </application>
 
 
 
-
-<!--    &lt;!&ndash; targetSdkVersion是30或者更高版本时，需要添加<queries>标签，使应用可以访问HMS Core（APK） &ndash;&gt;-->
-<!--        <queries>-->
-<!--            <intent>-->
-<!--                <action android:name="com.huawei.hms.core.aidlservice" />-->
-<!--            </intent>-->
-<!--        </queries>-->
-<!--    &lt;!&ndash; HMS Core（APK）访问配置 end&ndash;&gt;-->
+    <!-- targetSdkVersion是30或者更高版本时，需要添加<queries>标签，使应用可以访问HMS Core（APK） -->
+        <queries>
+            <intent>
+                <action android:name="com.huawei.hms.core.aidlservice" />
+            </intent>
+        </queries>
+    <!-- HMS Core（APK）访问配置 end-->
 
 </manifest>

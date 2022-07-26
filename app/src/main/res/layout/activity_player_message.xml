@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <com.agora.iotlink.widget.CommonTitleView
+    <io.agora.iotlinkdemo.widget.CommonTitleView
         android:id="@+id/title_view"
         style="@style/title_view"
         app:ctv_centerText="智能门铃"
@@ -40,7 +40,7 @@
         app:layout_constraintTop_toTopOf="@id/cbChangeSound"
         tools:ignore="SmallSp" />
 
-    <com.agora.iotlink.models.player.CustomStandardGSYVideoPlayer
+    <io.agora.iotlinkdemo.models.player.CustomStandardGSYVideoPlayer
         android:id="@+id/gsy_player"
         android:layout_width="match_parent"
         android:layout_height="200dp"

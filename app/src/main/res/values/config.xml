@@ -5,16 +5,37 @@
     <!-- 配置声网RTC的ProjectID -->
     <string name="PROJECT_ID">your_project_id</string>
 
-    <!-- Demo固定使用的productkey -->
-    <string name="PRODUCT_KEY">your_product_key</string>
-
     <!-- 配置灵隼服务Master Server -->
-    <string name="MASTER_SERVER_URL">https://app.agoralink-iot-cn.sd-rtn.com</string>
+    <string name="MASTER_SERVER_URL">your_master_server</string>
 
     <!-- 配置灵隼服务Slave Server -->
-    <string name="SALVE_SERVER_URL">https://api.agora.io/agoralink/cn/api</string>
+    <string name="SALVE_SERVER_URL">your_slave_serveri</string>
 
+    <!-- 配置环信SDK的AppId -->
+    <string name="EASEMOB_APPKEY">your_easemob_appkey</string>
 
+    <!-- 配置Firebase离线推送参数 -->
+    <bool name="FCM_ENBALE">false</bool>
+    <string name="FCM_SENDERID"></string>
+
+    <!-- 配置小米手机离线推送参数 -->
+    <string name="MI_PUSH_APPID"></string>
+    <string name="MI_PUSH_APPKEY"></string>
+
+    <!-- 配置魅族手机离线推送参数 -->
+    <string name="MEIZU_PUSH_APPID"></string>
+    <string name="MEIZU_PUSH_APPKEY"></string>
+
+    <!-- 配置OPPO手机离线推送参数 -->
+    <string name="OPPO_PUSH_APPKEY"></string>
+    <string name="OPPO_PUSH_APPSECRET"></string>
+
+    <!-- 配置VIVIO手机离线推送参数  -->
+    <integer name="VIVO_PUSH_APPID">0</integer>
+    <string name="VIVO_PUSH_APPKEY"></string>
+
+    <!-- 配置华为手机离线推送参数，注意‘appid=’不要删除 -->
+    <string name="HUAWEI_PUSH_APPKID">appid=106736987</string>
 
 
 </resources>

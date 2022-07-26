@@ -1,0 +1,47 @@
+package io.agora.iotlinkdemo.manager;
+
+public class PagePathConstant {
+    public static final String pageMainHome = "/page/mainHome";
+    public static final String pagePhoneLogin = "/page/phoneLogin";
+    public static final String pagePhoneRegister = "/page/phoneRegister";
+    public static final String pageSelectCountry = "/page/pageSelectCountry";
+    public static final String pageInputVCode = "/page/pageInputVCode";
+    public static final String pageSetPwd = "/page/pageSetPwd";
+    public static final String pageAbout = "/page/pageAbout";
+    public static final String pageMessage = "/page/pageMessage";
+    public static final String pageChangePassword = "/page/pageChangePassword";
+    public static final String pageAlbum = "/page/pageAlbum";
+    public static final String pageAlbumViewPhoto = "/page/pageAlbumViewPhoto";
+    public static final String pageCalled = "/page/pageCalled";
+    public static final String pageAddDeviceMain = "/page/pageAddDeviceMain";
+    public static final String pageResetDevice = "/page/pageResetDevice";
+    public static final String pageSetDeviceWifi = "/page/pageSetDeviceWifi";
+    public static final String pageDeviceAdding = "/page/pageDeviceAdding";
+    public static final String pageDeviceQR = "/page/pageDeviceQR";
+    public static final String pageWifiList = "/page/pageWifiList";
+    public static final String pageWifiTimeOut = "/page/pageWifiTimeOut";
+    public static final String pageAddResult = "/page/pageAddResult";
+    public static final String pageDeviceAddScanning = "/page/pageDeviceAddScanning";
+    public static final String pageDeviceSetting = "/page/pageDeviceSetting";
+    public static final String pageDeviceFirmwareUpgrade = "/page/pageDeviceFirmwareUpgrade";
+    public static final String pageDeviceShareToUserList = "/page/pageDeviceShareToUserList";
+    public static final String pageDeviceShareToUserDetail = "/page/pageDeviceShareToUserDetail";
+    public static final String pageDeviceShareToUserAdd = "/page/pageDeviceShareToUserAdd";
+    public static final String pageShareDeviceSetting = "/page/pageShareDeviceSetting";
+    public static final String pageDeviceInfoSetting = "/page/pageDeviceInfoSetting";
+    public static final String pageDeviceBaseSetting = "/page/pageDeviceBaseSetting";
+    public static final String pagePreviewPlay = "/page/pagePreviewPlay";
+    public static final String pagePlayMessage = "/page/pagePlayMessage";
+    public static final String pagePlayerFunction = "/page/pagePlayerFunction";
+    public static final String pagePlayerMessage = "/page/pagePlayerMessage";
+    public static final String pageMessageAlarm = "/page/pageMessageAlarm";
+    public static final String pageMessageNotify = "/page/pageMessageNotify";
+    public static final String pageUserInfo = "/page/pageUserInfo";
+    public static final String pageUserEditNickname = "/page/pageUserEditNickname";
+    public static final String pageGeneralSettings = "/page/pageGeneralSettings";
+    public static final String pageSystemPermissionSetting = "/page/pageSystemPermissionSetting";
+    public static final String pageMessagePushSetting = "/page/pageMessagePushSetting";
+    public static final String pageAppUpdate = "/page/pageAppUpdate";
+    public static final String pageAccountSecurity = "/page/pageAccountSecurity";
+    public static final String pageWebView = "/page/pageWebView";
+}
