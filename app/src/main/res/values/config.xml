@@ -22,10 +22,6 @@
     <string name="MI_PUSH_APPID"></string>
     <string name="MI_PUSH_APPKEY"></string>
 
-    <!-- 配置魅族手机离线推送参数 -->
-    <string name="MEIZU_PUSH_APPID"></string>
-    <string name="MEIZU_PUSH_APPKEY"></string>
-
     <!-- 配置OPPO手机离线推送参数 -->
     <string name="OPPO_PUSH_APPKEY"></string>
     <string name="OPPO_PUSH_APPSECRET"></string>
@@ -35,7 +31,7 @@
     <string name="VIVO_PUSH_APPKEY"></string>
 
     <!-- 配置华为手机离线推送参数，注意‘appid=’不要删除 -->
-    <string name="HUAWEI_PUSH_APPKID">appid=106736987</string>
+    <string name="HUAWEI_PUSH_APPKID">appid=</string>
 
 
 </resources>

@@ -32,19 +32,6 @@
 <!--        <uses-permission android:name="android.permission.WAKE_LOCK" />-->
 <!--        &lt;!&ndash; HUAWEI 推送权限配置 end &ndash;&gt;-->
 
-<!--        &lt;!&ndash; 魅族推送权限配置 start&ndash;&gt;-->
-<!--        <uses-permission android:name="com.meizu.flyme.push.permission.RECEIVE" />-->
-<!--        <permission-->
-<!--            android:name="${applicationId}.push.permission.MESSAGE"-->
-<!--            android:protectionLevel="signature" />-->
-<!--        <uses-permission android:name="${applicationId}.push.permission.MESSAGE" />-->
-<!--        <uses-permission android:name="com.meizu.c2dm.permission.RECEIVE" />-->
-<!--        <permission-->
-<!--            android:name="${applicationId}.permission.C2D_MESSAGE"-->
-<!--            android:protectionLevel="signature" />-->
-<!--        <uses-permission android:name="${applicationId}.permission.C2D_MESSAGE" />-->
-<!--        &lt;!&ndash; 魅族推送权限配置 end&ndash;&gt;-->
-
 <!--        &lt;!&ndash; OPPO推送权限配置 start &ndash;&gt;-->
 <!--        <uses-permission android:name="com.coloros.mcs.permission.RECIEVE_MCS_MESSAGE"/>-->
 <!--        <uses-permission android:name="com.heytap.mcs.permission.RECIEVE_MCS_MESSAGE"/>-->
@@ -254,14 +241,6 @@
 <!--                android:name="push_kit_auto_init_enabled"-->
 <!--                android:value="true"/>-->
 
-<!--            &lt;!&ndash; MEIZU账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.meizu.push.api_key"-->
-<!--                android:value="@string/MEIZU_PUSH_APPKEY" />-->
-<!--            <meta-data-->
-<!--                android:name="com.meizu.push.app_id"-->
-<!--                android:value="@string/MEIZU_PUSH_APPID" />-->
-
 <!--            &lt;!&ndash; Oppo账号配置 &ndash;&gt;-->
 <!--            <meta-data-->
 <!--                android:name="com.oppo.push.api_key"-->
@@ -338,19 +317,6 @@
 <!--                </intent-filter>-->
 <!--            </service>-->
 <!--            &lt;!&ndash; HuaWei 推送服务配置 end &ndash;&gt;-->
-
-<!--            &lt;!&ndash; MEIZU推送服务配置 start &ndash;&gt;-->
-<!--            <receiver android:name="com.hyphenate.push.platform.meizu.EMMzMsgReceiver">-->
-<!--                <intent-filter>-->
-<!--                <action android:name="com.meizu.flyme.push.intent.MESSAGE"/>-->
-<!--                <action android:name="com.meizu.flyme.push.intent.REGISTER.FEEDBACK" />-->
-<!--                <action android:name="com.meizu.flyme.push.intent.UNREGISTER.FEEDBACK"/>-->
-<!--                <action android:name="com.meizu.c2dm.intent.REGISTRATION"/>-->
-<!--                <action android:name="com.meizu.c2dm.intent.RECEIVE" />-->
-<!--                <category android:name="${applicationId}"></category>-->
-<!--                </intent-filter>-->
-<!--            </receiver>-->
-<!--            &lt;!&ndash; MEIZU推送服务配置 end &ndash;&gt;-->
 
 <!--            &lt;!&ndash; Oppo推送服务配置 start &ndash;&gt;-->
 <!--            <service-->

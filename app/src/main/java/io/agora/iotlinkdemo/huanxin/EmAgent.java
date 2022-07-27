@@ -33,9 +33,6 @@
 //        public String mMiAppId;            ///< 小米&红米 机型的推送配置
 //        public String mMiAppKey;
 //
-//        public String mMeizuAppId;         ///< 魅族 机型推送配置
-//        public String mMeizuAppKey;
-//
 //        public String mOppoAppKey;         ///< OPPO 机型的推送配置
 //        public String mOppoAppSecret;
 //
@@ -49,7 +46,6 @@
 //            String infoText = "{ mFcmSenderId=" + mFcmSenderId
 //                    + ", mOppoAppKey=" + mOppoAppKey + ", mOppoAppSecret=" + mOppoAppSecret
 //                    + ", mMiAppId=" + mMiAppId  + ", mMiAppKey=" + mMiAppKey
-//                    + ", mMeizuAppId=" + mMeizuAppId  + ", mMeizuAppKey=" + mMeizuAppKey
 //                    + ", mVivoAppId=" + mVivoAppId  + ", mVivoAppKey=" + mVivoAppKey
 //                    + ", mHuaweiAppId=" + mHuaweiAppId  + "}";
 //            return infoText;
@@ -148,16 +144,6 @@
 //            ALog.getInstance().d(TAG, "<initialize> enable OPPO phone"
 //                    + ", mOppoAppKey=" + mInitParam.mOppoAppKey
 //                    + ", mOppoAppSecret=" + mInitParam.mOppoAppSecret);
-//        }
-//
-//
-//        // 设置魅族appid和appkey
-//        if ( (!TextUtils.isEmpty(mInitParam.mMeizuAppId)) &&
-//                (!TextUtils.isEmpty(mInitParam.mMeizuAppKey)) && (phoneType == PHONE_TYPE_MEIZU) ) {
-//            builder.enableMeiZuPush(mInitParam.mMeizuAppId, mInitParam.mMeizuAppKey);
-//            ALog.getInstance().d(TAG, "<initialize> enable MEIZU phone"
-//                    + ", mMeizuAppId=" + mInitParam.mMeizuAppId
-//                    + ", mMeizuAppKey=" + mInitParam.mMeizuAppKey);
 //        }
 //
 //        // 设置华为推送

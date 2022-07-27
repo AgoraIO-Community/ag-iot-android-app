@@ -100,8 +100,6 @@ public class PushApplication extends BaseApplication {
 //            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
 //            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
 //            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
-//            pushParam.mMeizuAppId = mMetaData.getString("com.meizu.push.app_id", "");
-//            pushParam.mMeizuAppKey =mMetaData.getString("com.meizu.push.api_key", "");
 //            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
 //            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
 //            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
