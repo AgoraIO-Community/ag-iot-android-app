@@ -59,26 +59,33 @@
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvDeviceID"
-        android:layout_width="0dp"
+        android:layout_width="60dp"
         android:layout_height="56dp"
-        android:layout_marginTop="39dp"
+        android:layout_marginTop="36dp"
         android:gravity="center_vertical"
         android:text="@string/device_id"
         android:textColor="@color/black"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="@id/tvDeviceName"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@id/ivDeviceIcon"
         app:layout_constraintTop_toBottomOf="@id/ivDeviceIcon" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvDeviceIDValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="68dp"
+        android:maxLines="1"
+        android:gravity="center_vertical"
         android:textColor="@color/black_50_percent"
-        android:textSize="14sp"
+        app:autoSizeMaxTextSize="24sp"
+        app:autoSizeMinTextSize="8sp"
+        app:autoSizeStepGranularity="1sp"
+        app:autoSizeTextType="uniform"
         app:layout_constraintBottom_toBottomOf="@id/tvDeviceID"
-        app:layout_constraintEnd_toEndOf="@id/tvDeviceID"
-        app:layout_constraintTop_toTopOf="@id/tvDeviceID" />
+        app:layout_constraintTop_toTopOf="@id/tvDeviceID"
+        app:layout_constraintStart_toStartOf="@+id/tvDeviceID"  />
 
     <View
         android:layout_width="0dp"

@@ -129,6 +129,23 @@ public class Constant {
     /* 标记通知已读 */
     public static final int CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG = 208;
 
+    /* 获取全部告警消息失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL = 210;
+    /* 获取告警消息详情失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL = 211;
+    /* 获取全部通知消息失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_FAIL = 212;
+    /* 删除告警消息失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL = 213;
+    /* 未读告警消息数量失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_ALARM_COUNT_FAIL = 215;
+    /* 未读通知消息数量失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_FAIL = 216;
+    /* 标记告警已读失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG_FAIL = 217;
+    /* 标记通知已读失败 */
+    public static final int CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_FAIL = 218;
+
     /* 对方挂断 */
     public static final int CALLBACK_TYPE_PLAYER_CALL_HANG_UP = 300;
     /* 转为竖屏 */
@@ -149,23 +166,25 @@ public class Constant {
     /* 播放器返回总播放时间 */
     public static final int CALLBACK_TYPE_PLAYER_TOTAL_TIME = 308;
 
-    /* 登录 发送验证码成功*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_V_CODE_SUCCESS = 400;
-    /* 登录 发送验证码失败*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_V_CODE_FAIL = 401;
-    /* 注册成功*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_REGISTER_SUCCESS = 402;
-    /* 登录成功*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_SUCCESS = 403;
-    /* 登录成功*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL = 404;
-    /* 重置/修改密码成功*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_RESET_PWD_SUCCESS = 405;
-    /* 重置/修改密码失败*/
-    public static final int CALLBACK_TYPE_LOGIN_REQUEST_RESET_PWD_FAIL = 406;
-    /* 注销帐号成功*/
-    public static final int CALLBACK_TYPE_LOGOFF_SUCCESS = 407;
-    /* 注销帐号失败*/
-    public static final int CALLBACK_TYPE_LOGOFF_FAIL = 408;
+    /* 固件版本信息获取 */
+    public static final int CALLBACK_TYPE_FIRM_GETVERSION = 309;
+    /* 固件版本升级 */
+    public static final int CALLBACK_TYPE_FIRM_UPGRADE = 310;
+
+    /* 第三方账号注册完成 */
+    public static final int CALLBACK_TYPE_THIRD_REGISTER_DONE = 401;
+    /* 第三方账号注销完成 */
+    public static final int CALLBACK_TYPE_THIRD_UNREGISTER_DONE = 402;
+    /* 第三方账号登录完成 */
+    public static final int CALLBACK_TYPE_THIRD_LOGIN_DONE = 403;
+    /* 第三方账号登出完成 */
+    public static final int CALLBACK_TYPE_THIRD_LOGOUT_DONE = 404;
+
+    /* RTM联接完成 */
+    public static final int CALLBACK_TYPE_RTM_CONNECT_DONE = 501;
+    /* RTM发送消息完成 */
+    public static final int CALLBACK_TYPE_RTM_SEND_DONE = 502;
+    /* RTM接收到消息 */
+    public static final int CALLBACK_TYPE_RTM_RECVED = 503;
 
 }

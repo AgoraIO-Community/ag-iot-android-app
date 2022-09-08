@@ -1,8 +1,11 @@
 package io.agora.iotlinkdemo.models.player.living;
 
+import android.app.Application;
 import android.content.pm.ActivityInfo;
 import android.graphics.drawable.ClipDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +21,8 @@ import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.utils.ScreenUtils;
 import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
 import io.agora.iotlinkdemo.common.Constant;
@@ -26,6 +31,7 @@ import io.agora.iotlinkdemo.dialog.ChangeOfVoiceDialog;
 import io.agora.iotlinkdemo.dialog.NoPowerDialog;
 import io.agora.iotlinkdemo.dialog.SelectLegibilityDialog;
 import io.agora.iotlinkdemo.dialog.SelectMotionDetectionDialog;
+import io.agora.iotlinkdemo.dialog.SelectNightVisionDialog;
 import io.agora.iotlinkdemo.dialog.SelectPirDialog;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
@@ -38,6 +44,8 @@ import com.alibaba.android.arouter.facade.annotation.Route;
  */
 @Route(path = PagePathConstant.pagePlayerFunction)
 public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentPlayerFunctionBinding> {
+    private final String TAG = "IOTLINK/PlayFuncFrag";
+
     /**
      * 电量不足提示
      */
@@ -60,6 +68,10 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
      * 移动侦测对话框
      */
     private SelectMotionDetectionDialog selectMotionDetectionDialog;
+    /**
+     * 红外夜视对话框
+     */
+    private SelectNightVisionDialog mNightVisionDialog;
 
     /**
      * 设备播放等模块统一ViewModel
@@ -95,6 +107,17 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
                     getBinding().tvPlaySaveTimeFull.setText(StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis() / 1000));
                 } else if (type == Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO) {
                     getBinding().loadingBG.setVisibility(View.GONE);
+                } else if (type == Constant.CALLBACK_TYPE_FIRM_GETVERSION) {  // 获取固件版本
+                    IDeviceMgr.McuVersionInfo mcuVerInfo = (IDeviceMgr.McuVersionInfo)var2;
+                    Log.d(TAG, "<ISingleCallback> mcuVerInfo=" + mcuVerInfo.toString());
+                    PlayerPreviewActivity playerActivity = (PlayerPreviewActivity)getActivity();
+                    if (playerActivity != null) {
+                        if ((mcuVerInfo.mIsupgradable) && (mcuVerInfo.mUpgradeId > 0)) {
+                            ((PlayerPreviewActivity) getActivity()).updateTitle(true);
+                        } else {
+                            ((PlayerPreviewActivity) getActivity()).updateTitle(false);
+                        }
+                    }
                 }
             });
         });
@@ -144,18 +167,13 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
         getBinding().saveBg.setOnClickListener(view -> PagePilotManager.pageAlbum());
         getBinding().ivChangeScreen.setOnClickListener(view -> onBtnLandscape());
-        getBinding().cbNightVision.setOnClickListener(
-                view -> {
-                    getBinding().cbNightVision.setSelected(!getBinding().cbNightVision.isSelected());
-                    playerViewModel.setNightView(getBinding().cbNightVision.isSelected() ? 2 : 1);
-                });
+        getBinding().cbNightVision.setOnClickListener(view -> showNightVisionDialog());
         getBinding().cbWDR.setOnCheckedChangeListener((compoundButton, b) -> {
             if (b) {
                 ToastUtils.INSTANCE.showToast(R.string.function_not_open);
                 compoundButton.setChecked(false);
             }
         });
-
         getBinding().cbSoundDetection.setOnClickListener(view -> {
             getBinding().cbSoundDetection.setSelected(!getBinding().cbSoundDetection.isSelected());
             playerViewModel.setSoundDetection(getBinding().cbSoundDetection.isSelected());
@@ -277,6 +295,15 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         if (getBinding().cbChangeSound.isChecked()) {
             playerViewModel.setMutePeer(false);
         }
+
+        // 延迟调用查询当前MCU固件版本版本
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(
+                new Runnable() {
+                    public void run() {
+                        playerViewModel.queryMcuVersion();
+                    }
+                },
+                300);
     }
 
     @Override
@@ -310,7 +337,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
     @Override
     public void requestData() {
-        playerViewModel.requestDeviceProperty();
+        playerViewModel.requestViewModelData();
     }
 
     /**
@@ -418,6 +445,23 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         changeOfVoiceDialog.show();
     }
 
+    private void showNightVisionDialog() {
+        if (mNightVisionDialog == null) {
+            mNightVisionDialog = new SelectNightVisionDialog(getActivity());
+            mNightVisionDialog.iSingleCallback = (type, var2) -> {
+                playerViewModel.setNightView(type);
+                if (type == 2) {
+                    getBinding().cbNightVision.setSelected(true);
+                } else {
+                    getBinding().cbNightVision.setSelected(false);
+                }
+            };
+        }
+
+        mNightVisionDialog.setSelect(playerViewModel.mDevProperty.mNightView);
+        mNightVisionDialog.show();
+    }
+
     private void showMotionDetectionDialog() {
         if (selectMotionDetectionDialog == null) {
             selectMotionDetectionDialog = new SelectMotionDetectionDialog(getActivity());
@@ -441,12 +485,14 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
     @Override
     public void onStart() {
+        Log.d(TAG, "<onStart>");
         super.onStart();
         playerViewModel.onStart();
     }
 
     @Override
     public void onStop() {
+        Log.d(TAG, "<onStop>");
         super.onStop();
         playerViewModel.onStop();
     }

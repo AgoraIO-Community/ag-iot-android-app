@@ -29,47 +29,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAppName" />
 
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvSelectCountry"
-        style="@style/def_et_input"
-        android:layout_marginTop="60dp"
-        android:drawableStart="@mipmap/area"
-        android:drawableEnd="@mipmap/arrow_right"
-        android:hint="@string/please_select_country"
-        android:paddingEnd="29dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvAppName"
-        tools:ignore="RtlSymmetry" />
-
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/etAccounts"
         style="@style/def_et_input"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="128dp"
         android:drawableStart="@mipmap/user"
         android:enabled="false"
         android:hint="@string/please_input_account"
         android:inputType="text"
         android:paddingEnd="40dp"
-        app:layout_constraintEnd_toEndOf="@id/tvSelectCountry"
-        app:layout_constraintStart_toStartOf="@id/tvSelectCountry"
-        app:layout_constraintTop_toBottomOf="@id/tvSelectCountry"
-        tools:ignore="RtlSymmetry"
-        tools:text="123456789012345678901234" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvErrorTips"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="54dp"
-        android:layout_marginTop="3dp"
-        android:text="@string/error_pwd_tip"
-        android:textColor="@color/red_e0"
-        android:textSize="13sp"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="@id/etAccounts"
-        app:layout_constraintTop_toBottomOf="@id/etAccounts"
-        tools:visibility="visible" />
+        app:layout_constraintEnd_toEndOf="@id/tvAppName"
+        app:layout_constraintStart_toStartOf="@id/tvAppName"
+        app:layout_constraintTop_toBottomOf="@id/tvAppName"
+        tools:ignore="RtlSymmetry" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/iBtnClearAccount"
@@ -97,8 +69,7 @@
         android:paddingEnd="80dp"
         app:layout_constraintEnd_toEndOf="@id/etAccounts"
         app:layout_constraintStart_toStartOf="@id/etAccounts"
-        app:layout_constraintTop_toBottomOf="@id/etAccounts"
-        tools:text="12345678901234567890" />
+        app:layout_constraintTop_toBottomOf="@id/etAccounts"/>
 
     <androidx.appcompat.widget.AppCompatCheckBox
         android:id="@+id/iBtnEye"
@@ -126,18 +97,6 @@
         app:layout_constraintTop_toTopOf="@id/etPwd"
         tools:visibility="visible" />
 
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvForgetPassword"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        android:focusable="true"
-        android:padding="10dp"
-        android:text="@string/forget_password"
-        android:textColor="@color/black_50_percent"
-        android:textSize="13sp"
-        app:layout_constraintEnd_toEndOf="@id/etPwd"
-        app:layout_constraintTop_toBottomOf="@id/etPwd" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnLogin"
@@ -149,7 +108,7 @@
         android:textColor="@color/green_25"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvForgetPassword" />
+        app:layout_constraintTop_toBottomOf="@id/etPwd" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/btnRegister"

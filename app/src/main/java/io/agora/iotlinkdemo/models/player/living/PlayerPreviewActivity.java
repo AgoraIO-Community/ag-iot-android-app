@@ -1,5 +1,10 @@
 package io.agora.iotlinkdemo.models.player.living;
 
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -64,6 +69,11 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 getBinding().viewPager.setCurrentItem(1);
             }
         });
+        getBinding().rBtnControl.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (b) {
+                getBinding().viewPager.setCurrentItem(2);
+            }
+        });
         getBinding().viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
 
             @Override
@@ -72,9 +82,12 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 if (position == 0) {
                     getBinding().rBtnFunction.setChecked(true);
                     AnimUtils.radioGroupLineAnim(getBinding().rBtnFunction, getBinding().lineCheck);
-                } else {
+                } else if (position == 1) {
                     getBinding().rBtnMessage.setChecked(true);
                     AnimUtils.radioGroupLineAnim(getBinding().rBtnMessage, getBinding().lineCheck);
+                } else if (position == 2) {
+                    getBinding().rBtnControl.setChecked(true);
+                    AnimUtils.radioGroupLineAnim(getBinding().rBtnControl, getBinding().lineCheck);
                 }
             }
         });
@@ -87,9 +100,12 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 if (getBinding().viewPager.getCurrentItem() == 0) {
                     ((PlayerFunctionListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
                             .registeredFragments.get(0)).onBtnBack();
-                } else {
+                } else if (getBinding().viewPager.getCurrentItem() == 1) {
                     ((PlayerMessageListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
                             .registeredFragments.get(1)).onBtnBack();
+                } else if (getBinding().viewPager.getCurrentItem() == 2) {
+                    ((PlayerRtmFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                            .registeredFragments.get(2)).onBtnBack();
                 }
                 return true;
             }
@@ -109,6 +125,23 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
         getBinding().viewPager.setUserInputEnabled(false);
         getBinding().radioGroup.setVisibility(View.GONE);
         getBinding().lineCheck.setVisibility(View.GONE);
+    }
+
+    /**
+     * @brief 根据是否有固件版本 更新标题栏小红点
+     */
+    public void updateTitle(boolean newFirmwareVersion) {
+        int resId;
+        if (newFirmwareVersion) {
+            resId = R.mipmap.settingnewver;
+        } else {
+            resId = R.mipmap.setting;
+        }
+
+        Resources res = getBaseContext().getResources();
+        Bitmap newVerBmp = BitmapFactory.decodeResource(res, resId);
+        Drawable drawable = new BitmapDrawable(res, newVerBmp);
+        getBinding().titleView.updateRightIcon(drawable);
     }
 
     @Override

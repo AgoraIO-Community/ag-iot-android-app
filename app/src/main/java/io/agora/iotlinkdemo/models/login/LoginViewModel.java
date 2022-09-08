@@ -2,6 +2,8 @@ package io.agora.iotlinkdemo.models.login;
 
 import static io.agora.iotlink.ErrCode.XOK;
 
+import android.content.Intent;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.agora.baselibrary.base.BaseViewModel;
@@ -10,6 +12,7 @@ import com.agora.baselibrary.utils.ToastUtils;
 import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.event.ExitLoginEvent;
+import io.agora.iotlinkdemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.iotlinkdemo.utils.ErrorToastUtils;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
@@ -21,6 +24,16 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.Nullable;
 
 public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallback {
+    private final String TAG = "IOTLINK/LoginViewModel";
+
+    public static class ErrInfo {
+        public int mErrCode = ErrCode.XOK;
+        public String mErrTips;
+    }
+
+
+    private volatile boolean mUnregistering = false;    // 是否正在注销
+
     public LoginViewModel() {
         EventBus.getDefault().register(this);
     }
@@ -53,154 +66,126 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
         }
     }
 
+
     /**
-     * 获取验证码
+     * @param accountName : 注册账号名
+     * @param password    : 注册密码
+     * @brief 第三方账号注册
      */
-    public void requestVCode(String account, String type) {
-        int ret = AIotAppSdkFactory.getInstance().getAccountMgr().getCode(account, type);
-        if (ret != XOK) {
-            ToastUtils.INSTANCE.showToast("不能获取验证码, 错误码: " + ret);
-            return;
-        }
+    public void accountRegister(String accountName, String password) {
+        ThirdAccountMgr.getInstance().register(accountName, password, new ThirdAccountMgr.IRegisterCallback() {
+            @Override
+            public void onThirdAccountRegisterDone(int errCode, final String errMessage,
+                                                   final String account, final String password) {
+                ErrInfo errInfo = new ErrInfo();
+                errInfo.mErrCode = errCode;
+                errInfo.mErrTips = errMessage;
+                getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_REGISTER_DONE, errInfo);
+            }
+        });
     }
 
     /**
-     * 注册邮箱帐号 onRegisterDone
-     *
-     * @param account  账号
-     * @param password 密码
-     * @param code     验证码
+     * @param accountName : 注销账号名
+     * @param password    : 注销密码
+     * @brief 第三方账号注销
      */
-    public void registerMailAccount(String account, String password, String code) {
-        AIotAppSdkFactory.getInstance().getAccountMgr().register(account, password, code, null, account);
-    }
+    public void accountUnregister(String accountName, String password) {
 
-    /**
-     * 注册手机号帐号 onRegisterDone
-     *
-     * @param account  账号
-     * @param password 密码
-     * @param code     验证码
-     */
-    public void registerPhoneAccount(String account, String password, String code) {
-        AIotAppSdkFactory.getInstance().getAccountMgr().register(account, password, code, account, null);
-    }
-
-    /**
-     * 登录 onLoginDone
-     *
-     * @param account  账号
-     * @param password 密码
-     */
-    public void requestLogin(String account, String password) {
-        int ret = AIotAppSdkFactory.getInstance().getAccountMgr().login(account, password);
-        if (ret != XOK) {
-            ErrorToastUtils.showLoginError(ret);
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL, null);
-        }
-    }
-
-    /**
-     * 退出登录
-     */
-    public void requestLogout() {
+        // 先要进行SDK的登出操作
         SPUtil.Companion.getInstance(AgoraApplication.getInstance()).putString(Constant.ACCOUNT, null);
-        try {
-            AIotAppSdkFactory.getInstance().getAccountMgr().logout();
-        } catch (Exception e) {
-            Log.d("cwtsw", "getAccountMgr() == null");
-        }
-    }
 
-    /*
-     * @brief 注销一个用户账号，触发 onUnregisterDone() 回调
-     */
-    public void unregister() {
-        int ret = AIotAppSdkFactory.getInstance().getAccountMgr().unregister();
-        if (ret != XOK) {
-            ErrorToastUtils.showLoginError(ret);
-            ToastUtils.INSTANCE.showToast("要注销帐号失败 错误码：" + ret);
+        mUnregistering = true;
+        int errCode = AIotAppSdkFactory.getInstance().getAccountMgr().logout();
+        if (errCode != XOK) {
+            Log.e(TAG, "<accountUnregister> fail to logout, errCode=" + errCode);
         }
-    }
 
-    @Override
-    public void onUnregisterDone(int errCode, String account) {
-        if (errCode == ErrCode.XOK) {
-            SPUtil.Companion.getInstance(AgoraApplication.getInstance()).putString(Constant.ACCOUNT, null);
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGOFF_SUCCESS, account);
-        } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGOFF_FAIL, account);
-            ToastUtils.INSTANCE.showToast("注销帐号失败 错误码：" + errCode);
-        }
+        ThirdAccountMgr.getInstance().unregister(accountName, password, new ThirdAccountMgr.IUnregisterCallback() {
+            @Override
+            public void onThirdAccountUnregisterDone(int errCode, final String errMessage,
+                                                     final String account, final String password) {
+                ErrInfo errInfo = new ErrInfo();
+                errInfo.mErrCode = errCode;
+                errInfo.mErrTips = errMessage;
+                getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_UNREGISTER_DONE, errInfo);
+            }
+        });
     }
 
     /**
-     * 重置账号密码，触发 onPasswordResetDone() 回调
-     *
-     * @param accounts :  账号
-     * @param pws      :  密码
-     * @param code     : 新密码
+     * @param accountName 账号
+     * @param password    密码
+     * @brief 第三方账号登录
      */
-    public void passwordReset(String accounts, String pws, String code) {
-        AIotAppSdkFactory.getInstance().getAccountMgr().passwordReset(accounts, pws, code);
-    }
+    public void accountLogin(String accountName, String password) {
 
-    @Override
-    public void onPasswordResetDone(int errCode, String account) {
-        if (errCode == ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_RESET_PWD_SUCCESS, account);
-        } else {
-            ErrorToastUtils.showLoginError(errCode);
-        }
-    }
+        ThirdAccountMgr.getInstance().login(accountName, password, new ThirdAccountMgr.ILoginCallback() {
+            @Override
+            public void onThirdAccountLoginDone(int errCode, final String errMessage,
+                                                final String account, final String password,
+                                                final IAccountMgr.LoginParam loginParam) {
+                ErrInfo errInfo = new ErrInfo();
+                errInfo.mErrCode = errCode;
+                errInfo.mErrTips = errMessage;
 
-    /**
-     * 更改账号密码，触发 onPasswordChangeDone() 回调
-     *
-     * @param oldPassword : 旧密码
-     * @param newPassword : 新密码
-     */
-    public int passwordChange(String oldPassword, String newPassword) {
-        return AIotAppSdkFactory.getInstance().getAccountMgr().passwordChange(oldPassword, newPassword);
-    }
+                if (errCode != ErrCode.XOK) {  // 第三方账号登录失败
+                    getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGIN_DONE, errInfo);
+                    return;
+                }
 
-    @Override
-    public void onPasswordChangeDone(int errCode, String account) {
-        if (errCode != ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_RESET_PWD_FAIL, null);
-            ErrorToastUtils.showLoginError(errCode);
-        } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_RESET_PWD_SUCCESS, null);
-            ToastUtils.INSTANCE.showToast("更换密码成功");
-        }
-    }
-
-    @Override
-    public void onGetCodeDone(int errCode, String account) {
-        if (errCode == ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_V_CODE_SUCCESS, account);
-        } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_V_CODE_FAIL, account);
-            ErrorToastUtils.showLoginError(errCode);
-        }
-    }
-
-    @Override
-    public void onRegisterDone(int errCode, String account) {
-        if (errCode == ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_REGISTER_SUCCESS, account);
-        } else {
-            ErrorToastUtils.showLoginError(errCode);
-        }
+                // SDK登录操作
+                int ret = AIotAppSdkFactory.getInstance().getAccountMgr().login(loginParam);
+                if (ret != ErrCode.XOK) {
+                    errInfo.mErrCode = errCode;
+                    getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGIN_DONE, errInfo);
+                    return;
+                }
+            }
+        });
     }
 
     @Override
     public void onLoginDone(int errCode, String account) {
-        if (errCode == ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_SUCCESS, account);
-        } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL, account);
-            ErrorToastUtils.showLoginError(errCode);
+        Log.d(TAG, "<onLoginDone> errCode=" + errCode
+                + ", account=" + account);
+
+        if (account == null) {
+            ErrInfo errInfo = new ErrInfo();
+            errInfo.mErrCode = ErrCode.XERR_ACCOUNT_LOGIN;
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGIN_DONE, errInfo);
+            return;
         }
+
+        ErrInfo errInfo = new ErrInfo();
+        errInfo.mErrCode = errCode;
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGIN_DONE, errInfo);
+    }
+
+
+    /**
+     * @brief 第三方账号登出
+     */
+    public void accountLogout() {
+        SPUtil.Companion.getInstance(AgoraApplication.getInstance()).putString(Constant.ACCOUNT, null);
+
+        mUnregistering = false;
+        int errCode = AIotAppSdkFactory.getInstance().getAccountMgr().logout();
+        if (errCode != ErrCode.XOK) {
+            ErrInfo errInfo = new ErrInfo();
+            errInfo.mErrCode = errCode;
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGOUT_DONE, errInfo);
+        }
+    }
+
+    @Override
+    public void onLogoutDone(int errCode, String account) {
+        Log.d(TAG, "<onLogoutDone> errCode=" + errCode + ", account=" + account);
+        if (mUnregistering) {   // 注销时的登出不做处理
+            return;
+        }
+        ErrInfo errInfo = new ErrInfo();
+        errInfo.mErrCode = errCode;
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGOUT_DONE, errInfo);
     }
 }

@@ -31,10 +31,10 @@ public class UserAgreementDialog extends BaseDialog<DialogUserAgreementBinding> 
             getOnButtonClickListener().onRightButtonClick();
         });
         getBinding().tvPrivacyPolicy.setOnClickListener(view -> {
-            PagePilotManager.pageWebView("https://iot-console-web.sh.agoralab.co/terms/privacypolicy");
+            PagePilotManager.pageWebView("https://agoralink.sd-rtn.com/terms/privacypolicy");
         });
         getBinding().tvUserAgreement.setOnClickListener(view -> {
-            PagePilotManager.pageWebView("https://iot-console-web.sh.agoralab.co/terms/termsofuse");
+            PagePilotManager.pageWebView("https://agoralink.sd-rtn.com/terms/termsofuse");
         });
     }
 

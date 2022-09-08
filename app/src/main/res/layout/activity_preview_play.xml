@@ -44,22 +44,35 @@
             android:id="@+id/rBtnFunction"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="36dp"
+            android:layout_marginStart="18dp"
             android:button="@null"
             android:checked="true"
             android:text="@string/function"
             android:textColor="@color/grey_to_white"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            app:layout_constraintStart_toStartOf="parent"/>
 
         <androidx.appcompat.widget.AppCompatRadioButton
             android:id="@+id/rBtnMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="36dp"
+            android:layout_marginStart="60dp"
             android:button="@null"
             android:text="@string/message"
             android:textColor="@color/grey_to_white"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            app:layout_constraintStart_toEndOf="@+id/rBtnFunction"/>
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/rBtnControl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="60dp"
+            android:button="@null"
+            android:text="@string/control"
+            android:textColor="@color/grey_to_white"
+            android:textSize="16sp"
+            app:layout_constraintStart_toEndOf="@+id/rBtnMessage"/>
     </RadioGroup>
 
     <View

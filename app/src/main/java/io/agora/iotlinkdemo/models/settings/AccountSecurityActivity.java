@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -14,6 +15,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.listener.ISingleCallback;
+
+import io.agora.iotlink.ErrCode;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
 import io.agora.iotlinkdemo.common.Constant;
@@ -23,6 +26,8 @@ import io.agora.iotlinkdemo.event.UserLogoutEvent;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
+
+import com.agora.baselibrary.utils.SPUtil;
 import com.alibaba.android.arouter.facade.annotation.Route;
 
 import org.greenrobot.eventbus.EventBus;
@@ -36,6 +41,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
      * 登录模块统一ViewModel
      */
     private LoginViewModel phoneLoginViewModel;
+    private AccountSecurityActivity mActivity;
 
     @Override
     protected ActivityAccountSecurityBinding getViewBinding(@NonNull LayoutInflater inflater) {
@@ -46,26 +52,52 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
     public void initView(@Nullable Bundle savedInstanceState) {
         phoneLoginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
         phoneLoginViewModel.setLifecycleOwner(this);
+        mActivity = this;
     }
 
     @Override
     public void initListener() {
-        getBinding().tvChangePassword.setOnClickListener(view -> PagePilotManager.pageChangePassword());
+        getBinding().tvChangePassword.setOnClickListener(view -> {
+            // PagePilotManager.pageChangePassword();
+            popupMessage("当前不支持密码修改功能!");
+        });
         getBinding().btnLogout.setOnClickListener(view -> {
-            phoneLoginViewModel.requestLogout();
-            EventBus.getDefault().post(new UserLogoutEvent());
-            PagePilotManager.pagePhoneLogin();
-            mHealthActivityManager.popActivity();
+            showLoadingView();
+            phoneLoginViewModel.accountLogout();
         });
         getBinding().tvLogOff.setOnClickListener(view -> {
             showRequestSuspensionDialog();
         });
         phoneLoginViewModel.setISingleCallback((var1, var2) -> {
-            if (var1 == Constant.CALLBACK_TYPE_LOGOFF_SUCCESS) {
-                EventBus.getDefault().post(new UserLogoutEvent());
-                PagePilotManager.pagePhoneLogin();
-                mHealthActivityManager.popAllActivity();
-            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    hideLoadingView();
+
+                    if (var1 == Constant.CALLBACK_TYPE_THIRD_LOGOUT_DONE) {
+                        LoginViewModel.ErrInfo errInfo = (LoginViewModel.ErrInfo)var2;
+                        if (errInfo.mErrCode == ErrCode.XOK) {
+                            EventBus.getDefault().post(new UserLogoutEvent());
+                            PagePilotManager.pagePhoneLogin();
+                            mHealthActivityManager.popActivity();
+                        } else {
+                            popupMessage("登出失败！");
+                        }
+
+                    } else if (var1 == Constant.CALLBACK_TYPE_THIRD_UNREGISTER_DONE) {
+                        LoginViewModel.ErrInfo errInfo = (LoginViewModel.ErrInfo)var2;
+                        if (errInfo.mErrCode == ErrCode.XOK) {
+                            EventBus.getDefault().post(new UserLogoutEvent());
+                            PagePilotManager.pagePhoneLogin();
+                            mHealthActivityManager.popActivity();
+                        } else {
+                            popupMessage("注销失败！");
+                        }
+                    }
+                }
+            });
+
+
         });
     }
 
@@ -85,7 +117,10 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
 
                 @Override
                 public void onRightButtonClick() {
-                    phoneLoginViewModel.unregister();
+                    String account = SPUtil.Companion.getInstance(mActivity).getString(Constant.ACCOUNT, null);
+                    String password = SPUtil.Companion.getInstance(mActivity).getString(Constant.PASSWORD, null);
+                    showLoadingView();
+                    phoneLoginViewModel.accountUnregister(account, password);
                 }
             });
         }

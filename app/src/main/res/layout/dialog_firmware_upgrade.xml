@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_full_radius_white_7">
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvFirmUpgradeTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="31dp"
+        android:text="最新版本号: 1.0.0.0"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvFirmUpgradeContent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="50dp"
+        android:layout_marginTop="27dp"
+        android:gravity="center"
+        android:text="更新内容："
+        android:textColor="@color/def_text_color"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvFirmUpgradeTitle" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnFirmUpgradeCancel"
+        style="@style/def_btn_empty"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="20dp"
+        android:text="@string/cancel"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        app:layout_constraintEnd_toStartOf="@id/btnFirmUpgradeUpdate"
+        app:layout_constraintStart_toStartOf="@id/tvFirmUpgradeTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvFirmUpgradeContent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnFirmUpgradeUpdate"
+        style="@style/def_btn_full"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="20dp"
+        android:text="@string/update"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="normal"
+        app:layout_constraintEnd_toEndOf="@id/tvFirmUpgradeTitle"
+        app:layout_constraintStart_toEndOf="@id/btnFirmUpgradeCancel"
+        app:layout_constraintTop_toBottomOf="@id/tvFirmUpgradeContent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

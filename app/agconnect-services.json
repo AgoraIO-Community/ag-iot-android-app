@@ -26,21 +26,21 @@
 		"SG_back":"connect-ws-dra.hispace.dbankcloud.com"
 	},
 	"client":{
-		"cp_id":"12345678901234567890",
-		"product_id":"xxxxxxxxxxxxxxxxxx",
-		"client_id":"xxxxxxxxxxxxxxxxxxxxx",
-		"client_secret":"xxxxxxxxxxxxxxxxxxxxxxxx",
-		"project_id":"xxxxxxxxxxxxxxxx",
-		"app_id":"xxxxxxxxxxxxxxxxxxxxxxx",
-		"api_key":"xxxxxxxxxxxxxxxxxxxxxx",
+		"cp_id":"900086000150206921",
+		"product_id":"99536292102493332",
+		"client_id":"941233308660953600",
+		"client_secret":"A1257351D354A7DC91737AC2621A6D42BAAE699B9F253495FDE2B2CBB93C9C63",
+		"project_id":"99536292102493332",
+		"app_id":"106736987",
+		"api_key":"DAEDACQ2yhnxSOE/VLV1GvY3UQnPAQuTnrIHfRG2yEj1GkVI/4/yjx5QxZD/yXrEdDQXFFdwMGy27qoeEQNbU/S2wLJEDpWfrNO4PA==",
 		"package_name":"io.agora.iotlinkdemo"
 	},
 	"oauth_client":{
-		"client_id":"xxxxxxxxxxx",
+		"client_id":"106736987",
 		"client_type":1
 	},
 	"app_info":{
-		"app_id":"1234567890",
+		"app_id":"106736987",
 		"package_name":"io.agora.iotlinkdemo"
 	},
 	"service":{
@@ -77,15 +77,15 @@
 		{
 			"package_name":"io.agora.iotlinkdemo",
 			"client":{
-				"app_id":"1234567890"
+				"app_id":"106736987"
 			},
 			"app_info":{
 				"package_name":"io.agora.iotlinkdemo",
-				"app_id":"1234567890"
+				"app_id":"106736987"
 			},
 			"oauth_client":{
 				"client_type":1,
-				"client_id":"1234567890"
+				"client_id":"106736987"
 			}
 		}
 	]

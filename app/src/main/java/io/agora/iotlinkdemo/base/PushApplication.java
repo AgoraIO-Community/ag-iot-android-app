@@ -21,6 +21,8 @@ import android.util.Log;
 
 import com.agora.baselibrary.base.BaseApplication;
 //import io.agora.iotlinkdemo.huanxin.EmAgent;
+import io.agora.iotlink.IDeviceMgr;
+import io.agora.iotlinkdemo.huanxin.EmAgent;
 import io.agora.iotlinkdemo.utils.AppStorageUtil;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.IAgoraIotAppSdk;
@@ -44,6 +46,7 @@ public class PushApplication extends BaseApplication {
     private volatile int mAudCodecIndex = 12;   // 12 means opus, it's default value
 
     private IotDevice mLivingDevice;    ///< 当前正在通话的设备
+    private IDeviceMgr.McuVersionInfo mLivingMcuVersion;    ///< 当前正在通话设备的固件版本信息
 
     //////////////////////////////////////////////////////////////////
     ////////////////////// Public Methods ///////////////////////////
@@ -61,6 +64,7 @@ public class PushApplication extends BaseApplication {
 
     @Override
     public void onCreate() {
+        Log.d(TAG, "<onCreate> ==>Enter");
         super.onCreate();
 
         instance = this;
@@ -88,25 +92,7 @@ public class PushApplication extends BaseApplication {
                 return;
             }
         }
-
-
-
-        //
-        // 初始化环信的离线推送
-        //
-//        if (mMetaData != null)
-//        {
-//            EmAgent.EmPushParam  pushParam = new EmAgent.EmPushParam();
-//            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
-//            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
-//            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
-//            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
-//            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
-//            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
-//            pushParam.mVivoAppKey = mMetaData.getString("com.vivo.push.api_key", "");
-//            pushParam.mHuaweiAppId = mMetaData.getString("com.huawei.hms.client.appid", "");
-//            EmAgent.getInstance().initialize(this,  pushParam);
-//        }
+        Log.d(TAG, "<onCreate> <==Exit");
     }
 
 
@@ -138,6 +124,23 @@ public class PushApplication extends BaseApplication {
         }
 
         //
+        // 初始化环信的离线推送
+        //
+        if (mMetaData != null)
+        {
+            EmAgent.EmPushParam  pushParam = new EmAgent.EmPushParam();
+            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
+            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
+            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
+            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
+            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
+            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
+            pushParam.mVivoAppKey = mMetaData.getString("com.vivo.push.api_key", "");
+            pushParam.mHuaweiAppId = mMetaData.getString("com.huawei.hms.client.appid", "");
+            EmAgent.getInstance().initialize(this,  pushParam);
+        }
+
+        //
         //初始化IotAppSdk2.0 引擎
         //
         IAgoraIotAppSdk.InitParam initParam = new IAgoraIotAppSdk.InitParam();
@@ -146,7 +149,7 @@ public class PushApplication extends BaseApplication {
         initParam.mProjectID = mMetaData.getString("PROJECT_ID", "");
         initParam.mMasterServerUrl = mMetaData.getString("MASTER_SERVER_URL", "");
         initParam.mSlaveServerUrl = mMetaData.getString("SALVE_SERVER_URL", "");
-        //initParam.mPusherId = EmAgent.getInstance().getEid();  // 设置离线推送Id
+        initParam.mPusherId = EmAgent.getInstance().getEid();  // 设置离线推送Id
         initParam.mPublishVideo = false;
         initParam.mPublishAudio = false;
         initParam.mSubscribeAudio = true;
@@ -167,5 +170,12 @@ public class PushApplication extends BaseApplication {
         return mLivingDevice;
     }
 
+    public void setLivingMcuVersion(IDeviceMgr.McuVersionInfo mcuVersion) {
+        mLivingMcuVersion = mcuVersion;
+    }
+
+    public IDeviceMgr.McuVersionInfo getLivingMcuVersion() {
+        return mLivingMcuVersion;
+    }
 
 }

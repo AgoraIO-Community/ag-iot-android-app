@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.utils.StringUtils;
+
+import io.agora.iotlink.IotDevice;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
@@ -22,8 +24,6 @@ import com.alibaba.android.arouter.facade.annotation.Route;
 
 /**
  * 共享的设备设置 与DeviceSettingActivity 是同级的
- * <p>
- * 交付测试前sdk 未提供此功能
  */
 @Route(path = PagePathConstant.pageShareDeviceSetting)
 public class ShareDeviceSettingActivity extends BaseViewBindingActivity<ActivityDeviceShareSettingBinding> {
@@ -45,8 +45,10 @@ public class ShareDeviceSettingActivity extends BaseViewBindingActivity<Activity
 
     @Override
     public void requestData() {
-        getBinding().tvDeviceName.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceName);
-        getBinding().tvDeviceIdValue.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceNumber);
+        IotDevice livingDev = AgoraApplication.getInstance().getLivingDevice();
+        getBinding().tvDeviceFromUsername.setText(livingDev.mSharer);
+        getBinding().tvDeviceName.setText(livingDev.mDeviceName);
+        getBinding().tvDeviceIdValue.setText(livingDev.mDeviceID);
     }
 
     @Override

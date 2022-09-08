@@ -12,6 +12,8 @@ import androidx.appcompat.widget.AppCompatTextView;
 
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.event.ResetAddDeviceEvent;
 import io.agora.iotlinkdemo.manager.DevicesListManager;
@@ -21,6 +23,8 @@ import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.IotOutSharer;
+import io.agora.iotlinkdemo.models.login.LoginViewModel;
+import io.agora.iotlinkdemo.thirdpartyaccount.ThirdAccountMgr;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -38,6 +42,13 @@ import java.util.TimerTask;
  * 设备添加连接相关viewModel
  */
 public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallback, IAccountMgr.ICallback {
+    private final String TAG = "IOTLINK/DeviceViewModel";
+
+    public static class ErrInfo {
+        public int mErrCode = ErrCode.XOK;
+        public String mErrTips;
+    }
+
 
     public DeviceViewModel() {
         EventBus.getDefault().register(this);
@@ -98,7 +109,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 //        Log.d("cwtsw", "获取数据列表" + deviceList);
         DevicesListManager.devicesList.clear();
         DevicesListManager.devicesList.addAll(deviceList);
-        Log.d("cwtsw", "mBeforeBindDevList " + mBeforeBindDevList);
+        Log.d(TAG, "mBeforeBindDevList " + mBeforeBindDevList);
         if (deviceList.size() > mBeforeBindDevList.size()) {
             //停止计时
             stopTimer();
@@ -157,10 +168,31 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      * @return 错误码
      */
     public void shareDevice(IotDevice iotDevice, String sharingAccount, int permission, boolean needPeerAgree) {
-        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().shareDevice(iotDevice, sharingAccount, permission, needPeerAgree);
-        if (ret != ErrCode.XOK) {
-            Log.d("cwtsw", "要分享备失败, 错误码: " + ret);
-        }
+
+        // 根据账号名称，查询 accountId
+        ThirdAccountMgr.getInstance().queryId(sharingAccount, new ThirdAccountMgr.IQueryIdCallback() {
+            @Override
+            public void onThirdAccountQueryIdDone(int errCode, final String errMessage,
+                                                  final String accountName, final String accountId) {
+                if (errCode != ErrCode.XOK) {
+                    Log.e(TAG, "<shareDevice.onThirdAccountQueryIdDone> errCode=" + errCode);
+                    DeviceViewModel.ErrInfo errInfo = new DeviceViewModel.ErrInfo();
+                    errInfo.mErrCode = errCode;
+                    errInfo.mErrTips = errMessage;
+                    getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_FAIL, errInfo);
+                    return;
+                }
+
+                // 设备分享操作
+                int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().shareDevice(iotDevice, accountId, permission, needPeerAgree);
+                if (ret != ErrCode.XOK) {
+                    Log.e(TAG, "<shareDevice> failt to shareDevice(), errCode=" + ret);
+                    DeviceViewModel.ErrInfo errInfo = new DeviceViewModel.ErrInfo();
+                    errInfo.mErrCode = ret;
+                    getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_FAIL, errInfo);
+                }
+            }
+        });
     }
 
     /*
@@ -174,12 +206,16 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     @Override
     public void onShareDeviceDone(int errCode, boolean force, final IotDevice iotDevice,
                                   final String sharingAccount, int permission) {
+        Log.e(TAG, "<onShareDeviceDone> errCode=" + errCode
+                + ", sharingAccount" + sharingAccount);
+
         if (errCode == ErrCode.XOK) {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_SUCCESS, null);
-            ToastUtils.INSTANCE.showToast("设备分享成功");
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_SUCCESS, sharingAccount);
+
         } else {
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_FAIL, null);
-            ToastUtils.INSTANCE.showToast("设备分享失败 errCode = " + errCode);
+            DeviceViewModel.ErrInfo errInfo = new DeviceViewModel.ErrInfo();
+            errInfo.mErrCode = errCode;
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_FAIL, errInfo);
         }
     }
 
@@ -233,6 +269,32 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
             ToastUtils.INSTANCE.showToast("取消分享失败");
         }
     }
+
+    /**
+     * @brief 获取固件版本号
+     */
+    public void queryMcuVersion() {
+        IotDevice iotDevice = AgoraApplication.getInstance().getLivingDevice();
+        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().getMcuVersionInfo(iotDevice);
+        if (ret != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("不能获取固件版本, 错误码: " + ret);
+        }
+    }
+
+    @Override
+    public void onGetMcuVerInfoDone(int errCode, final IotDevice iotDevice,
+                                    final IDeviceMgr.McuVersionInfo mcuVerInfo) {
+        if ((errCode != ErrCode.XOK) || (mcuVerInfo == null)) {
+            Log.e(TAG, "<onGetMcuVerInfoDone> [ERROR] errCode=" + errCode);
+            return;
+        }
+
+        Log.d(TAG, "<onGetMcuVerInfoDone> iotDevice=" + iotDevice
+                + ",  mcuVerInfo=" + mcuVerInfo.toString());
+        AgoraApplication.getInstance().setLivingMcuVersion(mcuVerInfo);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_FIRM_GETVERSION, mcuVerInfo);
+    }
+
 
 
     /**
@@ -289,7 +351,9 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     }
 
     public void stopTimer() {
-        mTimer.cancel();
+        if (mTimer != null) {
+            mTimer.cancel();
+        }
     }
 
     private void onMsgTimer1s(Message msg) {

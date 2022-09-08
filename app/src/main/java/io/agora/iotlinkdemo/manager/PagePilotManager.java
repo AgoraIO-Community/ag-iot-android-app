@@ -243,14 +243,14 @@ public class PagePilotManager {
         }
         ARouter.getInstance()
                 .build(PagePathConstant.pagePlayMessage)
-                .withString(Constant.FILE_URL, iotAlarm.mFileUrl)
+                .withString(Constant.FILE_URL, iotAlarm.mVideoUrl)
                 .withString(Constant.FILE_DESCRIPTION, iotAlarm.mDescription)
                 .withString(Constant.MESSAGE_TITLE, title)
                 .withString(
                         Constant.MESSAGE_TIME,
                         StringUtils.INSTANCE.getDetailTime(
                                 "yyyy-MM-dd HH:mm:ss",
-                                Long.parseLong(iotAlarm.mCreatedDate) / 1000
+                                iotAlarm.mTriggerTime / 1000
                         )
                 )
                 .navigation();

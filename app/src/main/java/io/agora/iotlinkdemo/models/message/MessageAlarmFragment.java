@@ -128,8 +128,42 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
                         messageViewModel.markAlarmMessage(list);
                     }
                 }
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer)data;
+                        popupMessage("查询告警消息失败, 错误码: " + errCode);
+                    }
+                });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer) data;
+                        popupMessage("查询告警详情失败, 错误码: " + errCode);
+                    }
+                });
+
             } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        popupMessage("删除告警消息成功!");
+                    }
+                });
                 requestData();
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer)data;
+                        popupMessage("删除告警信息失败, 错误码: " + errCode);
+                    }
+                });
             }
         });
         getBinding().calendarView.setOnDateChangeListener((calendarView, year, month, dayOfMonth) -> {

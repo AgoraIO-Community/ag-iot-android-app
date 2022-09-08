@@ -78,18 +78,6 @@
             android:name=".models.login.ui.WebViewActivity"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".models.login.ui.PhoneRegisterActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".models.login.ui.SelectCountryActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".models.login.ui.InputVCodeActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".models.login.ui.SetPwdActivity"
-            android:screenOrientation="portrait" />
-        <activity
             android:name=".models.device.add.DeviceAddStep2ResetActivity"
             android:screenOrientation="portrait" />
         <activity
@@ -123,9 +111,6 @@
             android:screenOrientation="portrait" />
         <activity
             android:name=".models.settings.AccountSecurityActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".models.settings.ChangePasswordActivity"
             android:screenOrientation="portrait" />
         <activity
             android:name=".models.settings.SystemPermissionSettingActivity"
@@ -219,44 +204,44 @@
             android:value="@string/SALVE_SERVER_URL" />
 
 
-<!--        &lt;!&ndash; ==================== 离线推送账号配置 BEGIN ==================== &ndash;&gt;-->
-<!--            &lt;!&ndash; 环信账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="EASEMOB_APPKEY"-->
-<!--                android:value="@string/EASEMOB_APPKEY" />-->
+        <!-- ==================== 离线推送账号配置 BEGIN ==================== -->
+            <!-- 环信账号配置 -->
+            <meta-data
+                android:name="EASEMOB_APPKEY"
+                android:value="@string/EASEMOB_APPKEY" />
 
-<!--            &lt;!&ndash; Mi账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.mi.push.api_key"-->
-<!--                android:value="@string/MI_PUSH_APPKEY" />-->
-<!--            <meta-data-->
-<!--                android:name="com.mi.push.app_id"-->
-<!--                android:value="@string/MI_PUSH_APPID" />-->
+            <!-- Mi账号配置 -->
+            <meta-data
+                android:name="com.mi.push.api_key"
+                android:value="@string/MI_PUSH_APPKEY" />
+            <meta-data
+                android:name="com.mi.push.app_id"
+                android:value="@string/MI_PUSH_APPID" />
 
-<!--            &lt;!&ndash;华为账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.huawei.hms.client.appid"-->
-<!--                android:value="@string/HUAWEI_PUSH_APPKID" />-->
-<!--            <meta-data-->
-<!--                android:name="push_kit_auto_init_enabled"-->
-<!--                android:value="true"/>-->
+            <!--华为账号配置 -->
+            <meta-data
+                android:name="com.huawei.hms.client.appid"
+                android:value="@string/HUAWEI_PUSH_APPKID" />
+            <meta-data
+                android:name="push_kit_auto_init_enabled"
+                android:value="true"/>
 
-<!--            &lt;!&ndash; Oppo账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.oppo.push.api_key"-->
-<!--                android:value="@string/OPPO_PUSH_APPKEY" />-->
-<!--            <meta-data-->
-<!--                android:name="com.oppo.push.app_secret"-->
-<!--                android:value="@string/OPPO_PUSH_APPSECRET" />-->
+            <!-- Oppo账号配置 -->
+            <meta-data
+                android:name="com.oppo.push.api_key"
+                android:value="@string/OPPO_PUSH_APPKEY" />
+            <meta-data
+                android:name="com.oppo.push.app_secret"
+                android:value="@string/OPPO_PUSH_APPSECRET" />
 
-<!--            &lt;!&ndash; VIVO账号配置 &ndash;&gt;-->
-<!--            <meta-data-->
-<!--                android:name="com.vivo.push.api_key"-->
-<!--                android:value="@string/VIVO_PUSH_APPKEY" />-->
-<!--            <meta-data-->
-<!--                android:name="com.vivo.push.app_id"-->
-<!--                android:value="@integer/VIVO_PUSH_APPID" />-->
-<!--        &lt;!&ndash; ==================== 离线推送账号配置 END ==================== &ndash;&gt;-->
+            <!-- VIVO账号配置 -->
+            <meta-data
+                android:name="com.vivo.push.api_key"
+                android:value="@string/VIVO_PUSH_APPKEY" />
+            <meta-data
+                android:name="com.vivo.push.app_id"
+                android:value="@integer/VIVO_PUSH_APPID" />
+        <!-- ==================== 离线推送账号配置 END ==================== -->
 
 
 
@@ -362,12 +347,12 @@
 
 
 
-    <!-- targetSdkVersion是30或者更高版本时，需要添加<queries>标签，使应用可以访问HMS Core（APK） -->
-        <queries>
-            <intent>
-                <action android:name="com.huawei.hms.core.aidlservice" />
-            </intent>
-        </queries>
-    <!-- HMS Core（APK）访问配置 end-->
+<!--    &lt;!&ndash; targetSdkVersion是30或者更高版本时，需要添加<queries>标签，使应用可以访问HMS Core（APK） &ndash;&gt;-->
+<!--        <queries>-->
+<!--            <intent>-->
+<!--                <action android:name="com.huawei.hms.core.aidlservice" />-->
+<!--            </intent>-->
+<!--        </queries>-->
+<!--    &lt;!&ndash; HMS Core（APK）访问配置 end&ndash;&gt;-->
 
 </manifest>

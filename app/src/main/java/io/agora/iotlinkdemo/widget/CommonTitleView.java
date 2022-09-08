@@ -213,6 +213,10 @@ public final class CommonTitleView extends ConstraintLayout {
         }
     }
 
+    public void updateRightIcon(final Drawable drawableRight) {
+        this.binding.ivRightIcon.setImageDrawable(drawableRight);
+    }
+
     @JvmOverloads
     public CommonTitleView(@NotNull Context context, @Nullable AttributeSet attrs) {
         this(context, attrs, 0, 4, (DefaultConstructorMarker) null);

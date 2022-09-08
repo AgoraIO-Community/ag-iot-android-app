@@ -90,7 +90,44 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
                 if (data instanceof IotAlarm) {
                     PagePilotManager.pagePlayMessage((IotAlarm) data);
                 }
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer)data;
+                        popupMessage("查询通知消息失败, 错误码: " + errCode);
+                    }
+                });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer) data;
+                        popupMessage("查询通知消息数量失败, 错误码: " + errCode);
+                    }
+                });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer) data;
+                        popupMessage("标记通知消息已读失败, 错误码: " + errCode);
+                    }
+                });
+                requestData();
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        popupMessage("标记通知消息已读成功！");
+                    }
+                });
             }
+
         });
         getBinding().btnEdit.setOnClickListener(view -> {
             changeEditStatus(!messageNotifyAdapter.isEdit);

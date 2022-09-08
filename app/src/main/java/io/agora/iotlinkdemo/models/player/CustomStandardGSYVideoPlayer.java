@@ -3,11 +3,11 @@ package io.agora.iotlinkdemo.models.player;
 import android.content.Context;
 import android.media.AudioManager;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.agora.baselibrary.listener.ISingleCallback;
-import io.agora.iotlinkdemo.common.Constant;
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
+
+import io.agora.iotlinkdemo.common.Constant;
 
 public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
     public ISingleCallback<Integer, Object> iSingleCallback;
@@ -85,7 +85,7 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
     }
 
     @Override
-    protected void setProgressAndTime(int progress, int secProgress, int currentTime, int totalTime, boolean forceChange) {
+    protected void setProgressAndTime(long progress, long secProgress, long currentTime, long totalTime, boolean forceChange) {
         if (iSingleCallback != null) {
             iSingleCallback.onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_CURRENT_PROGRESS, progress);
             iSingleCallback.onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_SEC_PROGRESS, secProgress);

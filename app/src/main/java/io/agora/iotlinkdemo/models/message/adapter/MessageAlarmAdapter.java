@@ -36,7 +36,7 @@ public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
     public void onBindViewHolder(@NonNull CommonViewHolder holder, int position) {
         IotAlarm iotAlarm = getDatas().get(position);
         if (iotAlarm != null) {
-            GlideApp.with(getMContext()).load(iotAlarm.mFileUrl).placeholder(R.mipmap.icon_deft).into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
+            GlideApp.with(getMContext()).load(iotAlarm.mVideoUrl).placeholder(R.mipmap.icon_deft).into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
             if (iotAlarm.mMessageType == 0) {
                 holder.setText(R.id.tvMsgTitle, "声音检测");
             } else if (iotAlarm.mMessageType == 1) {
@@ -47,7 +47,7 @@ public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
                 holder.setText(R.id.tvMsgTitle, "语音告警");
             }
             holder.setText(R.id.tvMsgDesc, iotAlarm.mDescription);
-            holder.setText(R.id.tvMsgTime, StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", Long.parseLong(iotAlarm.mCreatedDate) / 1000));
+            holder.setText(R.id.tvMsgTime, StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", iotAlarm.mTriggerTime / 1000));
             holder.setText(R.id.tvMsgFrom, "来自设备 " + StringUtils.INSTANCE.getBase64String(iotAlarm.mDeviceName));
             if (isEdit) {
                 holder.setVisible(R.id.cbSelect, View.VISIBLE);

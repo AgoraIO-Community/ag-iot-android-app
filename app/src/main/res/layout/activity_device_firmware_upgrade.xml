@@ -11,41 +11,68 @@
         app:ctv_centerText="@string/firmware_upgrade"
         tools:ignore="MissingConstraints" />
 
+
     <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvTips1"
+        android:id="@+id/tvUpdateTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="190dp"
-        android:text="@string/updating"
-        android:textColor="@color/def_text_color"
+        android:layout_marginTop="30dp"
+        android:text="最新版本号: 1.0.0.0"
+        android:textColor="@color/black"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_view" />
+        app:layout_constraintTop_toBottomOf="@+id/title_view" />
 
     <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvTips2"
+        android:id="@+id/tvUpdateContent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="50dp"
+        android:layout_marginTop="30dp"
+        android:gravity="center"
+        android:text="更新内容："
+        android:textColor="@color/def_text_color"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvUpdateTitle" />
+
+    <ProgressBar
+        android:id="@+id/pbUpdateProgress"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:layout_marginTop="40dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvUpdateContent" />
+
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTipsUpdating"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80dp"
+        android:text="@string/updating"
+        android:textColor="@color/def_text_color"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pbUpdateProgress" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvTipsImportant"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="70dp"
-        android:layout_marginTop="240dp"
+        android:layout_marginTop="30dp"
         android:text="@string/important_tips1"
         android:textColor="@color/red_e0"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_view" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnCheckUpdate"
-        style="@style/def_btn_full"
-        android:layout_width="285dp"
-        android:layout_height="56dp"
-        android:layout_marginBottom="106dp"
-        android:text="@string/check_update"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/tvTipsUpdating" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

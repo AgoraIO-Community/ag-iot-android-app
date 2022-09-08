@@ -6,10 +6,10 @@
     <string name="PROJECT_ID">your_project_id</string>
 
     <!-- 配置灵隼服务Master Server -->
-    <string name="MASTER_SERVER_URL">your_master_server</string>
+    <string name="MASTER_SERVER_URL">https://app.agoralink-iot-cn.sd-rtn.com</string>
 
     <!-- 配置灵隼服务Slave Server -->
-    <string name="SALVE_SERVER_URL">your_slave_serveri</string>
+    <string name="SALVE_SERVER_URL">https://api.agora.io/agoralink/cn/api</string>
 
     <!-- 配置环信SDK的AppId -->
     <string name="EASEMOB_APPKEY">your_easemob_appkey</string>
@@ -31,7 +31,7 @@
     <string name="VIVO_PUSH_APPKEY"></string>
 
     <!-- 配置华为手机离线推送参数，注意‘appid=’不要删除 -->
-    <string name="HUAWEI_PUSH_APPKID">appid=</string>
+    <string name="HUAWEI_PUSH_APPKID"></string>
 
 
 </resources>

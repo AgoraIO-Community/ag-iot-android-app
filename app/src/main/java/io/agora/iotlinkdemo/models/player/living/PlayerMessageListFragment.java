@@ -145,7 +145,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT) {
                 if (data instanceof IotAlarm) {
                     currentIotAlarm = (IotAlarm) data;
-                    setGsyPlayerInfo(((IotAlarm) data).mFileUrl, "");
+                    setGsyPlayerInfo(((IotAlarm) data).mVideoUrl, "");
                     getBinding().gsyPlayer.startPlay();
                     getBinding().ivPlaying.post(() -> {
                         getBinding().ivPlaying.setSelected(true);
@@ -155,8 +155,42 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
                     });
                     isPlaying = true;
                 }
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer)data;
+                        popupMessage("查询告警消息失败, 错误码: " + errCode);
+                    }
+                });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer) data;
+                        popupMessage("查询告警详情失败, 错误码: " + errCode);
+                    }
+                });
+
             } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        popupMessage("删除告警消息成功!");
+                    }
+                });
                 requestMsgData();
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int errCode = (Integer)data;
+                        popupMessage("删除告警信息失败, 错误码: " + errCode);
+                    }
+                });
             }
         });
         previewMessageAdapter.setMRVItemClickListener((view, position, data) -> {
@@ -166,14 +200,18 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         });
         getBinding().gsyPlayer.iSingleCallback = (type, data) -> {
             if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_PROGRESS) {
-                getBinding().pbPlayProgress.setProgress((int) data);
-                getBinding().pbPlayProgressFull.setProgress((int) data);
+                long progress = (Long)data;
+                getBinding().pbPlayProgress.setProgress((int) progress);
+                getBinding().pbPlayProgressFull.setProgress((int) progress);
+
             } else if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_TIME) {
-                getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS((int) data / 1000));
-                getBinding().tvCurrentTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS((int) data / 1000));
+                getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS((long) data / 1000));
+                getBinding().tvCurrentTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS((long) data / 1000));
+
             } else if (type == Constant.CALLBACK_TYPE_PLAYER_TOTAL_TIME) {
-                getBinding().tvTotalTime.setText(StringUtils.INSTANCE.getDurationTimeSS((int) data / 1000));
-                getBinding().tvTotalTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS((int) data / 1000));
+                getBinding().tvTotalTime.setText(StringUtils.INSTANCE.getDurationTimeSS((long) data / 1000));
+                getBinding().tvTotalTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS((long) data / 1000));
+
             }
         };
 
@@ -244,7 +282,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
+                long time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
                 getBinding().gsyPlayer.getGSYVideoManager().seekTo(time);
             }
         });
@@ -261,7 +299,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
+                long time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
                 getBinding().gsyPlayer.getGSYVideoManager().seekTo(time);
             }
         });

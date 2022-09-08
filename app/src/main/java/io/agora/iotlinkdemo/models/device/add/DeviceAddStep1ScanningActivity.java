@@ -149,6 +149,8 @@ public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<Acti
         Log.d("cwtsw", "goNextStep hmsScans = " + hmsScans);
         try {
             if (hmsScans != null && hmsScans.length > 0 && hmsScans[0] != null && !TextUtils.isEmpty(hmsScans[0].getOriginalValue())) {
+                Log.d("cwtsw", "<goNextStep> originalValue=" + hmsScans[0].originalValue
+                                + ", showResult=" + hmsScans[0].showResult);
                 QRBean qrBean = GsonUtil.Companion.getInstance().fromJson(hmsScans[0].showResult, QRBean.class);
                 if (TextUtils.isEmpty(qrBean.c) || TextUtils.isEmpty(qrBean.k)) {
                     ToastUtils.INSTANCE.showToast("二维码不正确");

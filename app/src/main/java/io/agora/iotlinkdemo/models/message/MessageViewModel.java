@@ -1,5 +1,8 @@
 package io.agora.iotlinkdemo.models.message;
 
+import android.content.Context;
+import android.util.Log;
+
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
 import io.agora.iotlinkdemo.common.Constant;
@@ -18,6 +21,8 @@ import java.util.Locale;
 
 public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallback, IDevMessageMgr.ICallback {
 
+    private final String TAG = "IOTLINK/MsgViewModel";
+
     public IAlarmMgr.QueryParam queryParam;
     public IDevMessageMgr.QueryParam queryDevParam;
 
@@ -31,7 +36,6 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
         queryParam.mEndDate = endDateToString(new CustomDate());
         //消息类型
         queryParam.mMsgStatus = -1;
-
 
         queryDevParam = new IDevMessageMgr.QueryParam();
         List<IotDevice> mBindDevList = AIotAppSdkFactory.getInstance().getDeviceMgr().getBindDevList();
@@ -134,7 +138,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onAlarmMarkDone(int errCode, List<Long> markedIdList) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("标记告警已读失败, 错误码: " + errCode);
+            //ToastUtils.INSTANCE.showToast("标记告警已读失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG, null);
             requestAlarmMgrCount();
@@ -153,7 +158,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onDevMessageMarkDone(int errCode, List<Long> markedIdList) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("标记告警已读失败, 错误码: " + errCode);
+//            ToastUtils.INSTANCE.showToast("标记通知已读失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG, null);
 //            requestNotifyMgrCount();
@@ -163,7 +169,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onAlarmNumberQueryDone(int errCode, IAlarmMgr.QueryParam queryParam, long alarmNumber) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("查询告警消息数量失败, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("查询告警消息数量失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_COUNT_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_COUNT_RESULT, alarmNumber);
         }
@@ -172,7 +179,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onDevMessageNumberQueryDone(int errCode, IDevMessageMgr.QueryParam queryParam, long devMsgNumber) {
         if (errCode != ErrCode.XOK && errCode != -110005) {
-            ToastUtils.INSTANCE.showToast("查询通知消息数量失败, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("查询通知消息数量失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_RESULT, devMsgNumber);
         }
@@ -191,7 +199,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onAlarmPageQueryDone(int errCode, IAlarmMgr.QueryParam queryParam, IotAlarmPage alarmPage) {
         if (errCode != ErrCode.XOK && errCode != ErrCode.XERR_HTTP_JSON_PARSE) {
-            ToastUtils.INSTANCE.showToast("查询告警消息失败, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("查询告警消息失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_RESULT, alarmPage);
         }
@@ -210,9 +219,10 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onAlarmDeleteDone(int errCode, List<Long> deletedIdList) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("删除告警消息, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("删除告警消息, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL, (Integer)errCode);
         } else {
-            ToastUtils.INSTANCE.showToast("删除告警消息成功");
+        //    ToastUtils.INSTANCE.showToast("删除告警消息成功");
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT, null);
         }
     }
@@ -236,7 +246,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     public void onDevMessagePageQueryDone(int errCode, final IDevMessageMgr.QueryParam queryParam,
                                           final IotDevMsgPage devMsgPage) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("查询通知消息失败, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("查询通知消息失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_RESULT, devMsgPage);
         }
@@ -265,7 +276,8 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     @Override
     public void onAlarmInfoQueryDone(int errCode, IotAlarm iotAlarm) {
         if (errCode != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("获取 告警消息 详情失败, 错误码: " + errCode);
+        //    ToastUtils.INSTANCE.showToast("获取 告警消息 详情失败, 错误码: " + errCode);
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL, (Integer)errCode);
         } else {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT, iotAlarm);
         }

@@ -13,3 +13,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AgoraLink"
 include ':app'
+include ':iotsdk20'

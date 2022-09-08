@@ -56,10 +56,13 @@ public class DeviceShareUserDetailActivity extends BaseViewBindingActivity<Activ
         deviceViewModel.setLifecycleOwner(this);
         iotOutSharer = GsonUtil.Companion.getInstance().fromJson(iotOutSharerStr, IotOutSharer.class);
         GlideApp.with(this).load(iotOutSharer.mAvatar).error(R.mipmap.userimage).into(getBinding().ivUserAvatar);
+
         if (!TextUtils.isEmpty(iotOutSharer.mPhone)) {
             getBinding().tvPhone.setText(StringUtils.INSTANCE.formatAccount(iotOutSharer.mPhone));
-        } else {
+        } else if (!TextUtils.isEmpty(iotOutSharer.mEmail)) {
             getBinding().tvPhone.setText(iotOutSharer.mEmail);
+        } else {
+            getBinding().tvPhone.setText(iotOutSharer.mAppUserId);
         }
     }
 

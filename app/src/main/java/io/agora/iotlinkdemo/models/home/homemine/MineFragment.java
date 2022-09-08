@@ -20,6 +20,8 @@ import io.agora.iotlinkdemo.manager.DevicesListManager;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.usercenter.UserInfoViewModel;
 import io.agora.iotlink.IAccountMgr;
+import io.agora.iotlinkdemo.thirdpartyaccount.ThirdAccountMgr;
+
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 
@@ -43,6 +45,10 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
 
     @Override
     public void initListener() {
+
+        String accountName = ThirdAccountMgr.getInstance().getLoginAccountName();
+        getBinding().tvUserMobile.setText(accountName);
+
         getBinding().vToEdit.setOnClickListener(view -> {
             if (NetUtils.INSTANCE.isNetworkConnected()) {
                 PagePilotManager.pageUserInfo();
@@ -71,13 +77,9 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
     private void setUserInfo(IAccountMgr.UserInfo userInfo) {
         if (userInfo == null) return;
         getBinding().tvUserMobile.post(() -> {
-            if (!TextUtils.isEmpty(userInfo.mName)) {
-                getBinding().tvUserMobile.setText(userInfo.mName);
-            } else if (!TextUtils.isEmpty(userInfo.mPhoneNumber)) {
-                getBinding().tvUserMobile.setText(StringUtils.INSTANCE.formatAccount(userInfo.mPhoneNumber));
-            } else if (!TextUtils.isEmpty(userInfo.mEmail)) {
-                getBinding().tvUserMobile.setText(userInfo.mEmail);
-            }
+            String accountName = ThirdAccountMgr.getInstance().getLoginAccountName();
+            getBinding().tvUserMobile.setText(accountName);
+
             int count = DevicesListManager.deviceSize;
             getBinding().tvDeviceCount.setText(count + " 台设备");
             GlideApp.with(this).load(userInfo.mAvatar).error(R.mipmap.userimage)

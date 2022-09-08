@@ -24,7 +24,7 @@ public class WebViewActivity extends BaseViewBindingActivity<ActivityWebviewBind
      */
     @JvmField
     @Autowired(name = Constant.URL)
-    String url = "https://iot-console-web.sh.agoralab.co/terms/termsofuse";
+    String url = "https://agoralink.sd-rtn.com/terms/termsofuse";
 
 
     @Override

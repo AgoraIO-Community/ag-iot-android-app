@@ -28,8 +28,7 @@ import com.alibaba.android.arouter.facade.annotation.Route;
 
 /**
  * 添加共享给其他用户
- * <p>
- * 交付测试前sdk 未提供此功能
+ *
  */
 @Route(path = PagePathConstant.pageDeviceShareToUserAdd)
 public class DeviceShareAddUserActivity extends BaseViewBindingActivity<ActivityDeviceAddUserBinding> {
@@ -62,12 +61,33 @@ public class DeviceShareAddUserActivity extends BaseViewBindingActivity<Activity
             PagePilotManager.pageSelectCountry(this);
         });
         getBinding().tvAccount.setOnClickListener(view -> showEditNameDialog());
-        getBinding().btnFinish.setOnClickListener(view -> deviceViewModel.shareDevice(AgoraApplication.getInstance().getLivingDevice(),
-                getBinding().tvAccountValue.getText().toString(), 2, false));
+        getBinding().btnFinish.setOnClickListener(view -> {
+            showLoadingView();
+            deviceViewModel.shareDevice(AgoraApplication.getInstance().getLivingDevice(),
+                getBinding().tvAccountValue.getText().toString(), 2, false);
+        });
+
         deviceViewModel.setISingleCallback((type, data) -> {
-            if (type == Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_SUCCESS) {
-                mHealthActivityManager.popActivity();
-            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    hideLoadingView();
+
+                    if (type == Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_SUCCESS) {
+                        String sharingAccount = (String)data;
+                        ToastUtils.INSTANCE.showToast("设备分享成功，对方用户账号Id=" + sharingAccount);
+                        mHealthActivityManager.popActivity();
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_SHARE_TO_FAIL) {
+                        DeviceViewModel.ErrInfo errInfo = (DeviceViewModel.ErrInfo)data;
+                        if (errInfo.mErrTips != null) {
+                            ToastUtils.INSTANCE.showToast("设备分享失败, " + errInfo.mErrTips);
+                        } else {
+                            ToastUtils.INSTANCE.showToast("设备分享失败, 错误码=" + errInfo.mErrCode);
+                        }
+                    }
+                }
+            });
         });
     }
 
@@ -90,19 +110,7 @@ public class DeviceShareAddUserActivity extends BaseViewBindingActivity<Activity
                 if (integer == 0) {
                     if (o instanceof String) {
                         String account = (String) o;
-                        if (countryBean == null || countryBean.countryId == 10) {
-                            if (!StringUtils.INSTANCE.checkPhoneNum(account)) {
-                                ToastUtils.INSTANCE.showToast("请输入正确手机号");
-                            } else {
-                                getBinding().tvAccountValue.setText(account);
-                            }
-                        } else {
-                            if (!StringUtils.INSTANCE.checkEmailFormat(account)) {
-                                ToastUtils.INSTANCE.showToast("请输入正确邮箱");
-                            } else {
-                                getBinding().tvAccountValue.setText(account);
-                            }
-                        }
+                        getBinding().tvAccountValue.setText(account);
                         if (!TextUtils.isEmpty(getBinding().tvAccountValue.getText().toString())) {
                             getBinding().btnFinish.setEnabled(true);
                         }
@@ -116,15 +124,16 @@ public class DeviceShareAddUserActivity extends BaseViewBindingActivity<Activity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 100) {
-            if (resultCode == RESULT_OK) {
-                CountryBean countryBean = (CountryBean) data.getSerializableExtra(Constant.COUNTRY);
-                if (countryBean != null) {
-                    this.countryBean = countryBean;
-                    getBinding().tvCountryValue.setText(countryBean.countryName);
-                }
-            }
-        }
+        // 最新版本不能调整国家
+//        if (requestCode == 100) {
+//            if (resultCode == RESULT_OK) {
+//                CountryBean countryBean = (CountryBean) data.getSerializableExtra(Constant.COUNTRY);
+//                if (countryBean != null) {
+//                    this.countryBean = countryBean;
+//                    getBinding().tvCountryValue.setText(countryBean.countryName);
+//                }
+//            }
+//        }
     }
 
     @Override

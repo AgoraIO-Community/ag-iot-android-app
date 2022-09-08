@@ -142,13 +142,24 @@
         android:id="@+id/tvIsLastVersion"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="26dp"
+        android:layout_marginEnd="100dp"
         android:text="@string/is_the_latest_version"
         android:textColor="@color/black_50_percent"
         android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@id/tvDeviceFirmwareUpgrade"
-        app:layout_constraintEnd_toEndOf="@id/tvDeviceFirmwareUpgrade"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvDeviceFirmwareUpgrade" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivNeedUpgrade"
+        android:visibility="gone"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:layout_marginStart="10dp"
+        android:src="@mipmap/redpoint"
+        app:layout_constraintBottom_toBottomOf="@id/tvDeviceFirmwareUpgrade"
+        app:layout_constraintStart_toEndOf="@id/tvIsLastVersion"
+        app:layout_constraintTop_toTopOf="@id/tvDeviceFirmwareUpgrade"    />
 
     <View
         android:layout_width="0dp"

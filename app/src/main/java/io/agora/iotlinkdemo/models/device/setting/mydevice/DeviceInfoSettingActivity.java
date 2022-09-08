@@ -47,7 +47,7 @@ public class DeviceInfoSettingActivity extends BaseViewBindingActivity<ActivityD
     @Override
     public void requestData() {
         getBinding().tvDeviceName.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceName);
-        getBinding().tvDeviceIDValue.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceNumber);
+        getBinding().tvDeviceIDValue.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceID);
     }
 
     @Override

@@ -111,11 +111,12 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         getBinding().gsyPlayer.iSingleCallback = (type, data) -> {
             getBinding().gsyPlayer.post(() -> {
                 if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_PROGRESS) {
-                    getBinding().pbPlayProgress.setProgress((int) data);
+                    long progress = (Long)data;
+                    getBinding().pbPlayProgress.setProgress((int) progress);
                 } else if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_TIME) {
-                    getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS((int) ((int) data / 1000f)));
+                    getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS((long)data / 1000));
                 } else if (type == Constant.CALLBACK_TYPE_PLAYER_TOTAL_TIME) {
-                    getBinding().tvTotalTime.setText(StringUtils.INSTANCE.getDurationTimeSS((int) ((int) data / 1000f)));
+                    getBinding().tvTotalTime.setText(StringUtils.INSTANCE.getDurationTimeSS((long)data / 1000));
                 }
             });
         };
@@ -160,7 +161,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
+                long time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
                 getBinding().gsyPlayer.getGSYVideoManager().seekTo(time);
             }
         });

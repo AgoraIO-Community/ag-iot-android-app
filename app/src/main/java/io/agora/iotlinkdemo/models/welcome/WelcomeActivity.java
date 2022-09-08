@@ -18,6 +18,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.utils.SPUtil;
+
+import io.agora.iotlink.ErrCode;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
@@ -26,8 +28,10 @@ import io.agora.iotlinkdemo.databinding.ActivityWelcomeBinding;
 import io.agora.iotlinkdemo.dialog.CommonDialog;
 import io.agora.iotlinkdemo.dialog.UserAgreementDialog;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
+import io.agora.iotlinkdemo.models.home.MainActivity;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
 import io.agora.iotlink.AIotAppSdkFactory;
+import io.agora.iotlinkdemo.models.login.ui.PhoneLoginActivity;
 
 public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBinding> {
     private static final String TAG = "LINK/WelcomeAct";
@@ -36,17 +40,19 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     // 界面流程状态
     //
     private static final int UI_STATE_IDLE = 0x0000;        ///< 空闲状态
-    private static final int UI_STATE_USRAGREE = 0x0001;    ///< 隐私协议
-    private static final int UI_STATE_OVERLAYWND = 0x0002;  ///< 检测悬浮窗权限
-    private static final int UI_STATE_LOGIN = 0x0003;       ///< 处理登录
+    private static final int UI_STATE_INIT = 0x0001;        ///< 正在初始化
+    private static final int UI_STATE_USRAGREE = 0x0002;    ///< 隐私协议
+    private static final int UI_STATE_OVERLAYWND = 0x0003;  ///< 检测悬浮窗权限
+    private static final int UI_STATE_LOGIN = 0x0004;       ///< 处理登录
 
 
     //
     // message Id
     //
-    private static final int MSGID_CHECK_USRAGREE = 0x1001;    ///< 检测隐私协议是否同意
-    private static final int MSGID_CHECK_OVERLAYWND = 0x1002;  ///< 检测悬浮窗权限
-    private static final int MSGID_HANDLE_LOGIN = 0x1003;      ///< 处理登录
+    private static final int MSGID_ENGINE_INIT = 0x1001;       ///< 初始化离线推送和整个SDK
+    private static final int MSGID_CHECK_USRAGREE = 0x1002;    ///< 检测隐私协议是否同意
+    private static final int MSGID_CHECK_OVERLAYWND = 0x1003;  ///< 检测悬浮窗权限
+    private static final int MSGID_HANDLE_LOGIN = 0x1004;      ///< 处理登录
 
 
 
@@ -79,19 +85,7 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "<onCreate>");
-
-        // 初始化SDK引擎
-        AgoraApplication appInstance = (AgoraApplication) getApplication();
-        appInstance.initializeEngine();
-
-        // 创建登录处理模型
-        phoneLoginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
-        phoneLoginViewModel.setLifecycleOwner(this);
-        phoneLoginViewModel.setISingleCallback((var1, var2) -> {
-            hideLoadingView();
-            onCallbackLoginDone(var1, (String)var2);
-        });
+        Log.d(TAG, "<onCreate> ==>Enter");
 
         // 创建主线程消息处理
         mMsgHandler = new Handler(getMainLooper())
@@ -102,6 +96,10 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             {
                 switch (msg.what)
                 {
+                    case MSGID_ENGINE_INIT:
+                        onMsgEngineInitialie();
+                        break;
+
                     case MSGID_CHECK_USRAGREE:
                         onMsgCheckUserAgreement();
                         break;
@@ -117,16 +115,17 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             }
         };
 
-        // 开始处理用户同意
+        // 开始初始化引擎
         mUiState = UI_STATE_IDLE;
-        mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_USRAGREE, 200);
+        mMsgHandler.sendEmptyMessageDelayed(MSGID_ENGINE_INIT, 100);
+
+        Log.d(TAG, "<onCreate> <==Exit");
     }
 
     @Override
     protected void onStart() {
         Log.d(TAG, "<onStart>");
         super.onStart();
-        phoneLoginViewModel.onStart();
 
         if ((mUiState == UI_STATE_OVERLAYWND) && (mOverlyWndSetted)) {
             mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
@@ -137,7 +136,10 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     protected void onStop() {
         Log.d(TAG, "<onStop>");
         super.onStop();
-        phoneLoginViewModel.onStop();
+
+        if (phoneLoginViewModel != null) {
+            phoneLoginViewModel.onStop();
+        }
     }
 
     @Override
@@ -153,6 +155,33 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
         }
     }
 
+
+    ////////////////////////////////////////////////////////////////////
+    ////////////////// Methods for Engine Initialize ///////////////////
+    ///////////////////////////////////////////////////////////////////
+    void onMsgEngineInitialie() {
+        Log.d(TAG, "<onMsgEngineInitialie> ==>Enter");
+        // 初始化SDK引擎
+        AgoraApplication appInstance = (AgoraApplication) getApplication();
+        appInstance.initializeEngine();
+
+        // 创建登录处理模型
+        phoneLoginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
+        phoneLoginViewModel.setLifecycleOwner(this);
+        phoneLoginViewModel.setISingleCallback((var1, var2) -> {
+            hideLoadingView();
+            if (var1 == Constant.CALLBACK_TYPE_THIRD_LOGIN_DONE) {
+                LoginViewModel.ErrInfo errInfo = (LoginViewModel.ErrInfo)var2;
+                onCallbackLoginDone(errInfo.mErrCode);
+            }
+        });
+        phoneLoginViewModel.onStart();
+
+        // 开始处理隐私协议
+        mUiState = UI_STATE_USRAGREE;
+        mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_USRAGREE, 100);
+        Log.d(TAG, "<onMsgEngineInitialie> <==Exit");
+    }
 
     ////////////////////////////////////////////////////////////////////
     ////////////////// Methods for User Agreement /////////////////////
@@ -257,74 +286,28 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             return;
         }
 
-
-        phoneLoginViewModel.requestLogin(storedAccount, storedPassword);
-
-
+        phoneLoginViewModel.accountLogin(storedAccount, storedPassword);
     }
 
-    void onCallbackLoginDone(final int errCode, final String account) {
+    void onCallbackLoginDone(final int errCode) {
         Log.d(TAG, "<onCallbackLoginDone> errCode=" + errCode);
-        if (errCode == Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_SUCCESS) {
-            // 自动登录成功直接跳转到主界面
-            PagePilotManager.pageMainHome();
 
-        } else if (errCode == Constant.CALLBACK_TYPE_LOGIN_REQUEST_LOGIN_FAIL) {
+        if (errCode == ErrCode.XOK) {
+            // 自动登录成功直接跳转到主界面
+            //PagePilotManager.pageMainHome();
+            Intent intent = new Intent(WelcomeActivity.this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // 清除Activity堆栈
+            startActivity(intent);
+
+        } else  {
             // 自动登录失败跳转到登录界面
-            PagePilotManager.pagePhoneLogin();
+            //PagePilotManager.pagePhoneLogin();
+            Intent intent = new Intent(WelcomeActivity.this, PhoneLoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // 清除Activity堆栈
+            startActivity(intent);
         }
     }
-
-
-
-
-
-
-
-//    @RequiresApi(api = Build.VERSION_CODES.M)
-//    @Override
-//    public void getPermissions() {
-//        AgoraApplication appInstance = (AgoraApplication) getApplication();
-//        appInstance.initializeEngine();
-//        phoneLoginViewModel.onStart();
-//        if (!Settings.canDrawOverlays(this)) {
-//            showRequestSuspensionDialog();
-//        } else {
-//            checkStatusToStart();
-//        }
-//    }
-
-//    private void checkStatusToStart() {
-//        if (!SPUtil.Companion.getInstance(WelcomeActivity.this).getBoolean(Constant.IS_AGREE, false)) {
-//            showUserAgreementDialog();
-//        } else {
-//            startMainActivity();
-//        }
-//    }
-//
-
-
-
-//
-//    private void startMainActivity() {
-//        String account = AIotAppSdkFactory.getInstance().getAccountMgr().getLoggedAccount();
-//        if (TextUtils.isEmpty(account)) {
-//            account = SPUtil.Companion.getInstance(this).getString(Constant.ACCOUNT, null);
-//            if (!TextUtils.isEmpty(account)) {
-//                String password = SPUtil.Companion.getInstance(this).getString(Constant.PASSWORD, null);
-//                if (!TextUtils.isEmpty(password)) {
-//                    phoneLoginViewModel.requestLogin(account, password);
-//                }
-//            } else {
-//                PagePilotManager.pagePhoneLogin();
-//            }
-//        } else {
-//            PagePilotManager.pageMainHome();
-//        }
-//
-//        phoneLoginViewModel.onStop();
-//    }
-
-
 
 }

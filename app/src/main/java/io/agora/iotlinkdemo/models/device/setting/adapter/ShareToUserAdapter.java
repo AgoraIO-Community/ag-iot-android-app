@@ -30,11 +30,13 @@ public class ShareToUserAdapter extends BaseAdapter<IotOutSharer> {
         IotOutSharer accountInfo = getDatas().get(position);
         GlideApp.with(getMContext()).load(accountInfo.mAvatar).error(R.mipmap.userimage).into((AppCompatImageView) holder.getView(R.id.ivUserAvatar));
         holder.setText(R.id.tvUserDesc, accountInfo.mUsrNickName);
+        String userName = accountInfo.mAppUserId;
         if (!TextUtils.isEmpty(accountInfo.mPhone)) {
-            holder.setText(R.id.tvUsername, StringUtils.INSTANCE.formatAccount(accountInfo.mPhone));
-        } else {
-            holder.setText(R.id.tvUsername, accountInfo.mEmail);
+            userName = StringUtils.INSTANCE.formatAccount(accountInfo.mPhone);
+        } else if (!TextUtils.isEmpty(accountInfo.mEmail))  {
+            userName = accountInfo.mEmail;
         }
+        holder.setText(R.id.tvUsername, userName);
         holder.itemView.setOnClickListener(view -> {
             PagePilotManager.pageDeviceShareToUserDetail(accountInfo);
         });

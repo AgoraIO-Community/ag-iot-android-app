@@ -1,5 +1,7 @@
 package io.agora.iotlinkdemo.models.player;
 
+import static com.amazonaws.mobile.auth.core.internal.util.ThreadUtils.runOnUiThread;
+
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -27,6 +29,8 @@ import java.util.Map;
  * 播放相关viewModel
  */
 public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallback, ICallkitMgr.ICallback {
+    private final String TAG = "IOTLINK/PlayerViewModel";
+
     /**
      * 当前设备信息
      */
@@ -41,12 +45,19 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      */
     public volatile boolean mSendingVoice = false;
 
+    /**
+     * 是否正常运行
+     */
+    public volatile boolean mRunning = true;
+
     public void onStart() {
+        Log.d(TAG, "<onStart>");
         AIotAppSdkFactory.getInstance().getDeviceMgr().registerListener(this);
         AIotAppSdkFactory.getInstance().getCallkitMgr().registerListener(this);
     }
 
     public void onStop() {
+        Log.d(TAG, "<onStop>");
         AIotAppSdkFactory.getInstance().getDeviceMgr().unregisterListener(this);
         AIotAppSdkFactory.getInstance().getCallkitMgr().unregisterListener(this);
     }
@@ -84,6 +95,9 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      * @brief 更新网络状态
      */
     private void onMsgUpdateNetStatus() {
+        if (!mRunning) {
+            return;
+        }
         ICallkitMgr.RtcNetworkStatus networkStatus;
         networkStatus = AIotAppSdkFactory.getInstance().getCallkitMgr().getNetworkStatus();
 
@@ -107,6 +121,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
             mMsgHandler.removeMessages(MSGID_UPDATE_NETSTATUS);
             mMsgHandler = null;
         }
+        mRunning = false;
     }
 
     /**
@@ -140,30 +155,6 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      */
     public void initPeerVideo(SurfaceView peerView) {
         AIotAppSdkFactory.getInstance().getCallkitMgr().setPeerVideoView(peerView);
-    }
-
-    /**
-     * 获取设备属性 配置信息
-     */
-    public void requestDeviceProperty() {
-        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().getDeviceProperty(mLivingDevice);
-        if (ret != ErrCode.XOK) {
-            ToastUtils.INSTANCE.showToast("不能获取设备属性 配置信息, 错误码: " + ret);
-        }
-    }
-
-    /**
-     * 获取设备信息回调
-     */
-    @Override
-    public void onReceivedDeviceProperty(IotDevice device, Map<String, Object> properties) {
-        Log.d("cwtsw", "设备信息 properties = " + properties);
-        // 更新设备属性
-        synchronized (mDevProperty) {
-            mDevProperty.update(properties);
-        }
-        Log.d("cwtsw", "设备信息 mDevProperty.mVoiceDetect = " + mDevProperty.mVoiceDetect);
-        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY, null);
     }
 
     /*
@@ -261,4 +252,63 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public int callDial(IotDevice iotDevice, String attachMsg) {
         return AIotAppSdkFactory.getInstance().getCallkitMgr().callDial(iotDevice, attachMsg);
     }
+
+
+
+    /**
+     * @brief 获取视图需要的数据
+     */
+    public void requestViewModelData() {
+        // 先查询 设备属性信息
+        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().getDeviceProperty(mLivingDevice);
+        if (ret != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("不能获取设备属性 配置信息, 错误码: " + ret);
+        }
+    }
+
+    /**
+     * 获取设备属性信息回调
+     */
+    @Override
+    public void onReceivedDeviceProperty(IotDevice device, Map<String, Object> properties) {
+        Log.d(TAG, "设备信息 properties = " + properties);
+        if (!mRunning) {
+            return;
+        }
+
+        // 更新设备属性
+        synchronized (mDevProperty) {
+            mDevProperty.update(properties);
+        }
+        Log.d(TAG, "设备信息 mDevProperty.mVoiceDetect = " + mDevProperty.mVoiceDetect);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY, null);
+    }
+
+    /**
+     * @brief 获取固件版本号
+     */
+    public void queryMcuVersion() {
+        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().getMcuVersionInfo(mLivingDevice);
+        if (ret != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("不能获取固件版本, 错误码: " + ret);
+        }
+    }
+
+    @Override
+    public void onGetMcuVerInfoDone(int errCode, final IotDevice iotDevice,
+                                    final IDeviceMgr.McuVersionInfo mcuVerInfo) {
+        if ((errCode != ErrCode.XOK) || (mcuVerInfo == null)) {
+            Log.e(TAG, "<onGetMcuVerInfoDone> [ERROR] errCode=" + errCode);
+            return;
+        }
+
+        Log.d(TAG, "<onGetMcuVerInfoDone> iotDevice=" + iotDevice
+                + ",  mcuVerInfo=" + mcuVerInfo.toString());
+        if (!mRunning) {
+            return;
+        }
+        AgoraApplication.getInstance().setLivingMcuVersion(mcuVerInfo);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_FIRM_GETVERSION, mcuVerInfo);
+    }
+
 }

@@ -39,7 +39,7 @@ public class GeneralSettingsActivity extends BaseViewBindingActivity<ActivityGen
         getBinding().tvAccountSecurity.setOnClickListener(view -> PagePilotManager.pageAccountSecurity());
         getBinding().tvSystemPermissionSetting.setOnClickListener(view -> PagePilotManager.pageSystemPermissionSetting());
         getBinding().btnLogout.setOnClickListener(view -> {
-            phoneLoginViewModel.requestLogout();
+            phoneLoginViewModel.accountLogout();
             EventBus.getDefault().post(new UserLogoutEvent());
             PagePilotManager.pagePhoneLogin();
             mHealthActivityManager.popActivity();

@@ -10,11 +10,12 @@
     <string name="and">与</string>
     <string name="cancel">取消</string>
     <string name="close">关闭</string>
+    <string name="auto">自动</string>
     <string name="agree">同意</string>
     <string name="disagree">不同意</string>
     <string name="please_select_country">请选择国家/地区</string>
     <string name="country_area">国家/地区</string>
-    <string name="please_input_account">请输入手机号</string>
+    <string name="please_input_account">请输入用户账号</string>
     <string name="please_input_pwd">请输入密码</string>
     <string name="forget_password">忘记密码</string>
     <string name="login">登录</string>
@@ -69,6 +70,7 @@
     <string name="wdr">WDR</string>
     <string name="function">功能</string>
     <string name="message">消息</string>
+    <string name="control">控制</string>
     <string name="today">今天</string>
     <string name="all_type">全部类型</string>
     <string name="video_loading">远程视频加载中</string>
@@ -181,6 +183,8 @@
     <string name="share_to_tips1">向您分享了一个智能设备</string>
     <string name="accept_sharing">接受共享</string>
     <string name="important_tips">重要提示</string>
+    <string name="upgrade_content">更新内容</string>
+    <string name="already_last_version">已经是最新的版本</string>
     <string name="important_tips1">重要提示：升级过程中不能断电，否则会导致升级失败，设备可能无法开机</string>
     <string name="updating">正在升级…</string>
     <string name="playing">播放中</string>
@@ -194,4 +198,5 @@
     <string name="flashlight">手电筒</string>
     <string name="delete_success">删除成功</string>
     <string name="no_permission">没有相应的操作权限</string>
+    <string name="send">发送</string>
 </resources>
