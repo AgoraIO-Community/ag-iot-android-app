@@ -126,19 +126,19 @@ public class PushApplication extends BaseApplication {
         //
         // 初始化环信的离线推送
         //
-        if (mMetaData != null)
-        {
-            EmAgent.EmPushParam  pushParam = new EmAgent.EmPushParam();
-            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
-            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
-            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
-            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
-            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
-            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
-            pushParam.mVivoAppKey = mMetaData.getString("com.vivo.push.api_key", "");
-            pushParam.mHuaweiAppId = mMetaData.getString("com.huawei.hms.client.appid", "");
-            EmAgent.getInstance().initialize(this,  pushParam);
-        }
+//        if (mMetaData != null)
+//        {
+//            EmAgent.EmPushParam  pushParam = new EmAgent.EmPushParam();
+//            pushParam.mFcmSenderId = mMetaData.getString("com.fcm.push.senderid", "");
+//            pushParam.mMiAppId = mMetaData.getString("com.mi.push.app_id", "");
+//            pushParam.mMiAppKey = mMetaData.getString("com.mi.push.api_key", "");
+//            pushParam.mOppoAppKey = mMetaData.getString("com.oppo.push.api_key", "");
+//            pushParam.mOppoAppSecret = mMetaData.getString("com.oppo.push.app_secret", "");;
+//            pushParam.mVivoAppId = String.valueOf(mMetaData.getInt("com.vivo.push.app_id", 0));
+//            pushParam.mVivoAppKey = mMetaData.getString("com.vivo.push.api_key", "");
+//            pushParam.mHuaweiAppId = mMetaData.getString("com.huawei.hms.client.appid", "");
+//            EmAgent.getInstance().initialize(this,  pushParam);
+//        }
 
         //
         //初始化IotAppSdk2.0 引擎
@@ -149,7 +149,7 @@ public class PushApplication extends BaseApplication {
         initParam.mProjectID = mMetaData.getString("PROJECT_ID", "");
         initParam.mMasterServerUrl = mMetaData.getString("MASTER_SERVER_URL", "");
         initParam.mSlaveServerUrl = mMetaData.getString("SALVE_SERVER_URL", "");
-        initParam.mPusherId = EmAgent.getInstance().getEid();  // 设置离线推送Id
+        //initParam.mPusherId = EmAgent.getInstance().getEid();  // 设置离线推送Id
         initParam.mPublishVideo = false;
         initParam.mPublishAudio = false;
         initParam.mSubscribeAudio = true;
