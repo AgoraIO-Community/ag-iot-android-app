@@ -94,7 +94,7 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
      * 获取全部通知未读消息
      */
     public void requestNotifyMgrCount() {
-        int ret = AIotAppSdkFactory.getInstance().getDevMessageMgr().queryNumber(getQueryDevParam());
+        int ret = AIotAppSdkFactory.getInstance().getDevMessageMgr().queryNumber(queryDevParam);
         if (ret != ErrCode.XOK && ret != -10004) {
             ToastUtils.INSTANCE.showToast("不能查询全部通知未读消息数量, 错误码: " + ret);
         }

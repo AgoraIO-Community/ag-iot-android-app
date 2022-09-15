@@ -1,5 +1,6 @@
 package io.agora.iotlinkdemo.models.player.adapter;
 
+import android.text.TextUtils;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -39,8 +40,13 @@ public class PreviewMessageAdapter extends BaseAdapter<IotAlarm> {
     public void onBindViewHolder(@NonNull CommonViewHolder holder, int position) {
         IotAlarm iotAlarm = getDatas().get(position);
         if (iotAlarm != null) {
-            GlideApp.with(getMContext()).load(iotAlarm.mVideoUrl).placeholder(R.mipmap.icon_deft).
-                    into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
+            if (!TextUtils.isEmpty(iotAlarm.mImageUrl)) {
+                GlideApp.with(getMContext()).load(iotAlarm.mImageUrl).placeholder(R.mipmap.icon_deft).
+                        into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
+            } else {
+                GlideApp.with(getMContext()).load(iotAlarm.mVideoUrl).placeholder(R.mipmap.icon_deft).
+                        into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
+            }
             if (iotAlarm.mMessageType == 0) {
                 holder.setText(R.id.tvMsgTitle, "声音检测");
             } else if (iotAlarm.mMessageType == 1) {
