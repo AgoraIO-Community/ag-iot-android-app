@@ -88,14 +88,14 @@ public class AgoraService {
 
     ///< 服务器请求站点
     private String mBaseUrl = "";
-    private String mCallkitBaseUrl= "http://iot-api-gateway.sh.agoralab.co/api/call-service/v1";
-    private String mAlarmBaseUrl  = "http://iot-api-gateway.sh.agoralab.co/api/alert-center/alarm-message/v2";
-    private String mAuthBaseUrl   = "http://iot-api-gateway.sh.agoralab.co/api/oauth";
-    private String mDevMsgBaseUrl = "http://iot-api-gateway.sh.agoralab.co/api/alert-center/system-message/v1";
-    private String mImgMgrBaseUrl = "http://iot-api-gateway.sh.agoralab.co/api/file-system/image/v1";
-    private String mRtmBaseUrl    = "http://iot-api-gateway.sh.agoralab.co/api/call-service/v1";
-    private String mImgBaseUrl    = "http://iot-api-gateway.sh.agoralab.co/api/file-system/image-record/v1";
-    private String mRcdBaseUrl    = "http://iot-api-gateway.sh.agoralab.co/api/cloud-recorder/video-record/v1";
+    private String mCallkitBaseUrl= "https://api.agora.io/agoralink/cn/api/call-service/v1";
+    private String mAlarmBaseUrl  = "https://api.agora.io/agoralink/cn/api/alert-center/alarm-message/v2";
+    private String mAuthBaseUrl   = "https://api.agora.io/agoralink/cn/api/oauth";
+    private String mDevMsgBaseUrl = "https://api.agora.io/agoralink/cn/api/alert-center/system-message/v1";
+    private String mImgMgrBaseUrl = "https://api.agora.io/agoralink/cn/api/file-system/image/v1";
+    private String mRtmBaseUrl    = "https://api.agora.io/agoralink/cn/api/call-service/v1";
+    private String mImgBaseUrl    = "https://api.agora.io/agoralink/cn/api/file-system/image-record/v1";
+    private String mRcdBaseUrl    = "https://api.agora.io/agoralink/cn/api/cloud-recorder/video-record/v1";
 
 
     ////////////////////////////////////////////////////////////////////////
