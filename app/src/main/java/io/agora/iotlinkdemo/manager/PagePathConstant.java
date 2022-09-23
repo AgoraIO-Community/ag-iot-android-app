@@ -35,6 +35,7 @@ public class PagePathConstant {
     public static final String pagePlayerFunction = "/page/pagePlayerFunction";
     public static final String pagePlayerMessage = "/page/pagePlayerMessage";
     public static final String pagePlayerRtm = "/page/pagePlayerRtm";
+    public static final String pagePlayerRtc = "/page/pagePlayerRtc";
     public static final String pageMessageAlarm = "/page/pageMessageAlarm";
     public static final String pageMessageNotify = "/page/pageMessageNotify";
     public static final String pageUserInfo = "/page/pageUserInfo";

@@ -12,6 +12,8 @@ import android.view.SurfaceView;
 
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlink.IotPropertyDesc;
 import io.agora.iotlinkdemo.api.bean.IotDeviceProperty;
 import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.common.Constant;
@@ -22,6 +24,8 @@ import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotDevice;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -100,6 +104,9 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         }
         ICallkitMgr.RtcNetworkStatus networkStatus;
         networkStatus = AIotAppSdkFactory.getInstance().getCallkitMgr().getNetworkStatus();
+        if (networkStatus == null) {
+            return;
+        }
 
         String status1 = String.format(Locale.getDefault(),
                 "Lastmile Delay: %d ms", networkStatus.lastmileDelay);
@@ -247,6 +254,56 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     }
 
     /**
+     * 获取设备属性信息回调
+     */
+    @Override
+    public void onReceivedDeviceProperty(IotDevice device, Map<String, Object> properties) {
+        Log.d(TAG, "设备信息 properties = " + properties);
+        if (!mRunning) {
+            return;
+        }
+
+        // 更新设备属性
+        synchronized (mDevProperty) {
+            mDevProperty.update(properties);
+        }
+        Log.d(TAG, "设备信息 mDevProperty.mVoiceDetect = " + mDevProperty.mVoiceDetect);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY, null);
+    }
+
+    /**
+     * 查询所有属性描述符
+     */
+    public void queryAllPropDesc() {
+        Log.d(TAG, "<queryAllPropDesc> deviceID=" + mLivingDevice.mDeviceID
+                    + ", productNumber=" + mLivingDevice.mProductNumber);
+        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllPropertyDesc(
+                mLivingDevice.mDeviceID, null);
+//        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllPropertyDesc(
+//                null, mLivingDevice.mProductNumber);
+        if (ret != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("不能查询所有属性描述符, 错误码=" + ret);
+        }
+    }
+
+    @Override
+    public void onQueryAllPropertyDescDone(int errCode,
+                                           final String deviceID,
+                                           final String productNumber,
+                                           final List<IotPropertyDesc> propDescList) {
+        Log.d(TAG, "<onQueryAllPropertyDescDone> errCode=" + errCode);
+        if (!mRunning) {
+            return;
+        }
+
+        if (errCode == ErrCode.XOK) {
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATEPROPDESC, propDescList);
+        } else {
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATEPROPDESC, null);
+        }
+    }
+
+    /**
      * 呼叫设备 即连接设备
      */
     public int callDial(IotDevice iotDevice, String attachMsg) {
@@ -264,24 +321,6 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         if (ret != ErrCode.XOK) {
             ToastUtils.INSTANCE.showToast("不能获取设备属性 配置信息, 错误码: " + ret);
         }
-    }
-
-    /**
-     * 获取设备属性信息回调
-     */
-    @Override
-    public void onReceivedDeviceProperty(IotDevice device, Map<String, Object> properties) {
-        Log.d(TAG, "设备信息 properties = " + properties);
-        if (!mRunning) {
-            return;
-        }
-
-        // 更新设备属性
-        synchronized (mDevProperty) {
-            mDevProperty.update(properties);
-        }
-        Log.d(TAG, "设备信息 mDevProperty.mVoiceDetect = " + mDevProperty.mVoiceDetect);
-        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY, null);
     }
 
     /**

@@ -23,11 +23,13 @@ import io.agora.iotlink.IAlarmMgr;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDevMessageMgr;
 import io.agora.iotlink.IDeviceMgr;
+import io.agora.iotlink.IRtcPlayer;
 import io.agora.iotlink.IRtmMgr;
 import io.agora.iotlink.aws.AWSUtils;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.logger.ALog;
 import io.agora.iotlink.lowservice.AgoraLowService;
+import io.agora.iotlink.rtcsdk.TalkingEngine;
 
 import org.json.JSONObject;
 import java.util.HashMap;
@@ -66,6 +68,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     private AlarmMgr mAlarmMgr;
     private DevMessageMgr mDevmsgMgr;
     private RtmMgr mRtmMgr;
+    private RtcPlayer mRtcPlayer;
 
     public static final Object mDataLock = new Object();    ///< 同步访问锁,类中所有变量需要进行加锁处理
     private HandlerThread mWorkThread;  ///< 呼叫系统和设备管理器的工作线程，在该线程中串行运行
@@ -74,7 +77,6 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     private ThreadPoolExecutor mThreadPool; ///< 设备消息和告警消息的工作线程池，支持并发执行
 
     private volatile int mStateMachine = AgoraIotAppSdk.SDK_STATE_INVALID;     ///< 当前呼叫状态机
-
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -128,6 +130,9 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
 
         mRtmMgr = new RtmMgr();
         mRtmMgr.initialize(this);
+
+        mRtcPlayer = new RtcPlayer();
+        mRtcPlayer.initialize(this);
 
         //
         // 设置AwsUtil的回调
@@ -266,6 +271,11 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             mRtmMgr = null;
         }
 
+        if (mRtcPlayer != null) {
+            mRtcPlayer.release();
+            mRtcPlayer = null;
+        }
+
         synchronized (mDataLock) {
             mStateMachine = SDK_STATE_INVALID;  // 状态机切换到 无效状态
         }
@@ -310,9 +320,16 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         return mRtmMgr;
     }
 
+    @Override
+    public IRtcPlayer getRtcPlayer() {
+        return mRtcPlayer;
+    }
+
+
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////// Methods for each sub-module ///////////////////////
     //////////////////////////////////////////////////////////////////////////
+
     /*
      * @brief SDK状态机设置，仅在 AccountMgr 模块中设置
      */
@@ -368,6 +385,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
                 mAccountMgr.workThreadProcessMessage(msg);
                 mCallkitMgr.workThreadProcessMessage(msg);
                 mRtmMgr.workThreadProcessMessage(msg);
+                mRtcPlayer.workThreadProcessMessage(msg);
                 workThreadProcessMessage(msg);
             }
         };

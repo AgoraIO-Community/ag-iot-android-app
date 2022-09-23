@@ -27,9 +27,6 @@ public interface IDeviceMgr {
     public static final int DEVMGR_STATE_BINDING = 0x0002;         ///< 正在绑定设备
     public static final int DEVMGR_STATE_UNBINDING = 0x0003;       ///< 正在解绑设备
     public static final int DEVMGR_STATE_RENAMING = 0x0004;       ///< 正在重命名设备
-    public static final int DEVMGR_STATE_SETINGPROP = 0x0005;      ///< 正在设置属性值
-    public static final int DEVMGR_STATE_GETINGPROP = 0x0006;      ///< 正在获取属性值
-    public static final int DEVMGR_STATE_PRODUCT_QUERYING = 0x0007;  ///< 正在查询产品列表
     public static final int DEVMGR_STATE_SHARING_DEV = 0x0008;     ///< 正在共享设备
     public static final int DEVMGR_STATE_DESHARING_DEV = 0x0009;   ///< 正在解除共享
     public static final int DEVMGR_STATE_ACCEPT_DEV = 0x000A;      ///< 正在接收设备
@@ -192,7 +189,7 @@ public interface IDeviceMgr {
         public ProductPageTurn  mPageTurn = new ProductPageTurn();      ///< 查询结果翻页信息
     }
 
-    /*
+    /**
      * @brief 设备管理回调接口
      */
     public static interface ICallback {
@@ -229,6 +226,16 @@ public interface IDeviceMgr {
          * @param newName : 新的名字
          */
         default void onDeviceRenameDone(int errCode, IotDevice iotDevice, String newName) { }
+
+        /*
+         * @brief 查询属性描述符列表完成事件
+         * @param device : 相应的设备信息，
+         * @properties : 要设置的属性值
+         */
+        default void onQueryAllPropertyDescDone(int errCode,
+                                                final String deviceID,
+                                                final String productNumber,
+                                                final List<IotPropertyDesc> propDescList) { }
 
         /*
          * @brief 设备端属性值设置完成
@@ -381,33 +388,33 @@ public interface IDeviceMgr {
     ////////////////////////////////////////////////////////////////////////
     //////////////////////////// Public Methods ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
-    /*
+    /**
      * @brief 获取当前设备管理状态机
      * @return 返回状态机
      */
     int getStateMachine();
 
-    /*
+    /**
      * @brief 注册回调接口
      * @param callback : 回调接口
      * @return 错误码
      */
     int registerListener(IDeviceMgr.ICallback callback);
 
-    /*
+    /**
      * @brief 注销回调接口
      * @param callback : 回调接口
      * @return 错误码
      */
     int unregisterListener(IDeviceMgr.ICallback callback);
 
-    /*
+    /**
      * @brief 查询当前用户名下所有设备，触发 onDeviceQueryAllDone() 回调
      * @return 错误码
      */
     int queryAllDevices();
 
-    /*
+    /**
      * @brief 直接返回当前绑定的设备列表，该接口不从服务器查询，直接返回缓存的绑定设备列表
      *        通常需要至少通过 queryAllDevices() 查询过一次
      * @return 绑定设备列表
@@ -415,7 +422,7 @@ public interface IDeviceMgr {
     List<IotDevice> getBindDevList();
 
 
-    /*
+    /**
      * @brief 添加设备，触发 onDeviceAddDone() 回调
      * @param productNumber : 设备制造商Number
      * @param deviceID: 设备唯一(MAC地址)
@@ -423,14 +430,14 @@ public interface IDeviceMgr {
      */
     int addDevice(String productNumber, String deviceID);
 
-    /*
+    /**
      * @brief 移除设备，触发 onDeviceRemoveDone() 回调
      * @param removingDev : 要移除的设备信息
      * @return 错误码
      */
     int removeDevice(IotDevice removingDev);
 
-    /*
+    /**
      * @brief 设备重命名，触发 onDeviceRenameDone() 回调
      * @param iotDevice : 要重命名的设备信息
      * @param newName : 新的名字
@@ -438,16 +445,27 @@ public interface IDeviceMgr {
      */
     int renameDevice(IotDevice iotDevice, String newName);
 
-    /*
-     * @brief 设置设备属性，触发 onDeviceSetPropertyDone() 回调
+    /***
+     * @brief 查询所有属性描述符，触发 onQueryAllPropertyDescDone() 回调
+     *        deviceID 和 productNumber 两者取其一，另外一个参数为 null
+     * @param deviceID : 根据设备ID来查询
+     * @param productNumber : 根据productNumber查询
+     * @return 错误码
+     */
+    int queryAllPropertyDesc(final String deviceID, final String productNumber);
+
+    /**
+     * @brief 设置设备属性，触发 onSetPropertyDone() 回调
      * @param iotDevice : 要设置属性的设备
      * @param properties : 要设置的属性列表
      * @return 错误码
      */
     int setDeviceProperty(IotDevice iotDevice, Map<String, Object> properties);
 
-    /*
+    /**
      * @brief 获取设备属性，触发 onGetPropertyDone() 和 onReceivedDeviceProperty() 回调
+     *        命令发送成功后会触发 onGetPropertyDone() 回调
+     *        等实际的属性值获取到后，会触发 onReceivedDeviceProperty() 回调
      * @param iotDevice : 要获取属性的设备
      * @return 错误码
      */
@@ -477,7 +495,7 @@ public interface IDeviceMgr {
     int getMcuUpgradeStatus(IotDevice iotDevice, long upgradeId);
 
 
-    /*
+    /**
      * @brief 获取设备属性，触发 onQueryProductDone() 回调
      * @param queryParam : 产品查询参数
      * @return 错误码
@@ -485,7 +503,7 @@ public interface IDeviceMgr {
     int queryProductList(final ProductQueryParam queryParam);
 
 
-    /*
+    /**
      * @brief 分享设备给其他人，需要对方接受，触发 onShareDeviceDone() 回调
      * @param iotDevice : 将要分享出去的设备
      * @param sharingAccount : 分享的目标账号
@@ -496,15 +514,14 @@ public interface IDeviceMgr {
     int shareDevice(final IotDevice iotDevice, final String sharingAccount,
                     int permission, boolean needPeerAgree);
 
-    /*
+    /**
      * @brief 取消设备的分享权限，触发 onDeshareDeviceDone() 回调
-     * @param deviceId : 要取消的已经分享的设备Id
-     * @param unsharingAccount : 要取消权限的账号
+     * @param outSharer : 要取消的已经分享的信息
      * @return 错误码
      */
     int deshareDevice(final IotOutSharer outSharer);
 
-    /*
+    /**
      * @brief 接收来自其他账号的设备分享， 触发 onAcceptDeviceDone() 回调
      * @param deviceName : 设备名字
      * @param order : 分享口令
@@ -513,20 +530,20 @@ public interface IDeviceMgr {
     int acceptDevice(final String deviceName, final String order);
 
 
-    /*
+    /**
      * @brief 查询可分享的设备列表，触发 onQuerySharableDevListDone() 回调
      * @return 错误码
      */
     int querySharableDevList();
 
-    /*
+    /**
      * @brief 查询单个设备分享出去的账号列表，触发 onQueryOutSharerListDone() 回调
      * @param deviceNumber : 设备Number
      * @return 错误码
      */
     int queryOutSharerList(final String deviceNumber);
 
-    /*
+    /**
      * @brief 查询来自其他账号分享的设备列表，触发 onQueryInSharedDevList() 回调
      * @return 错误码
      */
@@ -534,7 +551,7 @@ public interface IDeviceMgr {
 
 
 
-    /*
+    /**
      * @brief 分页查询设备分享消息，触发 onQueryShareMsgPageDone() 回调
      * @param pageNumber : 要查询的页号，-1表示不设置
      * @param pageSize : 每页列表最大数量，-1表示不设置
@@ -543,14 +560,14 @@ public interface IDeviceMgr {
      */
     int queryShareMsgByPage(int pageNumber, int pageSize, int auditStatus);
 
-    /*
+    /**
      * @brief 查询单个分享消息详情，触发 onQueryShareMsgDetailDone() 回调
      * @param messageId : 要查询的分享消息ID
      * @return 错误码
      */
     int queryShareMsgById(long messageId);
 
-    /*
+    /**
      * @brief 删除单个分享消息，触发 onDeleteShareMsgDone() 回调
      * @param messageId : 要删除的分享消息ID
      * @return 错误码

@@ -23,6 +23,7 @@ import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 
 import io.agora.iotlink.IDeviceMgr;
+import io.agora.iotlink.IotPropertyDesc;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
 import io.agora.iotlinkdemo.common.Constant;
@@ -38,6 +39,8 @@ import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.player.PlayerViewModel;
 import io.agora.iotlink.ICallkitMgr;
 import com.alibaba.android.arouter.facade.annotation.Route;
+
+import java.util.List;
 
 /**
  * 播放页功能列表
@@ -118,6 +121,18 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
                             ((PlayerPreviewActivity) getActivity()).updateTitle(false);
                         }
                     }
+                } else if (type == Constant.CALLBACK_TYPE_PLAYER_UPDATEPROPDESC) { // 查询到属性描述符列表
+                    List<IotPropertyDesc> propDescList = (List<IotPropertyDesc>)var2;
+                    if (propDescList == null) {  // 查询属性描述列表失败
+                        return;
+                    }
+
+                    // 打印所有属性描述符信息
+                    for (int i = 0; i < propDescList.size(); i++) {
+                        IotPropertyDesc propertyDesc = propDescList.get(i);
+                        Log.d(TAG, "<ISingleCallback> propDesc[" + i + "] " + propertyDesc.toString());
+                    }
+
                 }
             });
         });
@@ -338,6 +353,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
     @Override
     public void requestData() {
         playerViewModel.requestViewModelData();
+        playerViewModel.queryAllPropDesc();
     }
 
     /**

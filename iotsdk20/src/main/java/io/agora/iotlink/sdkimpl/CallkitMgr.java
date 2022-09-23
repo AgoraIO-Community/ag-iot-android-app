@@ -102,6 +102,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
     private TalkingEngine mTalkEngine;              ///< 通话引擎
     private SurfaceView mPeerVidew;                 ///< 对端视频帧显示控件
+    private boolean mMuteLocalVideo;
+    private boolean mMuteLocalAudio;
+    private boolean mMutePeerVideo;
+    private boolean mMutePeerAudio;
+    private int mAudioEffect;
 
 
 
@@ -116,22 +121,13 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         IAgoraIotAppSdk.InitParam sdkInitParam = sdkInstance.getInitParam();
         mAppId = sdkInitParam.mRtcAppId;
 
-        // 初始化通话引擎
-        mTalkEngine = new TalkingEngine();
-        TalkingEngine.InitParam talkInitParam = mTalkEngine.new InitParam();
-        talkInitParam.mContext = sdkInitParam.mContext;
-        talkInitParam.mAppId = sdkInitParam.mRtcAppId;
-        talkInitParam.mCallback = this;
-        talkInitParam.mPublishVideo = sdkInitParam.mPublishVideo;
-        talkInitParam.mPublishAudio = sdkInitParam.mPublishAudio;
-        talkInitParam.mSubscribeAudio = sdkInitParam.mSubscribeAudio;
-        talkInitParam.mSubscribeVideo = sdkInitParam.mSubscribeVideo;
-        boolean ret = mTalkEngine.initialize(talkInitParam);
-        if (!ret) {
-            ALog.getInstance().d(TAG, "<initialize> fail to create talking engine");
-            mTalkEngine = null;
-            return ErrCode.XERR_CALLKIT_BASE;
-        }
+        // 初始化通话引擎参数
+        mPeerVidew = null;
+        mMuteLocalVideo = true;
+        mMuteLocalAudio = true;
+        mMutePeerVideo = false;
+        mMutePeerAudio = false;
+        mAudioEffect = Constants.AUDIO_EFFECT_OFF;
 
         return ErrCode.XOK;
     }
@@ -139,14 +135,15 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     void release() {
         workThreadClearMessage();
 
-        synchronized (mCallbackList) {
-            mCallbackList.clear();
-        }
-
         // 销毁通话引擎
-        if (mTalkEngine != null) {
+        if (mTalkEngine != null) {  // 正常情况下,通话引擎此时应该已经释放了
             mTalkEngine.release();
             mTalkEngine = null;
+            ALog.getInstance().e(TAG, "<release> talking engine destroyed");
+        }
+
+        synchronized (mCallbackList) {
+            mCallbackList.clear();
             ALog.getInstance().d(TAG, "<release> done");
         }
     }
@@ -353,48 +350,54 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     @Override
     public int setPeerVideoView(SurfaceView peerView) {
         mPeerVidew = peerView;
-        mTalkEngine.setRemoteVideoView(mPeerVidew);
+        if (mTalkEngine != null) {
+            mTalkEngine.setRemoteVideoView(mPeerVidew);
+        }
         return ErrCode.XOK;
     }
 
     @Override
     public int muteLocalVideo(boolean mute) {
-        if (mTalkEngine == null) {
-            return ErrCode.XERR_BAD_STATE;
-        }
+        mMuteLocalVideo = mute;
 
-        boolean ret = mTalkEngine.muteLocalVideoStream(mute);
-        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        if (mTalkEngine != null) {
+            boolean ret = mTalkEngine.muteLocalVideoStream(mute);
+            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        }
+        return ErrCode.XOK;
     }
 
     @Override
     public int muteLocalAudio(boolean mute) {
-        if (mTalkEngine == null) {
-            return ErrCode.XERR_BAD_STATE;
-        }
+        mMuteLocalAudio = mute;
 
-        boolean ret = mTalkEngine.muteLocalAudioStream(mute);
-        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        if (mTalkEngine != null) {
+            boolean ret = mTalkEngine.muteLocalAudioStream(mute);
+            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        }
+        return ErrCode.XOK;
     }
 
     @Override
     public int mutePeerVideo(boolean mute) {
-        if (mTalkEngine == null) {
-            return ErrCode.XERR_BAD_STATE;
-        }
+        mMutePeerVideo = mute;
 
-        boolean ret = mTalkEngine.mutePeerVideoStream(mute);
-        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        if (mTalkEngine != null) {
+            boolean ret = mTalkEngine.mutePeerVideoStream(mute);
+            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        }
+        return ErrCode.XOK;
     }
 
     @Override
     public int mutePeerAudio(boolean mute) {
-        if (mTalkEngine == null) {
-            return ErrCode.XERR_BAD_STATE;
-        }
+        mMutePeerAudio = mute;
 
-        boolean ret = mTalkEngine.mutePeerAudioStream(mute);
-        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        if (mTalkEngine != null) {
+            boolean ret = mTalkEngine.mutePeerAudioStream(mute);
+            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        }
+        return ErrCode.XOK;
     }
 
     @Override
@@ -404,40 +407,41 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
     @Override
     public int setAudioEffect(AudioEffectId effectId) {
-        if (mTalkEngine == null) {
-            ALog.getInstance().e(TAG, "<setAudioEffect> bad status");
-            return ErrCode.XERR_BAD_STATE;
-        }
 
-        int voice_changer = Constants.AUDIO_EFFECT_OFF;
+
+        mAudioEffect = Constants.AUDIO_EFFECT_OFF;
         switch (effectId) {
             case OLDMAN:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
                 break;
 
             case BABYBOY:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_BOY;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_BOY;
                 break;
 
             case BABYGIRL:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_GIRL;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_GIRL;
                 break;
 
             case ZHUBAJIE:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_PIGKING;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_PIGKING;
                 break;
 
             case ETHEREAL:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_SISTER;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_SISTER;
                 break;
 
             case HULK:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_HULK;
+                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_HULK;
                 break;
         }
 
-        boolean ret = mTalkEngine.setAudioEffect(voice_changer);
-        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        if (mTalkEngine == null) {
+            boolean ret = mTalkEngine.setAudioEffect(mAudioEffect);
+            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+        }
+
+        return ErrCode.XOK;
     }
 
     @Override
@@ -556,7 +560,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         //
         // 不管前面是否异常状态，总是停止所有处理，清零到空闲状态
         //
-        mTalkEngine.leaveChannel();     // 离开频道，结束通话
+        if (mTalkEngine != null) {
+            mTalkEngine.leaveChannel();     // 离开频道，结束通话
+            mTalkEngine.release();
+            mTalkEngine = null;
+        }
+
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
@@ -838,13 +847,30 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
      */
     void talkingPrepare(final String channelName, final String rtcToken,
                         int localUid, int peerUid) {
-        if (!mTalkEngine.isInChannel()) {  // 不在频道内时要加入频道进行处理
+
+        if (mTalkEngine == null) {  // RTC引擎未创建
+
+            // 根据SDK初始化参数创建 RTC通话引擎
+            IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
+            mTalkEngine = new TalkingEngine();
+            TalkingEngine.InitParam talkInitParam = mTalkEngine.new InitParam();
+            talkInitParam.mContext = sdkInitParam.mContext;
+            talkInitParam.mAppId = sdkInitParam.mRtcAppId;
+            talkInitParam.mCallback = this;
+            talkInitParam.mPublishVideo = sdkInitParam.mPublishVideo;
+            talkInitParam.mPublishAudio = sdkInitParam.mPublishAudio;
+            talkInitParam.mSubscribeAudio = sdkInitParam.mSubscribeAudio;
+            talkInitParam.mSubscribeVideo = sdkInitParam.mSubscribeVideo;
+            mTalkEngine.initialize(talkInitParam);
+
+            // 设置RTC初始参数
             mTalkEngine.setPeerUid(peerUid);
             mTalkEngine.joinChannel(channelName, rtcToken, localUid);
-            mTalkEngine.muteLocalVideoStream(true);     // 本地不推视频流
-            mTalkEngine.muteLocalAudioStream(true);     // 本地不推音频流
-            mTalkEngine.mutePeerVideoStream(false);     // 订阅对端视频流
-            mTalkEngine.mutePeerAudioStream(false);     // 订阅对端音频流
+            mTalkEngine.muteLocalVideoStream(mMuteLocalVideo);     // 本地不推视频流
+            mTalkEngine.muteLocalAudioStream(mMuteLocalAudio);     // 本地不推音频流
+            mTalkEngine.mutePeerVideoStream(mMutePeerVideo);     // 订阅对端视频流
+            mTalkEngine.mutePeerAudioStream(mMutePeerVideo);     // 订阅对端音频流
+            mTalkEngine.setAudioEffect(mAudioEffect);       // 设置音频效果
         }
     }
 
@@ -867,7 +893,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
      * @brief 停止通话，状态机切换到空闲，清除对端设备和peerUid
      */
     void talkingStop() {
-        mTalkEngine.leaveChannel();     // 离开频道，结束通话
+        if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
+            mTalkEngine.leaveChannel();     // 离开频道，结束通话
+            mTalkEngine.release();
+            mTalkEngine = null;
+        }
+
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
@@ -896,7 +927,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                     callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName, false);
         }
 
-        mTalkEngine.leaveChannel();     // 离开频道，结束通话
+        if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
+            mTalkEngine.leaveChannel();     // 离开频道，结束通话
+            mTalkEngine.release();
+            mTalkEngine = null;
+        }
+
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
@@ -1061,7 +1097,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", peerUid=" + peerUid
                 + ", stateMachine=" + stateMachine);
 
-        if (mPeerVidew != null) {
+        if ((mPeerVidew != null) && (mTalkEngine != null)) {
             mTalkEngine.setRemoteVideoView(mPeerVidew);
         }
     }

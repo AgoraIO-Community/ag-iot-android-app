@@ -8,6 +8,7 @@ import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.IotOutSharer;
+import io.agora.iotlink.IotPropertyDesc;
 import io.agora.iotlink.IotShareMessage;
 import io.agora.iotlink.IotShareMsgPage;
 import io.agora.iotlink.logger.ALog;
@@ -1091,6 +1092,114 @@ public class AgoraLowService {
 
         ALog.getInstance().d(TAG, "<productQuery> successful"
                 + ", productListCount=" + queryResult.mProductList.size());
+        return queryResult;
+    }
+
+    /**
+     * @brief 查询所有属性描述符
+     */
+    public static class PropertyDescResult {
+        public int mErrCode = ErrCode.XOK;
+        public List<IotPropertyDesc> mPropDescList = new ArrayList<>();
+    }
+    public PropertyDescResult queryPropertyDesc(final String srvToken,
+                                                final String deviceID,
+                                                final String productNumber) {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+        PropertyDescResult queryResult = new PropertyDescResult();
+
+        if ((deviceID == null) && (productNumber == null)) {
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> deviceID and productNumber all NULL!");
+            queryResult.mErrCode = ErrCode.XERR_INVALID_PARAM;
+            return queryResult;
+        }
+
+        // 请求URL
+        String requestUrl = mServerBaseUrl + "/device/point/list";
+
+        // 请求参数
+        try {
+            if (deviceID != null) {
+                body.put("mac", deviceID);
+            } else {
+                body.put("productId", productNumber);
+            }
+
+        } catch (JSONException jsonException) {
+            jsonException.printStackTrace();
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> failure set JSON object!");
+            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            return queryResult;
+        }
+
+
+        ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                srvToken, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> failure with no response");
+            queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return queryResult;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> failure, mErrorCode="
+                    + responseObj.mErrorCode);
+            queryResult.mErrCode = ErrCode.XERR_DEVMGR_QUERY_SHAREDETAIL;
+            return queryResult;
+        }
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> failure"
+                    + ", mRespCode=" + responseObj.mRespCode);
+            queryResult.mErrCode = mapRespErrCode(responseObj.mRespCode,
+                    ErrCode.XERR_DEVMGR_QUERY_SHAREDETAIL);
+            return queryResult;
+        }
+
+        // 解析设备列表信息
+        try {
+            JSONArray infoObj = responseObj.mRespJsonObj.getJSONArray("info");
+            if (infoObj == null) {
+                ALog.getInstance().e(TAG, "<queryPropertyDesc> no 'info' array");
+                queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
+                return queryResult;
+            }
+
+            for (int i = 0; i < infoObj.length(); i++) {
+                JSONObject descObj = infoObj.getJSONObject(i);
+                IotPropertyDesc propertyDesc = new IotPropertyDesc();
+
+                propertyDesc.mId =  parseJsonLongValue(descObj,"id", 0);
+                propertyDesc.mIndex = parseJsonIntValue(descObj,"index", 0);
+
+                propertyDesc.mProductID = parseJsonStringValue(descObj,"productId", null);
+                propertyDesc.mPointName = parseJsonStringValue(descObj,"pointName", null);
+                propertyDesc.mPointType = parseJsonIntValue(descObj,"pointType", 0);
+                propertyDesc.mMarkName = parseJsonStringValue(descObj,"markName", null);
+                propertyDesc.mReadType = parseJsonIntValue(descObj,"readType", 0);
+                propertyDesc.mMaxValue = parseJsonStringValue(descObj,"maxValue", null);
+                propertyDesc.mMinValue = parseJsonStringValue(descObj,"minValue", null);
+                propertyDesc.mParams = parseJsonStringValue(descObj,"params", null);
+                propertyDesc.mRemark = parseJsonStringValue(descObj,"remark", null);
+                propertyDesc.mStatus = parseJsonIntValue(descObj,"status", 0);
+
+                propertyDesc.mCreateBy = parseJsonLongValue(descObj,"createBy", 0);
+                propertyDesc.mCreateTime = parseJsonLongValue(descObj,"createTime", 0);
+                propertyDesc.mDeleted = parseJsonIntValue(descObj,"deleted", 0);
+
+                queryResult.mPropDescList.add(propertyDesc);
+            }
+
+            queryResult.mErrCode = ErrCode.XOK;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            ALog.getInstance().e(TAG, "<queryPropertyDesc> [JSONException], error=" + e);
+            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
+            return queryResult;
+        }
+
+        ALog.getInstance().d(TAG, "<queryPropertyDesc> successful"
+                + ", propertyDescCount=" + queryResult.mPropDescList.size());
         return queryResult;
     }
 

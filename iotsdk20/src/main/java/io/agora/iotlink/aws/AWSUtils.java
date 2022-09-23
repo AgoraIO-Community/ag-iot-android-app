@@ -165,12 +165,22 @@ public class AWSUtils {
 
             } else if (topic.contains("/shadow/get/accepted")) {
                 //只关注设备端上报的当前状态
-                JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("reported");
+                if (!jsonMessage.has("state")) {
+                    Log.e(TAG, "<handleMessage> no 'state' object!");
+                    return;
+                }
+                JSONObject stateObj = jsonMessage.getJSONObject("state");
+                if (!stateObj.has("reported")) {
+                    Log.e(TAG, "<handleMessage> no 'reported' object!");
+                    return;
+                }
+                JSONObject reportedObj = stateObj.getJSONObject("reported");
+
                 //去除topic前后内容，获取设备唯一标志
                 String things_name = topic.replaceAll("\\$aws/things/", "");
                 things_name = things_name.replaceAll("/shadow/get/accepted", "");
                 //通知收到设备状态更新事件
-                awsListener.onReceiveShadow(things_name, desiredObject);
+                awsListener.onReceiveShadow(things_name, reportedObj);
 
             } else if (topic.contains("/shadow/name/rtc/update/accepted")) {
                 //只关注APP端影子的期望值

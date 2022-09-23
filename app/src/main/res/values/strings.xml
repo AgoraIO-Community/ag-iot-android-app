@@ -199,4 +199,5 @@
     <string name="delete_success">删除成功</string>
     <string name="no_permission">没有相应的操作权限</string>
     <string name="send">发送</string>
+    <string name="video">视频</string>
 </resources>

@@ -122,6 +122,7 @@ public class ErrCode {
     public static final int XERR_DEVMGR_UPGRADE_INVALID = -50024;   ///< 升级信息不存在或无效
     public static final int XERR_DEVMGR_UPGRADE_GETSTATUS = -50025; ///< 获取升级信状态失败
     public static final int XERR_DEVMGR_NOT_ALLOW = -50026;         ///< 不允许的操作
+    public static final int XERR_DEVMGR_QUERY_PROPDESC = -50027;    ///< 查询属性描述符失败
 
     //
     // 告警管理相关错误

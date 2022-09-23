@@ -171,6 +171,9 @@ public class Constant {
     /* 固件版本升级 */
     public static final int CALLBACK_TYPE_FIRM_UPGRADE = 310;
 
+    /* 查询到属性描述符列表 */
+    public static final int CALLBACK_TYPE_PLAYER_UPDATEPROPDESC = 311;
+
     /* 第三方账号注册完成 */
     public static final int CALLBACK_TYPE_THIRD_REGISTER_DONE = 401;
     /* 第三方账号注销完成 */

@@ -103,4 +103,10 @@ public interface IAgoraIotAppSdk  {
      */
     IRtmMgr getRtmMgr();
 
+
+    /**
+     * @brief 获取频道内播放器
+     */
+    IRtcPlayer getRtcPlayer();
+
 }

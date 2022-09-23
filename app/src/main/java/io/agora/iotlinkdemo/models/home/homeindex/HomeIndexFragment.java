@@ -18,6 +18,9 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.agora.baselibrary.utils.NetUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 import com.agora.baselibrary.utils.UiUtils;
+
+import io.agora.iotlink.AIotAppSdkFactory;
+import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
 import io.agora.iotlinkdemo.base.PermissionHandler;
@@ -144,6 +147,19 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
                 PagePilotManager.pageDeviceAddScanning();
             }
         }
+
+//
+//        TODO: Test code for query product list
+//        IDeviceMgr.ProductQueryParam queryParam = new IDeviceMgr.ProductQueryParam();
+//        queryParam.mPageNo = 1;
+//        queryParam.mPageSize = 64;
+//
+//        showLoadingView();
+//        int errCode = AIotAppSdkFactory.getInstance().getDeviceMgr().queryProductList(queryParam);
+//        if (errCode != ErrCode.XOK) {
+//            hideLoadingView();
+//            popupMessage("查询所有产品列表失败，错误码=" + errCode);
+//        }
     }
 
     void onBtnDevItemClick(View view, int position, IotDevice iotDevice) {

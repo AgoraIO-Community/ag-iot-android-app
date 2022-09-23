@@ -49,25 +49,36 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Data Structure Definition /////////////////////
     ////////////////////////////////////////////////////////////////////////
-    /*
+    /**
      * @brief 通话引擎回调接口
      */
     public static interface ICallback {
 
-        /*
+        /**
+         * @brief 本地加入频道成功
+         */
+        default void onTalkingJoinDone(String channel, int localUid) { }
+
+        /**
+         * @brief 本地离开频道成功
+         */
+        default void onTalkingLeftDone() {  }
+
+
+        /**
          * @brief 通话对端RTC上线
          */
-        void onTalkingPeerJoined(int localUid, int peerUid);
+        default void onTalkingPeerJoined(int localUid, int peerUid) {  }
 
-        /*
+        /**
          * @brief 通话对端RTC下线
          */
-        void onTalkingPeerLeft(int localUid, int peerUid);
+        default void onTalkingPeerLeft(int localUid, int peerUid) {  }
 
-        /*
+        /**
          * @brief 对端首帧出图
          */
-        void onPeerFirstVideoDecoded(int peerUid, int videoWidth, int videoHeight);
+        default void onPeerFirstVideoDecoded(int peerUid, int videoWidth, int videoHeight) { }
     }
 
 
@@ -100,8 +111,8 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     private EngineConfig mRtcEngCfg;        ///< RtcEngine相关配置参数
     private MyEngineEventHandler mRtcEngEventHandler;   ///< RtcEngine事件处理器
     private RtcEngineEx mRtcEngine;         ///< RtcEngine实例对象
-    private int mLocalUid;                  ///< 本地端加入频道时的Uid
-    private int mPeerUid;                   ///< 对端通话的Uid
+    private int mLocalUid = 0;              ///< 本地端加入频道时的Uid
+    private int mPeerUid = 0;               ///< 对端通话的Uid
 
     private ICallkitMgr.RtcNetworkStatus mRtcStatus = new ICallkitMgr.RtcNetworkStatus();
     private volatile boolean mDumpVideoFrame = false;
@@ -125,7 +136,6 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
             mRtcEngCfg.mUid = random.nextInt(~(1<<31));
         }
         pref.edit().putInt(ConstantApp.PrefManager.PREF_PROPERTY_UID, mRtcEngCfg.mUid).apply();
-        ALog.getInstance().d(TAG,"<initialize> mUid=" + mRtcEngCfg.mUid);
 
         mRtcEngCfg.mUid2 = pref.getInt(ConstantApp.PrefManager.PREF_PROPERTY_UID2, 0);
         while (mRtcEngCfg.mUid2 == 0 || mRtcEngCfg.mUid2 == mRtcEngCfg.mUid) {
@@ -139,7 +149,6 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         VideoEncoderConfiguration.VideoDimensions dimension = ConstantApp.VIDEO_DIMENSIONS[prefIndex];
         mRtcEngCfg.mClientRole = Constants.CLIENT_ROLE_BROADCASTER;
         mRtcEngCfg.mVideoDimension = dimension;
-        ALog.getInstance().d(TAG,"<initialize> mUid2=" + mRtcEngCfg.mUid2);
 
 
         //
@@ -154,6 +163,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         try {
             mRtcEngine = (RtcEngineEx) RtcEngine.create(mInitParam.mContext, mInitParam.mAppId,
                     mRtcEngEventHandler.mRtcEventHandler);
+            ALog.getInstance().d(TAG, "<initialize> mAppId=" + mInitParam.mAppId
+                    + ", mUid=" + mRtcEngCfg.mUid
+                    + ", mUid2=" + mRtcEngCfg.mUid2);
         } catch (Exception e) {
             e.printStackTrace();
             ALog.getInstance().e(TAG, "<initialize> " + Log.getStackTraceString(e));
@@ -433,12 +445,20 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     {
         ALog.getInstance().d(TAG, "<onJoinChannelSuccess> channel=" + channel
                 + ", uid=" + uid + ", elapsed=" + elapsed);
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onTalkingJoinDone(channel, uid);
+        }
     }
 
     @Override
     public void onLeaveChannelSuccess()
     {
         Log.d(TAG, "<onLeaveChannelSuccess> ");
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onTalkingLeftDone();
+        }
     }
 
     @Override

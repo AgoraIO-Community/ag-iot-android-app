@@ -18,6 +18,7 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
         registeredFragments.add(PagePilotManager.getFragmentPage(PagePathConstant.pagePlayerFunction, null));
         registeredFragments.add(PagePilotManager.getFragmentPage(PagePathConstant.pagePlayerMessage, null));
         registeredFragments.add(PagePilotManager.getFragmentPage(PagePathConstant.pagePlayerRtm, null));
+        registeredFragments.add(PagePilotManager.getFragmentPage(PagePathConstant.pagePlayerRtc, null));
     }
 
     @NonNull

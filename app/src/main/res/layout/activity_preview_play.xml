@@ -73,6 +73,17 @@
             android:textColor="@color/grey_to_white"
             android:textSize="16sp"
             app:layout_constraintStart_toEndOf="@+id/rBtnMessage"/>
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/rBtnVideo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="60dp"
+            android:button="@null"
+            android:text="@string/video"
+            android:textColor="@color/grey_to_white"
+            android:textSize="16sp"
+            app:layout_constraintStart_toEndOf="@+id/rBtnMessage"/>
     </RadioGroup>
 
     <View

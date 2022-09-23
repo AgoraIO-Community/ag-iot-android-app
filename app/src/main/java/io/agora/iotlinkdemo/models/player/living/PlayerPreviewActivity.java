@@ -74,6 +74,11 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 getBinding().viewPager.setCurrentItem(2);
             }
         });
+        getBinding().rBtnVideo.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (b) {
+                getBinding().viewPager.setCurrentItem(3);
+            }
+        });
         getBinding().viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
 
             @Override
@@ -88,6 +93,9 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 } else if (position == 2) {
                     getBinding().rBtnControl.setChecked(true);
                     AnimUtils.radioGroupLineAnim(getBinding().rBtnControl, getBinding().lineCheck);
+                } else if (position == 3) {
+                    getBinding().rBtnVideo.setChecked(true);
+                    AnimUtils.radioGroupLineAnim(getBinding().rBtnVideo, getBinding().lineCheck);
                 }
             }
         });
@@ -106,6 +114,9 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 } else if (getBinding().viewPager.getCurrentItem() == 2) {
                     ((PlayerRtmFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
                             .registeredFragments.get(2)).onBtnBack();
+                } else if (getBinding().viewPager.getCurrentItem() == 3) {
+                    ((PlayerRtcFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                            .registeredFragments.get(3)).onBtnBack();
                 }
                 return true;
             }

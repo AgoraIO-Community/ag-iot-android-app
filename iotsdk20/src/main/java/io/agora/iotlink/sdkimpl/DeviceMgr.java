@@ -19,6 +19,7 @@ import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.IotOutSharer;
+import io.agora.iotlink.IotPropertyDesc;
 import io.agora.iotlink.IotShareMessage;
 import io.agora.iotlink.IotShareMsgPage;
 import io.agora.iotlink.aws.AWSUtils;
@@ -73,6 +74,7 @@ public class DeviceMgr implements IDeviceMgr {
     private static final int MSGID_DEVMGR_GET_MCUVER = 0x2016;
     private static final int MSGID_DEVMGR_UPGRADE_MCUVER = 0x2017;
     private static final int MSGID_DEVMGR_UPGRADE_GETSTATUS = 0x2018;
+    private static final int MSGID_DEVMGR_QUERY_PROPDESC = 0x2019;
     private static final int MSGID_DEVMGR_EXIT = 0x2099;
 
     ////////////////////////////////////////////////////////////////////////
@@ -136,6 +138,10 @@ public class DeviceMgr implements IDeviceMgr {
 
             case MSGID_DEVMGR_RENAME: {
                 DoDeviceRename(msg);
+            } break;
+
+            case MSGID_DEVMGR_QUERY_PROPDESC: {
+                DoQueryAllPropDesc(msg);
             } break;
 
             case MSGID_DEVMGR_SETPROP: {
@@ -225,6 +231,7 @@ public class DeviceMgr implements IDeviceMgr {
             mWorkHandler.removeMessages(MSGID_DEVMGR_RENAME);
             mWorkHandler.removeMessages(MSGID_DEVMGR_SETPROP);
             mWorkHandler.removeMessages(MSGID_DEVMGR_GETPROP);
+            mWorkHandler.removeMessages(MSGID_DEVMGR_QUERY_PROPDESC);
             mWorkHandler.removeMessages(MSGID_DEVMGR_RECVSHADOW);
             mWorkHandler.removeMessages(MSGID_DEVMGR_ON_OFF_LINE);
             mWorkHandler.removeMessages(MSGID_DEVMGR_ACTION_UPDATE);
@@ -431,19 +438,28 @@ public class DeviceMgr implements IDeviceMgr {
     }
 
     @Override
-    public int setDeviceProperty(IotDevice iotDevice, Map<String, Object> properties) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<setDeviceProperty> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
+    public int queryAllPropertyDesc(final String deviceID, final String productNumber) {
         if (!mSdkInstance.isAccountReady()) {
-            ALog.getInstance().e(TAG, "<setDeviceProperty> bad state, sdkState="
+            ALog.getInstance().e(TAG, "<queryAllPropertyDesc> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
         }
 
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_SETINGPROP;  // 状态机切换到 正在设置属性中
+        QueryPropDescParam queryParam = new QueryPropDescParam();
+        queryParam.mDeviceID = deviceID;
+        queryParam.mProductNumber = productNumber;
+        sendMessage(MSGID_DEVMGR_QUERY_PROPDESC, 0, 0, queryParam);
+        ALog.getInstance().d(TAG, "<queryAllPropertyDesc> deviceID=" + deviceID
+                + ", productNumber=" + productNumber);
+        return ErrCode.XOK;
+    }
+
+    @Override
+    public int setDeviceProperty(IotDevice iotDevice, Map<String, Object> properties) {
+        if (!mSdkInstance.isAccountReady()) {
+            ALog.getInstance().e(TAG, "<setDeviceProperty> bad state, sdkState="
+                    + mSdkInstance.getStateMachine());
+            return ErrCode.XERR_BAD_STATE;
         }
 
         SetPropParam setPropParam = new SetPropParam();
@@ -457,18 +473,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int getDeviceProperty(IotDevice iotDevice) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<getDeviceProperty> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<getDeviceProperty> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_GETINGPROP;  // 状态机切换到 正在获取属性中
         }
 
         sendMessage(MSGID_DEVMGR_GETPROP, 0, 0, iotDevice);
@@ -526,18 +534,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryProductList(final ProductQueryParam queryParam) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryProductList> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryProductList> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_PRODUCT_QUERYING;  // 状态机切换到 正在查询产品中
         }
 
         sendMessage(MSGID_DEVMGR_PRODUCT_QUERY, 0, 0, queryParam);
@@ -1116,9 +1116,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoProductListQuery> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 设备管理空闲状态
-            }
             ProductQueryResult result = new ProductQueryResult();
             result.mErrCode = ErrCode.XERR_DEVMGR_PRODUCT_QUERY;
             CallbackProductQueryDone(result);
@@ -1129,9 +1126,6 @@ public class DeviceMgr implements IDeviceMgr {
         queryParam.mBlurry = sdkInitParam.mProjectID;
         ProductQueryResult queryResult = AgoraLowService.getInstance().productQuery(
                 account.mPlatformToken, queryParam);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 设备管理空闲状态
-        }
 
         ALog.getInstance().d(TAG, "<DoProductListQuery> done, errCode=" + queryResult.mErrCode);
         processTokenErrCode(queryResult.mErrCode);  // Token过期统一处理
@@ -1147,6 +1141,47 @@ public class DeviceMgr implements IDeviceMgr {
     }
 
     /*
+     * @brief 工作线程中处理 查询所有属性描述符
+     */
+    void DoQueryAllPropDesc(Message msg) {
+        QueryPropDescParam queryParam = (QueryPropDescParam)(msg.obj);
+
+        AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
+        if (account == null) {
+            ALog.getInstance().e(TAG, "<DoQueryAllPropDesc> cannot get account");
+            List<IotPropertyDesc> propDescList = new ArrayList<>();
+            CallbackQueryPropDescDone(ErrCode.XERR_DEVMGR_QUERY_PROPDESC, queryParam.mDeviceID,
+                    queryParam.mProductNumber, propDescList);
+            return;
+        }
+
+        //
+        // 查询属性描述符
+        //
+        AgoraLowService.PropertyDescResult queryResult;
+        queryResult = AgoraLowService.getInstance().queryPropertyDesc(account.mPlatformToken,
+                queryParam.mDeviceID,  queryParam.mProductNumber);
+
+        ALog.getInstance().d(TAG, "<DoQueryAllPropDesc> done, mAccount =" + account.mAccount
+                + ", errCode=" + queryResult.mErrCode
+                + ", propDescCount=" + queryResult.mPropDescList.size());
+        CallbackQueryPropDescDone(queryResult.mErrCode, queryParam.mDeviceID,
+                queryParam.mProductNumber, queryResult.mPropDescList);
+    }
+
+    void CallbackQueryPropDescDone(int errCode,
+                                   final String deviceID,
+                                   final String productNumber,
+                                   final List<IotPropertyDesc> propDescList) {
+        synchronized (mCallbackList) {
+            for (IDeviceMgr.ICallback listener : mCallbackList) {
+                listener.onQueryAllPropertyDescDone(errCode, deviceID, productNumber, propDescList);
+            }
+        }
+    }
+
+
+    /*
      * @brief 工作线程中处理 设置设备属性值
      */
     void DoDeviceSetProp(Message msg) {
@@ -1157,9 +1192,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeviceSetProp> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackSetPropertyDone(ErrCode.XERR_DEVMGR_SETPROPERTY, iotDevice, properties);
             return;
         }
@@ -1170,10 +1202,6 @@ public class DeviceMgr implements IDeviceMgr {
         AgoraLowService.AccountInfo gyAccount = convertToLowServiceAccount(account);
         AWSUtils.getInstance().setDeviceStatus(gyAccount.mAccount, iotDevice.mProductID,
                 iotDevice.mDeviceID, properties);
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 设备空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoDeviceSetProp> done, mAccount =" + account.mAccount
                 + ", iotDevice=" + iotDevice.toString()
@@ -1200,10 +1228,6 @@ public class DeviceMgr implements IDeviceMgr {
         // 进行设备属性设置
         //
         AWSUtils.getInstance().getDeviceStatus(iotDevice.mDeviceID);
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 设备空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoDeviceGetProp> iotDevice=" + iotDevice.toString());
         CallbackGetPropertyDone(ErrCode.XOK, iotDevice);
@@ -2046,5 +2070,13 @@ public class DeviceMgr implements IDeviceMgr {
         IotDevice mIotDevice;
         long   mUpgradeId;
         int    mDecide;
+    }
+
+    /**
+     * @brief 查询属性描述符参数
+     */
+    private class QueryPropDescParam {
+        String mDeviceID;
+        String mProductNumber;
     }
 }
