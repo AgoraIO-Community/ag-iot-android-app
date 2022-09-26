@@ -156,7 +156,7 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
     }
 
     @Override
-    public int start(final String channelName, final int localUid, final SurfaceView displayView) {
+    public int start(final String channelName, final SurfaceView displayView) {
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<start> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
@@ -175,12 +175,11 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
 
         mPlayerParam = new PlayerParam();
         mPlayerParam.mChannelName = channelName;
-        mPlayerParam.mLocalUid = localUid;
         mPlayerParam.mDisplayView = displayView;
 
         sendTaskMessage(MSGID_RTCPLAYER_REQTOKEN, 0, 0, mPlayerParam);
         ALog.getInstance().d(TAG, "<start> finished, channelName=" + channelName
-                                + ", localUid=" + localUid);
+                                + ", displayView=" + displayView.toString());
         return ErrCode.XOK;
     }
 
@@ -222,7 +221,19 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
         //
         // 向服务器请求 RtcPlayer 的token信息
         //
-        String rtcToken = null;
+        IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
+        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
+        AgoraService.RtcPlayTokenResult tokenResult = AgoraService.getInstance().getRtcPlayToken(
+                accountInfo.mAgoraAccessToken, sdkInitParam.mRtcAppId, playerParam.mChannelName);
+
+        if (tokenResult.mErrCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<DoRequestToken> fail to get token, errCode="
+                    + tokenResult.mErrCode);
+            setStateMachine(RTCPLAYER_STATE_STOPPED);  // 停止状态
+            sendTaskMessage(MSGID_RTCPLAYER_PREPARED, tokenResult.mErrCode,0, playerParam);
+            return;
+        }
+        playerParam.mLocalUid = tokenResult.mLocalUid;
 
 
         //
@@ -238,28 +249,31 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
                 mTalkEngine = new TalkingEngine();
                 TalkingEngine.InitParam talkInitParam = mTalkEngine.new InitParam();
                 talkInitParam.mContext = sdkInitParam.mContext;
-                talkInitParam.mAppId = "aab8b8f5a8cd4469a63042fcfafe7063"; // sdkInitParam.mRtcAppId;
+                talkInitParam.mAppId = sdkInitParam.mRtcAppId;
                 talkInitParam.mCallback = rtcPlayer;
                 talkInitParam.mPublishVideo = false;
                 talkInitParam.mPublishAudio = false;
                 talkInitParam.mSubscribeAudio = true;
                 talkInitParam.mSubscribeVideo = true;
                 mTalkEngine.initialize(talkInitParam);
-                // mTalkEngine.setPeerUid(peerUid);
-                // mTalkEngine.setRemoteVideoView(playerParam.mDisplayView);
+
 
                 // 加入频道
-                boolean ret = mTalkEngine.joinChannel(playerParam.mChannelName, rtcToken,
-                        playerParam.mLocalUid);
+                boolean ret = mTalkEngine.joinChannel(playerParam.mChannelName, tokenResult.mRtcPlayToken,
+                        tokenResult.mLocalUid);
                 if (!ret) {
                     setStateMachine(RTCPLAYER_STATE_STOPPED);  // 停止状态
                     sendTaskMessage(MSGID_RTCPLAYER_PREPARED, ErrCode.XERR_UNSUPPORTED,
                             0, playerParam);
+                    return;
                 }
+                // mTalkEngine.setPeerUid(peerUid);
+                mTalkEngine.setRemoteVideoView(playerParam.mDisplayView);
             }
         });
 
-        ALog.getInstance().d(TAG, "<DoRequestToken> finished, rtcToken=" + rtcToken);
+        ALog.getInstance().d(TAG, "<DoRequestToken> finished, rtcToken=" + tokenResult.mRtcPlayToken
+                        + ", uid=" + tokenResult.mLocalUid);
      }
 
     /**
@@ -339,7 +353,7 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
      */
     private class PlayerParam {
         String mChannelName;
-        int    mLocalUid;
+        int mLocalUid;
         SurfaceView mDisplayView;
     }
 

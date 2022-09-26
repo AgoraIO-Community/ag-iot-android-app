@@ -26,8 +26,7 @@ public class IotOutSharer {
 
     public String mProductNumber;       ///< 产品唯一Number
     public String mProductID;           ///< 产品ID
-    public String mDeviceNumber;        ///< 设备唯一的Number
-    public String mDeviceID;            ///< 设备MAC地址
+    public String mDeviceID;            ///< 设备ID(MAC地址)
     public String mDevNickName;         ///< 设备名
     public boolean mConnected;          ///< 是否在线
 
@@ -43,7 +42,7 @@ public class IotOutSharer {
                 + "mAvatar=" + mAvatar + ", mAvatar=" + mAvatar
                 + "mAppUserId=" + mAppUserId
                 + ", mProductNumber=" + mProductNumber + ", mProductID=" + mProductID
-                + ", mDeviceNumber=" + mDeviceNumber + ", mDeviceID=" + mDeviceID
+                + ", mDeviceID=" + mDeviceID
                 + ", mDevNickName=" + mDevNickName + ", mConnected=" + mConnected
                 + ", mCreateTime=" + mCreateTime + ", mUpdateTime=" + mUpdateTime + " }";
 

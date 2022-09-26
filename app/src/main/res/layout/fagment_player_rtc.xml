@@ -17,19 +17,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/et_rtc_uid"
-        style="@style/def_et_input"
-        android:layout_marginTop="30dp"
-        android:enabled="true"
-        android:hint="输入uid"
-        android:inputType="text"
-        android:paddingEnd="40dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/et_rtc_channel_name" />
-
-
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_rtc_play"
         style="@style/rtm_btn_full"
@@ -40,7 +27,7 @@
         android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/et_rtc_uid" />
+        app:layout_constraintTop_toBottomOf="@+id/et_rtc_channel_name" />
 
     <SurfaceView
         android:id="@+id/player_view"

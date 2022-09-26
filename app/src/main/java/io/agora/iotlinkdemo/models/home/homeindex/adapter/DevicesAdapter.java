@@ -29,8 +29,8 @@ public class DevicesAdapter extends BaseAdapter<IotDevice> {
 
     @Override
     public int getItemViewType(int position) {
-        if (getDatas().get(position).mDeviceNumber.equals("199")) {
-            return Integer.parseInt(getDatas().get(position).mDeviceNumber);
+        if (getDatas().get(position).mDeviceID.equals("199")) {
+            return Integer.parseInt(getDatas().get(position).mDeviceID);
         } else {
             return super.getItemViewType(position);
         }
@@ -39,7 +39,7 @@ public class DevicesAdapter extends BaseAdapter<IotDevice> {
     @Override
     public void onBindViewHolder(@NonNull CommonViewHolder holder, int position) {
         IotDevice device = getDatas().get(position);
-        if (!getDatas().get(position).mDeviceNumber.equals("199")) {
+        if (!getDatas().get(position).mDeviceID.equals("199")) {
             if (device != null) {
                 holder.setText(R.id.tvDeviceName, StringUtils.INSTANCE.getBase64String(device.mDeviceName));
                 holder.itemView.setOnClickListener(view -> getMRVItemClickListener().onItemClick(view, position, device));

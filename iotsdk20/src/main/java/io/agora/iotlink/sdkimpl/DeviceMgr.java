@@ -568,7 +568,7 @@ public class DeviceMgr implements IDeviceMgr {
         shareParam.mPermission = permission;
         shareParam.mForce = (needPeerAgree ? false : true);
         sendMessage(MSGID_DEVMGR_SHARE, 0, 0, shareParam);
-        ALog.getInstance().d(TAG, "<shareDevice> deviceNumber=" + iotDevice.mDeviceNumber
+        ALog.getInstance().d(TAG, "<shareDevice> deviceID=" + iotDevice.mDeviceID
                 + ", sharingAccount=" + sharingAccount
                 + ", permission=" + permission + ", needPeerAgree=" + needPeerAgree);
         return ErrCode.XOK;
@@ -593,7 +593,7 @@ public class DeviceMgr implements IDeviceMgr {
         ShareDevOptParam deshareParam = new ShareDevOptParam();
         deshareParam.mOutSharer = outSharer;
         sendMessage(MSGID_DEVMGR_DESHARE, 0, 0, deshareParam);
-        ALog.getInstance().d(TAG, "<deshareDevice> mDeviceNumber=" + outSharer.mDeviceNumber);
+        ALog.getInstance().d(TAG, "<deshareDevice> mDeviceID=" + outSharer.mDeviceID);
         return ErrCode.XOK;
     }
 
@@ -644,7 +644,7 @@ public class DeviceMgr implements IDeviceMgr {
     }
 
     @Override
-    public int queryOutSharerList(final String deviceNumber) {
+    public int queryOutSharerList(final String deviceID) {
         if (getStateMachine() != DEVMGR_STATE_IDLE) {
             ALog.getInstance().e(TAG, "<queryOutSharerList> bad state, mStateMachine=" + mStateMachine);
             return ErrCode.XERR_BAD_STATE;
@@ -661,9 +661,9 @@ public class DeviceMgr implements IDeviceMgr {
 
         ShareDevOptParam deshareParam = new ShareDevOptParam();
         deshareParam.mIotDevice = new IotDevice();
-        deshareParam.mIotDevice.mDeviceNumber = deviceNumber;
+        deshareParam.mIotDevice.mDeviceID = deviceID;
         sendMessage(MSGID_DEVMGR_QUERY_OUTSHARER, 0, 0, deshareParam);
-        ALog.getInstance().d(TAG, "<queryOutSharerList> deviceNumber=" + deviceNumber);
+        ALog.getInstance().d(TAG, "<queryOutSharerList> deviceID=" + deviceID);
         return ErrCode.XOK;
     }
 
@@ -792,7 +792,6 @@ public class DeviceMgr implements IDeviceMgr {
     void onDevOnlineChanged(String deviceMac, String deviceId, boolean online) {
         DevOnOffLineParam onOffLineParam = new DevOnOffLineParam();
         onOffLineParam.mDeviceID = deviceMac;
-        onOffLineParam.mDeviceNumber = deviceId;
         onOffLineParam.mOnline = online;
 
         if (mWorkHandler != null) {
@@ -830,7 +829,6 @@ public class DeviceMgr implements IDeviceMgr {
                               Map<String, Object> properties) {
         DevPropertyUpdateParam propertyUpdateParam = new DevPropertyUpdateParam();
         propertyUpdateParam.mDeviceID = deviceMac;
-        propertyUpdateParam.mDeviceNumber = deviceId;
         propertyUpdateParam.mProperties = properties;
 
         if (mWorkHandler != null) {
@@ -875,7 +873,6 @@ public class DeviceMgr implements IDeviceMgr {
                 iotDevice.mUserType = devInfo.mUserType;
                 iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mProductID = devInfo.mProductKey;
-                iotDevice.mDeviceNumber = devInfo.mDeviceId;
                 iotDevice.mDeviceName = devInfo.mDeviceName;
                 iotDevice.mDeviceID = devInfo.mDeviceMac;
                 iotDevice.mSharer = devInfo.mSharer;
@@ -945,9 +942,8 @@ public class DeviceMgr implements IDeviceMgr {
                 IotDevice iotDevice = new IotDevice();
                 iotDevice.mAppUserId = devInfo.mAppUserId;
                 iotDevice.mUserType = devInfo.mUserType;
-                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mProductID = devInfo.mProductKey;
-                iotDevice.mDeviceNumber = devInfo.mDeviceId;
+                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mDeviceName = devInfo.mDeviceName;
                 iotDevice.mDeviceID = devInfo.mDeviceMac;
                 iotDevice.mSharer = devInfo.mSharer;
@@ -959,8 +955,6 @@ public class DeviceMgr implements IDeviceMgr {
                     // 更新新绑定设备的信息
                     bindingDev.mAppUserId = devInfo.mAppUserId;
                     bindingDev.mUserType = devInfo.mUserType;
-                    bindingDev.mProductNumber = devInfo.mProductId;
-                    bindingDev.mDeviceNumber = devInfo.mDeviceId;
                     bindingDev.mDeviceName = devInfo.mDeviceName;
                     bindingDev.mSharer = devInfo.mSharer;
                     bindingDev.mCreateTime = devInfo.mCreateTime;
@@ -1016,7 +1010,7 @@ public class DeviceMgr implements IDeviceMgr {
         // 进行设备解绑操作
         //
         AgoraLowService.AccountInfo gyAccount = convertToLowServiceAccount(account);
-        int errCode = AgoraLowService.getInstance().deviceUnbind(gyAccount, unbindingDev.mDeviceNumber);
+        int errCode = AgoraLowService.getInstance().deviceUnbind(gyAccount, unbindingDev.mDeviceID);
 
         //
         // 查询已经绑定的设备列表
@@ -1030,9 +1024,8 @@ public class DeviceMgr implements IDeviceMgr {
                 IotDevice iotDevice = new IotDevice();
                 iotDevice.mAppUserId = devInfo.mAppUserId;
                 iotDevice.mUserType = devInfo.mUserType;
-                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mProductID = devInfo.mProductKey;
-                iotDevice.mDeviceNumber = devInfo.mDeviceId;
+                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mDeviceName = devInfo.mDeviceName;
                 iotDevice.mDeviceID = devInfo.mDeviceMac;
                 iotDevice.mSharer = devInfo.mSharer;
@@ -1088,7 +1081,7 @@ public class DeviceMgr implements IDeviceMgr {
         //
         AgoraLowService.AccountInfo gyAccount = convertToLowServiceAccount(account);
         int errCode = AgoraLowService.getInstance().deviceRename(gyAccount,
-                            renameParam.mIotDevice.mDeviceNumber, renameParam.mNewName);
+                            renameParam.mIotDevice.mDeviceID, renameParam.mNewName);
         synchronized (mDataLock) {
             mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
@@ -1258,7 +1251,7 @@ public class DeviceMgr implements IDeviceMgr {
         // 获取固件版本
         //
         AgoraLowService.McuVersionResult result = AgoraLowService.getInstance().getMcuVersion(
-                account.mPlatformToken,  iotDevice.mDeviceNumber);
+                account.mPlatformToken,  iotDevice.mDeviceID);
 
         ALog.getInstance().d(TAG, "<DoGetMcuVersion> errCode=" + result.mErrCode
                 + ", mMcuVersion=" + result.mMcuVersion);
@@ -1293,7 +1286,6 @@ public class DeviceMgr implements IDeviceMgr {
         // 升级固件版本
         //
         int errCode = AgoraLowService.getInstance().upgradeMcuVersion(account.mPlatformToken,
-                upgradeParam.mIotDevice.mDeviceNumber,
                 upgradeParam.mUpgradeId, upgradeParam.mDecide);
 
         ALog.getInstance().d(TAG, "<DoUpgradeMcuVersion> errCode=" + errCode
@@ -1465,7 +1457,6 @@ public class DeviceMgr implements IDeviceMgr {
         }
 
         ALog.getInstance().d(TAG, "<DoDevicePropertyUpdate> deviceID=" + iotDevice.mDeviceID
-                + ", deviceNumber=" + iotDevice.mDeviceNumber
                 + ", mProperties=" + propertyUpdateParam.mProperties);
 
         synchronized (mCallbackList) {
@@ -1496,14 +1487,14 @@ public class DeviceMgr implements IDeviceMgr {
         // 进行设备共享操作
         //
         int errCode = AgoraLowService.getInstance().shareDevice(account.mPlatformToken,
-                shareParam.mForce, shareParam.mIotDevice.mDeviceNumber,
+                shareParam.mForce, shareParam.mIotDevice.mDeviceID,
                 shareParam.mAccount, shareParam.mPermission);
         synchronized (mDataLock) {
             mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<DoShareDevice> errCode=" + errCode
-                + ", deviceNumber=" + shareParam.mIotDevice.mDeviceNumber
+                + ", deviceID=" + shareParam.mIotDevice.mDeviceID
                 + ", account=" + shareParam.mAccount
                 + ", permission=" + shareParam.mPermission
                 + ", force=" + shareParam.mForce       );
@@ -1540,16 +1531,16 @@ public class DeviceMgr implements IDeviceMgr {
         //
         // 进行撤销共享操作
         //
-        String deviceNumber = deshareParam.mOutSharer.mDeviceNumber;
+        String deviceID = deshareParam.mOutSharer.mDeviceID;
         String deshareAccount = deshareParam.mOutSharer.mAppUserId;
         int errCode = AgoraLowService.getInstance().deshareDevice(account.mPlatformToken,
-                deviceNumber, deshareAccount);
+                deviceID, deshareAccount);
         synchronized (mDataLock) {
             mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<DoDeshareDevice> errCode=" + errCode
-                + ", deviceNumber =" + deviceNumber
+                + ", deviceNumber =" + deviceID
                 + ", deshareAccount=" + deshareAccount        );
         processTokenErrCode(errCode);  // Token过期统一处理
         CallbackDevDeshareDone(errCode, deshareParam.mOutSharer);
@@ -1668,7 +1659,7 @@ public class DeviceMgr implements IDeviceMgr {
      */
     void DoQueryOutSharers(Message msg) {
         ShareDevOptParam optParam = (ShareDevOptParam)(msg.obj);
-        String deviceNumber = optParam.mIotDevice.mDeviceNumber;
+        String deviceID = optParam.mIotDevice.mDeviceID;
 
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
@@ -1676,7 +1667,7 @@ public class DeviceMgr implements IDeviceMgr {
             synchronized (mDataLock) {
                 mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
             }
-            CallbackQueryDesharableDone(ErrCode.XERR_DEVMGR_QUERY_DESHARABLE, deviceNumber,null);
+            CallbackQueryDesharableDone(ErrCode.XERR_DEVMGR_QUERY_DESHARABLE, deviceID,null);
             return;
         }
 
@@ -1685,7 +1676,7 @@ public class DeviceMgr implements IDeviceMgr {
         //
         ArrayList<IotDevice> desharableDevList = new ArrayList<>();
         AgoraLowService.OutSharerQueryResult queryResult;
-        queryResult = AgoraLowService.getInstance().queryOutSharerList(account.mPlatformToken, deviceNumber);
+        queryResult = AgoraLowService.getInstance().queryOutSharerList(account.mPlatformToken, deviceID);
 
         synchronized (mDataLock) {
             mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
@@ -1694,14 +1685,14 @@ public class DeviceMgr implements IDeviceMgr {
         ALog.getInstance().d(TAG, "<DoQuerySharable> errCode=" + queryResult.mErrCode
                 + ", outSharerCount=" + queryResult.mOutSharerList.size());
         processTokenErrCode(queryResult.mErrCode);  // Token过期统一处理
-        CallbackQueryDesharableDone(queryResult.mErrCode, deviceNumber, queryResult.mOutSharerList);
+        CallbackQueryDesharableDone(queryResult.mErrCode, deviceID, queryResult.mOutSharerList);
     }
 
-    void CallbackQueryDesharableDone(int errCode, final String deviceNumber,
+    void CallbackQueryDesharableDone(int errCode, final String deviceID,
                                      final List<IotOutSharer> sharerList) {
         synchronized (mCallbackList) {
             for (IDeviceMgr.ICallback listener : mCallbackList) {
-                listener.onQueryOutSharerListDone(errCode, deviceNumber, sharerList);
+                listener.onQueryOutSharerListDone(errCode, deviceID, sharerList);
             }
         }
     }
@@ -1958,9 +1949,8 @@ public class DeviceMgr implements IDeviceMgr {
                 IotDevice iotDevice = new IotDevice();
                 iotDevice.mAppUserId = devInfo.mAppUserId;
                 iotDevice.mUserType = devInfo.mUserType;
-                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mProductID = devInfo.mProductKey;
-                iotDevice.mDeviceNumber = devInfo.mDeviceId;
+                iotDevice.mProductNumber = devInfo.mProductId;
                 iotDevice.mDeviceName = devInfo.mDeviceName;
                 iotDevice.mDeviceID = devInfo.mDeviceMac;
                 iotDevice.mSharer = devInfo.mSharer;
@@ -2012,7 +2002,6 @@ public class DeviceMgr implements IDeviceMgr {
      */
     private class DevOnOffLineParam {
         String mDeviceID;
-        String mDeviceNumber;
         boolean mOnline;
     }
 
@@ -2029,7 +2018,6 @@ public class DeviceMgr implements IDeviceMgr {
      */
     private class DevPropertyUpdateParam {
         String mDeviceID;
-        String mDeviceNumber;
         Map<String, Object> mProperties;
     }
 

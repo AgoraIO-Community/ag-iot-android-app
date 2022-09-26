@@ -137,6 +137,84 @@ public class AgoraService {
     //////////////////////////////////////////////////////////////////////////////////
     ////////////////////////// Methods for Callkit Module ////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////
+    public static class RtcPlayTokenResult {
+        public int mErrCode;
+        public String mChannelName;
+        public String mRtcPlayToken;
+        public int mLocalUid;
+    }
+
+    /**
+     * @brief 获取 RTC播放的 token
+     * @param token : Agora服务器的鉴权 token
+     * @param appid : Agora AppId，来自于声网开发者平台
+     * @param channelName : 要播放的频道名称
+     * @return 服务端分配的Token信息
+     */
+    public RtcPlayTokenResult getRtcPlayToken(final String token, final String appid,
+                                              final String channelName) {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+        RtcPlayTokenResult tokenResult = new RtcPlayTokenResult();
+
+        // 请求URL
+        String requestUrl = mCallkitBaseUrl + "/getRtcToken";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", appid + "-" + channelName);
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+
+            JSONObject payloadObj = new JSONObject();
+            payloadObj.put("appId", appid);
+            payloadObj.put("channelName", channelName);
+            body.put("payload", payloadObj);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            tokenResult.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            return tokenResult;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                token, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<getRtcPlayToken> failure with no response!");
+            tokenResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return tokenResult;
+        }
+        ALog.getInstance().d(TAG, "<getRtcPlayToken> responseObj=" + responseObj.toString());
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<getRtcPlayToken> failure, mErrorCode=" + responseObj.mErrorCode);
+            tokenResult.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
+            return tokenResult;
+        }
+
+        // 解析呼叫请求返回结果
+        try {
+            JSONObject dataObj = responseObj.mRespJsonObj.getJSONObject("data");
+            tokenResult.mChannelName = parseJsonStringValue(dataObj, "channelName", null);
+            tokenResult.mRtcPlayToken = parseJsonStringValue(dataObj, "rtcToken", null);
+            tokenResult.mLocalUid = parseJsonIntValue(dataObj, "uid", 0);
+            tokenResult.mErrCode = ErrCode.XOK;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            ALog.getInstance().e(TAG, "<getRtcPlayToken> JSONException=" + e.toString());
+            tokenResult.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
+            return tokenResult;
+        }
+
+        ALog.getInstance().d(TAG, "<getRtcPlayToken> channelName=" + tokenResult.mChannelName
+                    + ", rtcToken=" + tokenResult.mRtcPlayToken
+                    + ", uid=" + tokenResult.mLocalUid  );
+        return tokenResult;
+    }
+
+
+
     /*
      * @brief 发起一个呼叫请求
      * @param appid : Agora AppId，来自于声网开发者平台

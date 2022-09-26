@@ -117,7 +117,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
             for (int i = 0; i < deviceList.size(); i++) {
                 int j = 0;
                 for (j = 0; j < mBeforeBindDevList.size(); j++) {
-                    if (deviceList.get(i).mDeviceNumber.equals(mBeforeBindDevList.get(j).mDeviceNumber)) {
+                    if (deviceList.get(i).mDeviceID.equals(mBeforeBindDevList.get(j).mDeviceID)) {
                         break;
                     }
                 }
@@ -316,7 +316,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public void initHandler() {
         mBeforeBindDevList.clear();
         for (IotDevice device : DevicesListManager.devicesList) {
-            if (!TextUtils.isEmpty(device.mDeviceNumber)) {
+            if (!TextUtils.isEmpty(device.mDeviceID)) {
                 mBeforeBindDevList.add(device);
             }
         }

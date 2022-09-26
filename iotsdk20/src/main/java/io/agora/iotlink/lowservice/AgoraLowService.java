@@ -120,7 +120,7 @@ public class AgoraLowService {
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
-    private static final String TAG = "AgoraLowService";
+    private static final String TAG = "IOTSDK/LowService";
     private static final int HTTP_TIMEOUT = 8000;
 
 
@@ -151,409 +151,6 @@ public class AgoraLowService {
     public void setBaseUrl(final String baseUrl) {
         mServerBaseUrl = baseUrl;
         ALog.getInstance().e(TAG, "<setBaseUrl> mServerBaseUrl=" + mServerBaseUrl);
-    }
-
-    /*
-     * @brief 获取邮箱注册验证码
-     * @param clientId : 品牌标识
-     * @param account : 要注册的邮箱账号
-     * @param type : 请求类型（【REGISTER】注册、【LOGIN】登录、【PWE_RESET】重置密码）
-     * @return 错误码，0表示成功
-     */
-    public int getEmailCode(final long clientId, final String account, final String type) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/email/code/get";
-
-        // 请求参数
-        try {
-            body.put("merchantId", Long.toString(clientId));
-            body.put("email", account);
-            body.put("type", type);
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<getEmailCode> failure set JSON object!");
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST", null, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<getEmailCode> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<getEmailCode> failure, mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_GETCODE;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<getEmailCode> failure, mRespCode="
-                    + responseObj.mRespCode);
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_GETCODE);
-        }
-
-        ALog.getInstance().d(TAG, "<getEmailCode> successful"
-                + ", email=" + account + ", type=" + type);
-        return ErrCode.XOK;
-    }
-
-    /*
-     * @brief 获取手机验证码
-     * @param clientId : 品牌标识
-     * @param phoneNumber : 手机号码
-     * @param type : 请求类型（【REGISTER】注册、【LOGIN】登录、【PWE_RESET】重置密码）
-     * @return 错误码，0表示成功
-     */
-    public int getPhoneCode(final long clientId, final String phoneNumber, final String type) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        if ((phoneNumber == null) || (phoneNumber.length() <= 4)) {
-            ALog.getInstance().e(TAG, "<getPhoneCode> failure, phoneNumber=" + phoneNumber);
-            return ErrCode.XERR_INVALID_PARAM;
-        }
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/sms/code/get";
-
-        // 请求参数
-        try {
-            body.put("merchantId", Long.toString(clientId));
-            String phone = phoneNumber;
-            String phoneHead = phoneNumber.substring(0, 3);
-            if (phoneHead.compareToIgnoreCase("+86") != 0) {
-                phone = "+86" + phoneNumber;
-            }
-            body.put("phone", phone);
-            body.put("type", type);
-
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<getPhoneCode> failure set JSON object!");
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST", null, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<getPhoneCode> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<getPhoneCode> failure, mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_GETCODE;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<getPhoneCode> failure, mRespCode="
-                    + responseObj.mRespCode);
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_GETCODE);
-        }
-
-        ALog.getInstance().d(TAG, "<getPhoneCode> successful"
-                + ", phoneNumber=" + phoneNumber + ", type=" + type);
-        return ErrCode.XOK;
-    }
-
-
-    /*
-     * @brief 注册用户账号
-     * @param clientId : 品牌标识
-     * @param account : 要注册的账号
-     * @param password : 账号密码
-     * @param code : 账号注册验证码
-     * @param phoneNumber: 手机号码，必须以+86开头
-     * @param eMail: 邮箱，与手机号码 二选一
-     * @return 错误码，0表示成功
-     */
-    public int accountRegister(long clientId, final String account, final String password,
-                               final String code,
-                               final String phoneNumber, final String eMail) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/user/register";
-
-        // 请求参数
-        try {
-            body.put("merchantId", Long.toString(clientId));
-            body.put("account", account);
-            body.put("password", password);
-            if (!code.isEmpty()) {
-                body.put("code", code);
-            }
-
-            // 手机号码 与 邮箱 只能二选一，并且手机号码必须加"+86"开头
-            if ((phoneNumber != null) && (phoneNumber.length() > 4)) {
-                String phone = phoneNumber;
-                String phoneHead = phoneNumber.substring(0, 3);
-                if (phoneHead.compareToIgnoreCase("+86") != 0) {
-                    phone = "+86" + phoneNumber;
-                }
-                body.put("mobilephone", phone);
-
-            } else if ((eMail != null) && (eMail.length() > 2)) {
-                body.put("email", eMail);
-            }
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<accountRegister> failure set JSON object!");
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST", null, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<accountRegister> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountRegister> failure, mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_REGISTER;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountRegister> failure, mRespCode="
-                    + responseObj.mRespCode);
-            if (responseObj.mRespCode == 1) {  // 该账号已经注册
-                return ErrCode.XERR_ACCOUNT_ALREADY_EXIST;
-            }
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_REGISTER);
-        }
-
-        ALog.getInstance().d(TAG, "<accountRegister> successful"
-                + ", account=" + account + ", password=" + password);
-        return ErrCode.XOK;
-    }
-
-    /*
-     * @brief 注销用户账号
-     * @return 错误码，0表示成功
-     */
-    public int accountUnregister(final String srvToken) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/user/cancel";
-
-        // 请求参数
-
-        // 发送HTTP请求
-        ResponseObj responseObj = requestToServer(requestUrl, "POST", srvToken, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<accountUnregister> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountUnregister> failure, mErrorCode="
-                    + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_UNREGISTER;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountUnregister> failure, mRespCode="
-                    + responseObj.mRespCode);
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_UNREGISTER);
-        }
-
-        ALog.getInstance().d(TAG, "<accountUnregister> successful");
-        return ErrCode.XOK;
-    }
-
-    /*
-     * @brief  根据账号和密码 登录用户账号
-     * @param account : 要登录的账号
-     * @param password : 要登录的账号密码
-     * @return 账号信息，如果返回null表示登录失败
-     */
-    public static class LoginResult {
-        public int mErrCode = ErrCode.XOK;
-        public AccountInfo mAccountInfo;
-    }
-    public LoginResult accountLogin(final String account, final String password) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-        LoginResult result = new LoginResult();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/user/login";
-
-        // 请求参数
-        try {
-            body.put("account", account);
-            body.put("password", password);
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<accountLogin> failure set JSON object!");
-            result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
-            return result;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST", null, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<accountLogin> failure with no response!");
-            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return result;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountLogin> failure!");
-            result.mErrCode = ErrCode.XERR_ACCOUNT_LOGIN;
-            return result;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountLogin> failure, mRespCode="
-                    + responseObj.mRespCode);
-            result.mErrCode = mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_LOGIN);
-            return result;
-        }
-        if (responseObj.mRespJsonObj == null) {
-            ALog.getInstance().e(TAG, "<accountLogin> NO response object!");
-            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return result;
-        }
-
-        // 解析账号信息
-        result.mAccountInfo = new AccountInfo();
-        try {
-            JSONObject infoObj = responseObj.mRespJsonObj.getJSONObject("info");
-            result.mAccountInfo.mAccount = infoObj.getString("account");
-            result.mAccountInfo.mEndpoint = infoObj.getString("endpoint");
-            result.mAccountInfo.mRegion = infoObj.getString("region");
-            result.mAccountInfo.mExpiration = infoObj.getInt("expiration");
-            result.mAccountInfo.mPlatformToken= infoObj.getString("granwin_token");
-
-            JSONObject poolObj = infoObj.getJSONObject("pool");
-            result.mAccountInfo.mPoolIdentifier = poolObj.getString("identifier");
-            result.mAccountInfo.mPoolIdentityId = poolObj.getString("identityId");
-            result.mAccountInfo.mIdentityPoolId = poolObj.getString("identityPoolId");
-            result.mAccountInfo.mPoolToken = poolObj.getString("token");
-
-            JSONObject proofObj = infoObj.getJSONObject("proof");
-            result.mAccountInfo.mProofAccessKeyId = proofObj.getString("accessKeyId");
-            result.mAccountInfo.mProofSecretKey = proofObj.getString("secretKey");
-            result.mAccountInfo.mProofSessionToken = proofObj.getString("sessionToken");
-            result.mAccountInfo.mProofSessionExpiration = proofObj.getLong("sessionExpiration");
-
-            // 拼接user映射的虚拟设备thing name
-            result.mAccountInfo.mInventDeviceName = queryInventDeviceName(result.mAccountInfo.mPlatformToken);
-
-            result.mErrCode = ErrCode.XOK;
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-            ALog.getInstance().e(TAG, "<accountLogin> [JSONException], error=" + e);
-            result.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
-            return result;
-        }
-
-        ALog.getInstance().d(TAG, "<accountLogin> successful"
-                + ", account=" + account + ", password=" + password);
-        return result;
-    }
-
-    /*
-     * @brief  更改用户账号的密码
-     * @param account : 当前登录的账号
-     * @param newPassword : 要重置的密码
-     * @param code : 验证码
-     * @return 错误代码，0表示成功
-     */
-    public int accountResetPassword(final String account, final String srvToken,
-                                    final String newPassword, final String code) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/user/password/reset";
-
-        // 请求参数
-        try {
-            body.put("account", account);
-            body.put("newPassword", newPassword);
-            body.put("code", code);
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<accountResetPassword> failure set JSON object!");
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST",
-                null, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<accountResetPassword> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountResetPassword> failure"
-                    + ", account=" + account
-                    + ", newPassword=" + newPassword
-                    + ", code=" + code
-                    + ", mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_RESETPSWD;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountChgPassword> failure"
-                    + ", account=" + account
-                    + ", newPassword=" + newPassword
-                    + ", code=" + code
-                    + ", mRespCode=" + responseObj.mRespCode);
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_RESETPSWD);
-        }
-
-        ALog.getInstance().d(TAG, "<accountResetPassword> successful"
-                + ", account=" + account
-                + ", newPassword=" + newPassword
-                + ", code=" + code);
-        return ErrCode.XOK;
-    }
-
-    /*
-     * @brief  更改用户账号的密码
-     * @param account : 要登录的账号
-     * @param password : 要登录的账号密码
-     * @return 错误代码，0表示成功
-     */
-    public int accountChgPassword(final String srvToken, final String oldPassword,
-                                  final String newPassword) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/user/password/update";
-
-        // 请求参数
-        try {
-            body.put("oldPassword", oldPassword);
-            body.put("newPassword", newPassword);
-        } catch (JSONException jsonException) {
-            jsonException.printStackTrace();
-            ALog.getInstance().e(TAG, "<accountResetPassword> failure set JSON object!");
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST",
-                srvToken, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<accountChgPassword> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountChgPassword> failure"
-                    + ", oldPassword=" + oldPassword
-                    + ", newPassword=" + newPassword
-                    + ", mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_ACCOUNT_CHGPSWD;
-        }
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountChgPassword> failure"
-                    + ", oldPassword=" + oldPassword
-                    + ", newPassword=" + newPassword
-                    + ", mRespCode=" + responseObj.mRespCode);
-            return mapRespErrCode(responseObj.mRespCode, ErrCode.XERR_ACCOUNT_CHGPSWD);
-        }
-
-        ALog.getInstance().d(TAG, "<accountChgPassword> successful"
-                + ", oldPassword=" + oldPassword
-                + ", newPassword=" + newPassword    );
-        return ErrCode.XOK;
     }
 
     /*
@@ -757,7 +354,7 @@ public class AgoraLowService {
         return ErrCode.XOK;
     }
 
-    /*
+    /**
      * @brief 查询指定账号名下绑定的设备列表
      */
     public static class DeviceQueryResult {
@@ -839,7 +436,7 @@ public class AgoraLowService {
         return queryResult;
     }
 
-    /*
+    /**
      * @brief 绑定IoT设备
      */
     public int deviceBind(final AccountInfo accountInfo, final String productKey,
@@ -883,7 +480,7 @@ public class AgoraLowService {
         return ErrCode.XOK;
     }
 
-    /*
+    /**
      * @brief 解绑IoT设备
      */
     public int deviceUnbind(final AccountInfo accountInfo, String deviceId) {
@@ -895,7 +492,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
         } catch (JSONException jsonException) {
             jsonException.printStackTrace();
             ALog.getInstance().e(TAG, "<deviceUnbind> failure set JSON object!");
@@ -924,7 +521,7 @@ public class AgoraLowService {
         return ErrCode.XOK;
     }
 
-    /*
+    /**
      * @brief 重命名IoT设备
      */
     public int deviceRename(final AccountInfo accountInfo, String deviceId, String name) {
@@ -936,7 +533,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
             body.put("deviceNickName", name);
         } catch (JSONException jsonException) {
             jsonException.printStackTrace();
@@ -967,7 +564,7 @@ public class AgoraLowService {
     }
 
 
-    /*
+    /**
      * @brief 查询产品列表信息
      * @param srvToken : 参数
      */
@@ -979,7 +576,7 @@ public class AgoraLowService {
         queryResult.mQueryParam = queryParam;
 
         // 请求URL
-        String requestUrl = mServerBaseUrl + "/app/product/list";
+        String requestUrl = mServerBaseUrl + "/device/product/list";
 
         // 请求参数
         if (queryParam.mPageNo >= 0) {
@@ -1034,13 +631,14 @@ public class AgoraLowService {
                 JSONObject productObj = listObj.getJSONObject(i);
                 IDeviceMgr.ProductInfo productInfo = new IDeviceMgr.ProductInfo();
 
-                productInfo.mId = parseJsonLongValue(productObj, "id", 0);
+                long id = parseJsonLongValue(productObj, "id", 0);
+                productInfo.mProductNumber = String.valueOf(id);
                 productInfo.mName = parseJsonStringValue(productObj,"name", null);
                 productInfo.mAlias = parseJsonStringValue(productObj,"alias", null);
                 productInfo.mImgSmall = parseJsonStringValue(productObj,"imgSmall", null);
                 productInfo.mImgBig = parseJsonStringValue(productObj,"imgBig", null);
 
-                productInfo.mProductNumber = parseJsonStringValue(productObj,"productKey", null);
+                productInfo.mProductID = parseJsonStringValue(productObj,"productKey", null);
                 productInfo.mProductTypeId = parseJsonLongValue(productObj, "productTypeId", 0);
                 productInfo.mProductTypeName = parseJsonStringValue(productObj,"productTypeName", null);
 
@@ -1171,7 +769,7 @@ public class AgoraLowService {
                 propertyDesc.mId =  parseJsonLongValue(descObj,"id", 0);
                 propertyDesc.mIndex = parseJsonIntValue(descObj,"index", 0);
 
-                propertyDesc.mProductID = parseJsonStringValue(descObj,"productId", null);
+                propertyDesc.mProductNumber = parseJsonStringValue(descObj,"productId", null);
                 propertyDesc.mPointName = parseJsonStringValue(descObj,"pointName", null);
                 propertyDesc.mPointType = parseJsonIntValue(descObj,"pointType", 0);
                 propertyDesc.mMarkName = parseJsonStringValue(descObj,"markName", null);
@@ -1204,7 +802,7 @@ public class AgoraLowService {
     }
 
 
-    /*
+    /**
      * @brief 分享设备
      * @param srvToken : Token参数
      * @param force : 是否强制分享，强制分享无需对端账号接受
@@ -1220,7 +818,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
             body.put("type", permission);
             body.put("userId", sharingAccount);
 
@@ -1258,7 +856,7 @@ public class AgoraLowService {
         return ErrCode.XOK;
     }
 
-    /*
+    /**
      * @brief 取消设备分享
      * @param srvToken : Token参数
      * @param deviceId : 设备Id
@@ -1274,7 +872,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
             body.put("userId", desharingAccount);
         } catch (JSONException jsonException) {
             jsonException.printStackTrace();
@@ -1306,7 +904,7 @@ public class AgoraLowService {
         return ErrCode.XOK;
     }
 
-    /*
+    /**
      * @brief 接受分享过来的设备
      * @param srvToken : Token参数
      * @param deviceName : 设备名字
@@ -1355,7 +953,7 @@ public class AgoraLowService {
     }
 
 
-    /*
+    /**
      * @brief 查询可以分享出去的设备列表
      */
     public DeviceQueryResult querySharableDevList(final String srvToken) {
@@ -1418,7 +1016,7 @@ public class AgoraLowService {
         return queryResult;
     }
 
-    /*
+    /**
      * @brief 查询分享出去的账号和设备信息
      */
     public static class OutSharerQueryResult {
@@ -1437,7 +1035,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
         } catch (JSONException jsonException) {
             jsonException.printStackTrace();
             ALog.getInstance().e(TAG, "<queryOutSharerList> failure set JSON object!");
@@ -1487,7 +1085,6 @@ public class AgoraLowService {
 
                 outSharer.mProductNumber = parseJsonStringValue(deviceObj,"productId", null);
                 outSharer.mProductID = parseJsonStringValue(deviceObj,"productKey", null);
-                outSharer.mDeviceNumber = parseJsonStringValue(deviceObj,"deviceId", null);
                 outSharer.mDeviceID = parseJsonStringValue(deviceObj,"mac", null);
                 outSharer.mDevNickName = parseJsonStringValue(deviceObj,"deviceNickname", null);
                 outSharer.mConnected = parseJsonBoolValue(deviceObj,"connect", false);
@@ -1510,8 +1107,8 @@ public class AgoraLowService {
         return queryResult;
     }
 
-    /*
-     * @brief 查询分享尽量的设备列表
+    /**
+     * @brief 查询分享进来的设备列表
      */
     public DeviceQueryResult queryFromsharingDevList(final String srvToken) {
         Map<String, String> params = new HashMap();
@@ -1572,7 +1169,7 @@ public class AgoraLowService {
         return queryResult;
     }
 
-    /*
+    /**
      * @brief 分页查询设备推送消息列表
      */
     public static class ShareMsgPageQueryResult {
@@ -1683,7 +1280,7 @@ public class AgoraLowService {
         return queryResult;
     }
 
-    /*
+    /**
      * @brief 查询单个分享消息
      */
     public static class ShareMsgInfoResult {
@@ -1778,7 +1375,7 @@ public class AgoraLowService {
     }
 
 
-    /*
+    /**
      * @brief 删除单个分享消息
      */
     public int deleteShareMsg(final String srvToken, long messageId) {
@@ -1846,7 +1443,7 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
+            body.put("mac", deviceId);
         } catch (JSONException jsonException) {
             jsonException.printStackTrace();
             ALog.getInstance().e(TAG, "<getMcuVersion> failure set JSON object!");
@@ -1884,8 +1481,6 @@ public class AgoraLowService {
                 return result;
             }
 
-            long deviceNumber = parseJsonLongValue(infoObj, "deviceId", -1);
-            result.mMcuVersion.mDeviceNumber = Long.toString(deviceNumber);
             result.mMcuVersion.mDeviceID = parseJsonStringValue(infoObj, "mac", null);
             result.mMcuVersion.mUpgradeId = parseJsonLongValue(infoObj, "upgradeId", -1);
             result.mMcuVersion.mIsupgradable = parseJsonBoolValue(infoObj, "isUpgrade", false);
@@ -1911,12 +1506,10 @@ public class AgoraLowService {
     /**
      * @brief 升级固件版本信息
      * @param srvToken : Token参数
-     * @param deviceId : 设备Id
      * @param upgradeId : 升级Id
      * @param decide : 升级方式
      */
     public int upgradeMcuVersion(final String srvToken,
-                                 final String deviceId,
                                  final long upgradeId,
                                  final int decide           ) {
         Map<String, String> params = new HashMap();
@@ -1928,7 +1521,6 @@ public class AgoraLowService {
 
         // 请求参数
         try {
-            body.put("deviceId", deviceId);
             body.put("upgradeId", upgradeId);
             body.put("decide", decide);
         } catch (JSONException jsonException) {
@@ -1956,8 +1548,7 @@ public class AgoraLowService {
         }
 
         ALog.getInstance().d(TAG, "<upgradeMcuVersion> successful"
-                + ", deviceId=" + deviceId  + ", upgradeId=" + upgradeId
-                + ", decide=" + decide);
+                + ", upgradeId=" + upgradeId + ", decide=" + decide);
         return ErrCode.XOK;
     }
 
@@ -2022,8 +1613,6 @@ public class AgoraLowService {
                 return result;
             }
 
-            long deviceNumber = parseJsonLongValue(infoObj, "deviceId", -1);
-            result.mPrgoress.mDeviceNumber = String.valueOf(deviceNumber);
             result.mPrgoress.mDeviceName = parseJsonStringValue(infoObj, "deviceName", null);
             result.mPrgoress.mDeviceID = parseJsonStringValue(infoObj, "mac", null);
             result.mPrgoress.mCurrVersion = parseJsonStringValue(infoObj, "currentVersion", null);
@@ -2173,44 +1762,6 @@ public class AgoraLowService {
                 connection.disconnect();
             }
         }
-    }
-
-
-    /*
-     * @brief  查询user对应的虚拟设备（首次调用创建虚拟设备）
-     * @param accountInfo : 登录的账号信息
-     * @return 获取到的虚拟设备thing name
-     */
-    private String queryInventDeviceName(final String srvToken) {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mServerBaseUrl + "/device/invent/certificate/get";
-
-        ResponseObj responseObj = requestToServer(requestUrl, "POST",
-                srvToken, params, body);
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<queryInventDeviceName> failure"
-                    + ", toke=" + srvToken);
-            return null;
-        }
-
-        // 解析虚拟设备名称
-        String deviceName = "";
-        try {
-            JSONObject infoObj = responseObj.mRespJsonObj.getJSONObject("info");
-            deviceName = infoObj.getString("thingName");
-        } catch (JSONException e) {
-            e.printStackTrace();
-            ALog.getInstance().e(TAG, "<queryInventDeviceName> [JSONException], error=" + e);
-            return null;
-        }
-
-        ALog.getInstance().d(TAG, "<queryInventDeviceName> done"
-                + ", toke=" + srvToken
-                + ", device name =" + deviceName);
-        return deviceName;
     }
 
 

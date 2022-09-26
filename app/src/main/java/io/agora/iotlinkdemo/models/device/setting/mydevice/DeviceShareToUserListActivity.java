@@ -81,7 +81,7 @@ public class DeviceShareToUserListActivity extends BaseViewBindingActivity<Activ
     protected void onResume() {
         super.onResume();
         if (NetUtils.INSTANCE.isNetworkConnected()) {
-            deviceViewModel.queryOutSharerList(AgoraApplication.getInstance().getLivingDevice().mDeviceNumber);
+            deviceViewModel.queryOutSharerList(AgoraApplication.getInstance().getLivingDevice().mDeviceID);
         }
     }
 

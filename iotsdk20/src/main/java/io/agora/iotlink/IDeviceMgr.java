@@ -38,7 +38,6 @@ public interface IDeviceMgr {
      * @brief 设备固件版本信息
      */
     public static class McuVersionInfo {
-        public String mDeviceNumber;        ///< 设备唯一的数字
         public String mDeviceID;            ///< 设备唯一ID(就是设备MAC)
         public long mUpgradeId;             ///< 升级记录Id，-1 表示没有获取到
         public boolean mIsupgradable;       ///< 当前固件是否可以升级
@@ -51,7 +50,6 @@ public interface IDeviceMgr {
         @Override
         public String toString() {
             String infoText = "{ mDeviceID=" + mDeviceID
-                    + ", mDeviceNumber=" + mDeviceNumber
                     + ", mUpgradeId=" + mUpgradeId
                     + ", mIsupgradable=" + mIsupgradable
                     + ", mCurrVersion=" + mCurrVersion
@@ -67,7 +65,6 @@ public interface IDeviceMgr {
      * @brief 设备固件升级状态
      */
     public static class McuUpgradeStatus {
-        public String mDeviceNumber;        ///< 设备唯一的数字
         public String mDeviceID;            ///< 设备唯一ID(就是设备MAC)
         public String mDeviceName;          ///< 设备名字
         public long mUpgradeId;             ///< 升级记录Id，-1 表示没有获取到
@@ -77,7 +74,6 @@ public interface IDeviceMgr {
         @Override
         public String toString() {
             String infoText = "{ mDeviceID=" + mDeviceID
-                    + ", mDeviceNumber=" + mDeviceNumber
                     + ", mDeviceName=" + mDeviceName
                     + ", mUpgradeId=" + mUpgradeId
                     + ", mCurrVersion=" + mCurrVersion
@@ -90,10 +86,10 @@ public interface IDeviceMgr {
      * @brief 产品信息
      */
     public static class ProductInfo {
-        public long mId;                ///< 产品ID
+        public String mProductNumber;   ///< 产品唯一标识
+        public String mProductID;       ///< 产品ID(就是 ProductKey)
         public String mName;            ///< 产品名称
         public String mAlias;           ///< 产品别名
-        public String mProductNumber;   ///< 产品密钥
         public long mProductTypeId;     ///< 产品型号Id
         public String mProductTypeName; ///< 产品型号名称
 
@@ -116,7 +112,7 @@ public interface IDeviceMgr {
 
         @Override
         public String toString() {
-            String infoText = "{ mId=" + mId + ", mName=" + mName + ", mAlias=" + mAlias
+            String infoText = "{ mProductID=" + mProductID + ", mName=" + mName + ", mAlias=" + mAlias
                     + ", mProductNumber=" + mProductNumber
                     + ", mProductTypeId=" + mProductTypeId
                     + ", mProductTypeName=" + mProductTypeName
@@ -340,13 +336,13 @@ public interface IDeviceMgr {
          */
         default void onQuerySharableDevListDone(int errCode, final List<IotDevice> deviceList) { }
 
-        /*
+        /**
          * @brief 完成查询查询分享出去的账号信息
          * @param errCode : 错误码
-         * @param deviceNumber : 要查询的设备Number
+         * @param devcieID : 要查询的设备ID
          * @param outSharerList : 查询到的分享出去的账号信息
          */
-        default void onQueryOutSharerListDone(int errCode, final String deviceNumber,
+        default void onQueryOutSharerListDone(int errCode, final String devcieID,
                                                   final List<IotOutSharer> outSharerList) { }
 
         /*
@@ -538,10 +534,10 @@ public interface IDeviceMgr {
 
     /**
      * @brief 查询单个设备分享出去的账号列表，触发 onQueryOutSharerListDone() 回调
-     * @param deviceNumber : 设备Number
+     * @param devcieID : 设备ID
      * @return 错误码
      */
-    int queryOutSharerList(final String deviceNumber);
+    int queryOutSharerList(final String devcieID);
 
     /**
      * @brief 查询来自其他账号分享的设备列表，触发 onQueryInSharedDevList() 回调

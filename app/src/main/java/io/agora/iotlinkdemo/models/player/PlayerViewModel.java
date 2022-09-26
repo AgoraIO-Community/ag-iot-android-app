@@ -68,7 +68,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     public Bitmap saveScreenshotToSD() {
         Bitmap videoFrameBmp = AIotAppSdkFactory.getInstance().getCallkitMgr().capturePeerVideoFrame();
-        String strFilePath = FileUtils.getFileSavePath(mLivingDevice.mDeviceNumber, true);
+        String strFilePath = FileUtils.getFileSavePath(mLivingDevice.mDeviceID, true);
         boolean ret = FileUtils.saveScreenshotToSD(videoFrameBmp, strFilePath);
         if (ret) {
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_SAVE_SCREENSHOT, null);
@@ -276,7 +276,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      */
     public void queryAllPropDesc() {
         Log.d(TAG, "<queryAllPropDesc> deviceID=" + mLivingDevice.mDeviceID
-                    + ", productNumber=" + mLivingDevice.mProductNumber);
+                    + ", mProductID=" + mLivingDevice.mProductID);
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllPropertyDesc(
                 mLivingDevice.mDeviceID, null);
 //        int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllPropertyDesc(

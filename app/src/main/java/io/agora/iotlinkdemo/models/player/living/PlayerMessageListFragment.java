@@ -399,7 +399,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         getBinding().gsyPlayer.taskShotPic(bitmap -> {
             getBinding().ivCover.setImageBitmap(bitmap);
             boolean ret = FileUtils.saveScreenshotToSD(bitmap,
-                    FileUtils.getFileSavePath(AgoraApplication.getInstance().getLivingDevice().mDeviceNumber, true));
+                    FileUtils.getFileSavePath(AgoraApplication.getInstance().getLivingDevice().mDeviceID, true));
             if (ret) {
                 showSaveTip(false);
             } else {

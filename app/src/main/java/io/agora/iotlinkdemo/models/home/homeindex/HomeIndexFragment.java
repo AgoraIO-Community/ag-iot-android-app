@@ -107,7 +107,7 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
                         DevicesListManager.deviceSize = devices.size();
                         if (devices.size() != ((List<IotDevice>) var2).size()) {
                             IotDevice titleDevice = new IotDevice();
-                            titleDevice.mDeviceNumber = "199";
+                            titleDevice.mDeviceID = "199";
                             devices.add(titleDevice);
                             for (IotDevice device : (List<IotDevice>) var2) {
                                 if (device.mSharer != null && !device.mSharer.equals("0")) {

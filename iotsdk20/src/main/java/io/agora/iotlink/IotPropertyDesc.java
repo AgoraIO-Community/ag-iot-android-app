@@ -63,7 +63,7 @@ public class IotPropertyDesc {
     public long mId;           ///< 属性唯一标识
     public int mIndex;         ///< 排序键（值越小排越前）
 
-    public String mProductID;  ///<	产品ID
+    public String mProductNumber;  ///<	产品唯一标识
     public String mPointName;  ///<	数据点名称
     public int mPointType;     ///< 数据点类型：【1】整型、【2】布尔值、【3】枚举、【4】字符串、【5】浮点型、【6】bit类型、【7】raw类型
     public String mMarkName;    ///<	数据点标识
@@ -81,7 +81,7 @@ public class IotPropertyDesc {
     @Override
     public String toString() {
         String infoText = "{ mId=" + mId + ", mIndex=" + mIndex
-                + ", mProductID=" + mProductID + ", mPointName=" + mPointName
+                + ", mProductNumber=" + mProductNumber + ", mPointName=" + mPointName
                 + ", mPointType=" + mPointType + ", mMarkName=" + mMarkName
                 + ", mReadType=" + mReadType + ", mRemark=" + mRemark
                 + ", mMaxValue=" + mMaxValue + ", mMinValue=" + mMinValue

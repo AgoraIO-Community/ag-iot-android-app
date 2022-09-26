@@ -72,11 +72,9 @@ public interface IRtcPlayer  {
     /**
      * @brief 进入频道，开始拉流播放，触发 onPrepareDone() 事件
      * @param channelName : 要加入的频道
-     * @param localUid : 本地RTC user id
      * @return 错误码
      */
-    int start(final String channelName, final int localUid,
-              final SurfaceView displayView);
+    int start(final String channelName, final SurfaceView displayView);
 
     /**
      * @brief 退出频道，停止拉流

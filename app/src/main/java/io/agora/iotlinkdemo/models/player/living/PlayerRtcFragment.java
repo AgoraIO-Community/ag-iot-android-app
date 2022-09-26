@@ -135,18 +135,13 @@ public class PlayerRtcFragment extends BaseViewBindingFragment<FagmentPlayerRtcB
 
         if (playingState == IRtcPlayer.RTCPLAYER_STATE_STOPPED) {  // 当前处于停止状态
             String channelName = getBinding().etRtcChannelName.getText().toString();
-            String uid = getBinding().etRtcUid.getText().toString();
             if (TextUtils.isEmpty(channelName)) {
                 popupMessage("请输入要播放的频道");
                 return;
             }
-            if (TextUtils.isEmpty(uid)) {
-                popupMessage("请输入rtc uid");
-                return;
-            }
 
             // 加入频道启动播放
-            int errCode = rtcPlayer.start(channelName, Integer.valueOf(uid), getBinding().playerView);
+            int errCode = rtcPlayer.start(channelName, getBinding().playerView);
             if (errCode != ErrCode.XOK) {
                 popupMessage("播放频道失败，错误码=" + errCode);
                 return;

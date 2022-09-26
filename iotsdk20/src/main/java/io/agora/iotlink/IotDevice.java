@@ -16,14 +16,13 @@ package io.agora.iotlink;
  */
 public class IotDevice {
 
-    public String mAppUserId;           ///< 用户Id
-    public String mUserType;           ///< 用户角色：1--所有者; 2--管理员; 3--成员
-
-    public String mProductNumber;      ///< 产品唯一数字
-    public String mProductID;         ///< 产品密钥
-    public String mDeviceNumber;      ///< 设备唯一的数字
-    public String mDeviceName;        ///< 设备名
+    public String mProductNumber;     ///< 产品唯一标识
+    public String mProductID;         ///< 产品密钥(就是 ProductKey)
     public String mDeviceID;          ///< 设备唯一ID(就是设备MAC)
+    public String mDeviceName;        ///< 设备名
+
+    public String mAppUserId;         ///< 用户Id
+    public String mUserType;          ///< 用户角色：1--所有者; 2--管理员; 3--成员
     public String mSharer;            ///< 分享人的用户Id，如果自己配网则是 0
     public int mShareCount = -1;      ///< 当前分享个数，-1表示未设置
     public int mShareType = -1;       ///< 共享类型，-1表示未设置
@@ -38,8 +37,8 @@ public class IotDevice {
     public String toString() {
         String infoText = "{ mAppUserId=" + mAppUserId + ", mUserType=" + mUserType
                 + ", mProductNumber=" + mProductNumber + ", mProductID=" + mProductID
-                + ", mDeviceNumber=" + mDeviceNumber + ", mDeviceName=" + mDeviceName
-                + ", mDeviceID=" + mDeviceID + ", mSharer=" + mSharer + " }";
+                + ", mDeviceID=" + mDeviceID + ", mDeviceName=" + mDeviceName
+                + ", mSharer=" + mSharer + " }";
         return infoText;
     }
 
