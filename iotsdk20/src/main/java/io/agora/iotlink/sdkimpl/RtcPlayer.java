@@ -89,7 +89,6 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
     void release() {
         stop();
         workThreadClearMessage();
-        mTalkEngine = null;
     }
 
     boolean isRunning() {
@@ -199,6 +198,8 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
 
         if (mTalkEngine != null) {
             mTalkEngine.leaveChannel();
+            mTalkEngine.release();
+            mTalkEngine = null;
             ALog.getInstance().d(TAG, "<stop> done");
         }
 
@@ -225,6 +226,10 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
         AgoraService.RtcPlayTokenResult tokenResult = AgoraService.getInstance().getRtcPlayToken(
                 accountInfo.mAgoraAccessToken, sdkInitParam.mRtcAppId, playerParam.mChannelName);
+//        AgoraService.RtcPlayTokenResult tokenResult = new AgoraService.RtcPlayTokenResult();
+//        tokenResult.mErrCode = ErrCode.XOK;
+//        tokenResult.mRtcPlayToken = null;
+//        tokenResult.mLocalUid = 0;
 
         if (tokenResult.mErrCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<DoRequestToken> fail to get token, errCode="
@@ -234,7 +239,6 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
             return;
         }
         playerParam.mLocalUid = tokenResult.mLocalUid;
-
 
         //
         // 在入口调用线程中，加入频道进行拉流
@@ -257,7 +261,6 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
                 talkInitParam.mSubscribeVideo = true;
                 mTalkEngine.initialize(talkInitParam);
 
-
                 // 加入频道
                 boolean ret = mTalkEngine.joinChannel(playerParam.mChannelName, tokenResult.mRtcPlayToken,
                         tokenResult.mLocalUid);
@@ -267,8 +270,6 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
                             0, playerParam);
                     return;
                 }
-                // mTalkEngine.setPeerUid(peerUid);
-                mTalkEngine.setRemoteVideoView(playerParam.mDisplayView);
             }
         });
 
@@ -282,7 +283,7 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
     void DoPrepareDone(Message msg) {
         int errCode = msg.arg1;
         PlayerParam playerParam = (PlayerParam)msg.obj;
-        ALog.getInstance().e(TAG, "<DoPrepareDone> errCode=" + errCode);
+        ALog.getInstance().d(TAG, "<DoPrepareDone> errCode=" + errCode);
 
         synchronized (mCallbackList) {
             for (IRtcPlayer.ICallback listener : mCallbackList) {
@@ -296,30 +297,21 @@ public class RtcPlayer implements IRtcPlayer, TalkingEngine.ICallback {
     //////////////////// TalkingEngine.ICallback 回调处理 ////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     @Override
-    public void onTalkingJoinDone(String channel, int localUid) {
-        ALog.getInstance().d(TAG, "<onTalkingJoinDone> channel=" + channel
-                + ", localUid=" + localUid);
-    }
-
-    @Override
-    public void onTalkingLeftDone() {
-        ALog.getInstance().d(TAG, "<onTalkingLeftDone> ");
-    }
-
-
-    @Override
-    public void onTalkingPeerJoined(int localUid, int peerUid) {
+    public void onUserOnline(int uid) {
         int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onTalkingPeerJoined> localUid=" + localUid
-                + ", peerUid=" + peerUid
+        ALog.getInstance().d(TAG, "<onUserOnline> uid=" + uid
                 + ", stateMachine=" + stateMachine);
+
+        if (uid != mPlayerParam.mLocalUid) {
+            mTalkEngine.setPeerUid(uid);
+            mTalkEngine.setRemoteVideoView(mPlayerParam.mDisplayView);
+        }
     }
 
     @Override
-    public void onTalkingPeerLeft(int localUid, int peerUid) {
+    public void onUserOffline(int uid) {
         int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onTalkingPeerLeft> localUid=" + localUid
-                + ", peerUid=" + peerUid
+        ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid
                 + ", stateMachine=" + stateMachine);
 
     }

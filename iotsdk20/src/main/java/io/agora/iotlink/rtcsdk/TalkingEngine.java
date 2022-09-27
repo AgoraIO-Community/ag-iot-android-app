@@ -79,6 +79,17 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
          * @brief 对端首帧出图
          */
         default void onPeerFirstVideoDecoded(int peerUid, int videoWidth, int videoHeight) { }
+
+
+        /**
+         * @brief 用户上线
+         */
+        default void onUserOnline(int uid) {  }
+
+        /**
+         * @brief 用户下线
+         */
+        default void onUserOffline(int uid) {  }
     }
 
 
@@ -129,32 +140,15 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         // 初始RtcEngine配置信息
         //
         mRtcEngCfg = new EngineConfig();
-        Random random = new Random(System.currentTimeMillis());
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(mInitParam.mContext);
-        mRtcEngCfg.mUid = pref.getInt(ConstantApp.PrefManager.PREF_PROPERTY_UID, 0);
-        while (mRtcEngCfg.mUid == 0) {
-            mRtcEngCfg.mUid = random.nextInt(~(1<<31));
-        }
-        pref.edit().putInt(ConstantApp.PrefManager.PREF_PROPERTY_UID, mRtcEngCfg.mUid).apply();
-
-        mRtcEngCfg.mUid2 = pref.getInt(ConstantApp.PrefManager.PREF_PROPERTY_UID2, 0);
-        while (mRtcEngCfg.mUid2 == 0 || mRtcEngCfg.mUid2 == mRtcEngCfg.mUid) {
-            mRtcEngCfg.mUid2 = random.nextInt(~(1<<31));
-        }
-        pref.edit().putInt(ConstantApp.PrefManager.PREF_PROPERTY_UID2, mRtcEngCfg.mUid2).apply();
-        int prefIndex = pref.getInt(ConstantApp.PrefManager.PREF_PROPERTY_PROFILE_IDX, ConstantApp.DEFAULT_PROFILE_IDX);
-        if (prefIndex > ConstantApp.VIDEO_DIMENSIONS.length - 1) {
-            prefIndex = ConstantApp.DEFAULT_PROFILE_IDX;
-        }
+        int prefIndex = ConstantApp.DEFAULT_PROFILE_IDX;  // 480P
         VideoEncoderConfiguration.VideoDimensions dimension = ConstantApp.VIDEO_DIMENSIONS[prefIndex];
         mRtcEngCfg.mClientRole = Constants.CLIENT_ROLE_BROADCASTER;
         mRtcEngCfg.mVideoDimension = dimension;
 
-
         //
         // 创建RtcEngine事件回调处理
         //
-        mRtcEngEventHandler = new MyEngineEventHandler(mInitParam.mContext, mRtcEngCfg);
+        mRtcEngEventHandler = new MyEngineEventHandler(mInitParam.mContext);
         mRtcEngEventHandler.addEventHandler(this);
 
         //
@@ -163,9 +157,7 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         try {
             mRtcEngine = (RtcEngineEx) RtcEngine.create(mInitParam.mContext, mInitParam.mAppId,
                     mRtcEngEventHandler.mRtcEventHandler);
-            ALog.getInstance().d(TAG, "<initialize> mAppId=" + mInitParam.mAppId
-                    + ", mUid=" + mRtcEngCfg.mUid
-                    + ", mUid2=" + mRtcEngCfg.mUid2);
+            ALog.getInstance().d(TAG, "<initialize> mAppId=" + mInitParam.mAppId);
         } catch (Exception e) {
             e.printStackTrace();
             ALog.getInstance().e(TAG, "<initialize> " + Log.getStackTraceString(e));
@@ -207,6 +199,7 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     {
         if (mRtcEngine != null) {
             mRtcEngine.leaveChannel();
+            RtcEngine.destroy();
             mRtcEngine = null;
         }
 
@@ -471,6 +464,10 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
                 mInitParam.mCallback.onTalkingPeerJoined(mLocalUid, mPeerUid);
             }
         }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onUserOnline(uid);
+        }
     }
 
     @Override
@@ -482,6 +479,10 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
             if (mInitParam.mCallback != null) {
                 mInitParam.mCallback.onTalkingPeerLeft(mLocalUid, mPeerUid);
             }
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onUserOffline(uid);
         }
     }
 
