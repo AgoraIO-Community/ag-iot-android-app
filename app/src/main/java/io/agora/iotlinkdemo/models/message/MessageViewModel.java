@@ -5,6 +5,9 @@ import android.util.Log;
 
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlink.IotAlarmImage;
+import io.agora.iotlink.IotAlarmVideo;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
@@ -282,4 +285,46 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT, iotAlarm);
         }
     }
+
+
+    /**
+     * @brief 根据ImageId 查询告警图片信息
+     */
+    public void queryAlarmImage(final String imageId) {
+        // String imageId = "IVFESSRUKM3ESSZUIVETKLLMPBUDAMBR_1664349292588_1303698194";
+        int errCode = AIotAppSdkFactory.getInstance().getAlarmMgr().queryImageById(imageId);
+        if (errCode != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("查询告警图片失败，错误码=" + errCode);
+        }
+    }
+
+    @Override
+    public void onAlarmImageQueryDone(int errCode, final String imageId,
+                                       final IotAlarmImage alarmImage) {
+        Log.d(TAG, "<onAlarmImageQueryDone> errCode=" + errCode
+                + ", imageId=" + imageId + ", alarmImage=" + alarmImage.toString());
+    }
+
+
+    /**
+     * @brief 根据时间戳 查询告警云录视频信息
+     */
+    public void queryAlarmVideo(final String deviceID, long timestamp) {
+        int errCode = AIotAppSdkFactory.getInstance().getAlarmMgr().queryVideoByTimestamp(
+                        deviceID, timestamp);
+        if (errCode != ErrCode.XOK) {
+            ToastUtils.INSTANCE.showToast("查询告警云录视频失败，错误码=" + errCode);
+        }
+    }
+
+    @Override
+    public void onAlarmVideoQueryDone(int errCode, final String deviceID, long timestamp,
+                                       final IotAlarmVideo alarmVideo) {
+        Log.d(TAG, "<onAlarmVideoQueryDone> errCode=" + errCode
+                + ", deviceID=" + deviceID
+                + ", timestamp=" + timestamp
+                + ", alarmVideo=" + alarmVideo.toString());
+    }
+
+
 }

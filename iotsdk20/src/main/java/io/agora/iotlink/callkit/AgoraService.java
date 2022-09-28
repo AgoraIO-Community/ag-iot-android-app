@@ -7,7 +7,9 @@ import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAlarmMgr;
 import io.agora.iotlink.IDevMessageMgr;
 import io.agora.iotlink.IotAlarm;
+import io.agora.iotlink.IotAlarmImage;
 import io.agora.iotlink.IotAlarmPage;
+import io.agora.iotlink.IotAlarmVideo;
 import io.agora.iotlink.IotDevMessage;
 import io.agora.iotlink.IotDevMsgPage;
 import io.agora.iotlink.IotDevice;
@@ -684,7 +686,7 @@ public class AgoraService {
         //
         if (queryResult.mAlarm.mImageId != null) {
             AlarmImageResult imgResult = queryAlarmImageInfo(token, account, queryResult.mAlarm.mImageId);
-            queryResult.mAlarm.mImageUrl = imgResult.mVodUrl;
+            queryResult.mAlarm.mImageUrl = imgResult.mAlarmImg.mImageUrl;
         }
 
         //
@@ -694,9 +696,9 @@ public class AgoraService {
             CloudRecordResult recordResult = queryAlarmRecordInfo(token, account,
                     queryResult.mAlarm.mDeviceID, queryResult.mAlarm.mTriggerTime);
 
-            queryResult.mAlarm.mVideoUrl = recordResult.mVodUrl;
-            queryResult.mAlarm.mVideoBeginTime = recordResult.mBeginTime;
-            queryResult.mAlarm.mVideoEndTime = recordResult.mEndTime;
+            queryResult.mAlarm.mVideoUrl = recordResult.mAlarmVideo.mVideoUrl;
+            queryResult.mAlarm.mVideoBeginTime = recordResult.mAlarmVideo.mBeginTime;
+            queryResult.mAlarm.mVideoEndTime = recordResult.mAlarmVideo.mEndTime;
         }
 
         ALog.getInstance().d(TAG, "<getAlarmInfoById> done, account=" + account
@@ -862,7 +864,7 @@ public class AgoraService {
             IotAlarm iotAlarm = queryResult.mAlarmPage.mAlarmList.get(i);
             if (iotAlarm.mImageId != null) {
                 AlarmImageResult imgResult = queryAlarmImageInfo(token, account, iotAlarm.mImageId);
-                iotAlarm.mImageUrl = imgResult.mVodUrl;
+                iotAlarm.mImageUrl = imgResult.mAlarmImg.mImageUrl;
                 queryResult.mAlarmPage.mAlarmList.set(i, iotAlarm);
             }
         }
@@ -982,33 +984,8 @@ public class AgoraService {
      * @brief 告警图片信息
      */
     public static class AlarmImageResult {
-        public int mErrCode;
-
-        public long mRecordId;      ///< 图片记录id
-        public String mImageId;     ///< 图片id，全局唯一
-        public String mAccountId;   ///< 用户账号Id
-        public String mProductID;   ///< 产品id
-        public String mDeviceID;    ///< 设备id
-        public String mDeviceName;  ///< 设备名称
-        public String mFileName;    ///< 图片文件名（包括前面的目录）
-        public String mVodUrl;      ///< 图片文件路径URL，已经包含签名了
-        public String mBucket;      ///< 图片文件存储桶
-        public String mRemark;      ///< 备注
-        public boolean mDeleted;    ///< 是否已删除，0-未删除，1-已删除
-        public long mCreatedBy;     ///< 创建人id
-        public long mCreateTime;    ///< 创建时间戳
-
-        @Override
-        public String toString() {
-            String infoText = "{ mRecordId=" + mRecordId + ", mImageId=" + mImageId
-                    + ", mAccountId=" + mAccountId +  ", mProductID=" + mProductID
-                    + ", mDeviceID=" + mDeviceID + ", mDeviceName=" + mDeviceName
-                    + ", mFileName=" + mFileName + ", mVodUrl=" + mVodUrl
-                    + ", mBucket=" + mBucket + ", mRemark=" + mRemark
-                    + ", mDeleted=" + mDeleted + ", mCreatedBy=" + mCreatedBy
-                    + ", mCreateTime=" + mCreateTime + " }";
-            return infoText;
-        }
+        public int mErrCode = ErrCode.XOK;
+        public IotAlarmImage mAlarmImg = new IotAlarmImage();
     }
 
     /**
@@ -1020,7 +997,7 @@ public class AgoraService {
      */
     public AlarmImageResult queryAlarmImageInfo(final String token, final String account,
                                                 final String imageId)  {
-        AlarmImageResult queryResult = new AlarmImageResult();
+        AlarmImageResult result = new AlarmImageResult();
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
 
@@ -1042,63 +1019,63 @@ public class AgoraService {
 
         } catch (JSONException e) {
             e.printStackTrace();
-            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> [EXIT] failure with JSON exp!");
-            return queryResult;
+            return result;
         }
 
         AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
                 token, params, body);
         if (responseObj == null) {
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> [EXIT] failure with no response!");
-            queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return result;
         }
         if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
-            queryResult.mErrCode = ErrCode.XERR_ALARM_NUMBER;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
+            return result;
         }
         if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
-            queryResult.mErrCode = ErrCode.XERR_ALARM_NUMBER;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
+            return result;
         }
 
         // 解析呼叫请求返回结果
         try {
             JSONObject dataObj = responseObj.mRespJsonObj.getJSONObject("data");
 
-            queryResult.mRecordId = dataObj.getLong("recordId");  // 必须要有
-            queryResult.mImageId = parseJsonStringValue(dataObj, "imageId", null);
-            queryResult.mAccountId = parseJsonStringValue(dataObj, "userId", null);
-            queryResult.mFileName = parseJsonStringValue(dataObj, "fileName", null);
-            queryResult.mBucket = parseJsonStringValue(dataObj, "bucket", null);
-            queryResult.mRemark = parseJsonStringValue(dataObj, "remark", null);
-            queryResult.mVodUrl = parseJsonStringValue(dataObj, "vodUrl", null);
+            result.mAlarmImg.mRecordId = dataObj.getLong("recordId");  // 必须要有
+            result.mAlarmImg.mImageId = parseJsonStringValue(dataObj, "imageId", null);
+            result.mAlarmImg.mAccountId = parseJsonStringValue(dataObj, "userId", null);
+            result.mAlarmImg.mFileName = parseJsonStringValue(dataObj, "fileName", null);
+            result.mAlarmImg.mBucket = parseJsonStringValue(dataObj, "bucket", null);
+            result.mAlarmImg.mRemark = parseJsonStringValue(dataObj, "remark", null);
+            result.mAlarmImg.mImageUrl = parseJsonStringValue(dataObj, "vodUrl", null);
 
-            queryResult.mProductID = parseJsonStringValue(dataObj, "productId", null);
-            queryResult.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);
-            queryResult.mDeviceName = parseJsonStringValue(dataObj, "deviceName", null);
+            result.mAlarmImg.mProductID = parseJsonStringValue(dataObj, "productId", null);
+            result.mAlarmImg.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);
+            result.mAlarmImg.mDeviceName = parseJsonStringValue(dataObj, "deviceName", null);
 
-            queryResult.mDeleted = parseJsonBoolValue(dataObj, "deleted", false);
-            queryResult.mCreatedBy = parseJsonLongValue(dataObj,"createdBy", 0);
-            queryResult.mCreateTime = parseJsonLongValue(dataObj,"createdTime", -1);
+            result.mAlarmImg.mDeleted = parseJsonBoolValue(dataObj, "deleted", false);
+            result.mAlarmImg.mCreatedBy = parseJsonLongValue(dataObj,"createdBy", 0);
+            result.mAlarmImg.mCreateTime = parseJsonLongValue(dataObj,"createdTime", -1);
 
-            queryResult.mErrCode = ErrCode.XOK;
+            result.mErrCode = ErrCode.XOK;
 
         } catch (JSONException e) {
             e.printStackTrace();
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> failure with JSON exception");
-            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
+            return result;
         }
 
         ALog.getInstance().d(TAG, "<queryAlarmImageInfo> [EXIT], queryResult="
-                + queryResult.toString());
-        return queryResult;
+                + result.mAlarmImg.toString());
+        return result;
     }
 
 
@@ -1106,38 +1083,8 @@ public class AgoraService {
      * @brief 云录视频信息
      */
     public static class CloudRecordResult {
-        public int mErrCode;
-
-        public long mVideoRecordId; ///< 视频记录id
-        public int mRecordType;     ///<  录像类型，0表示计划录像，1表示报警录像，2表示主动录像，99表示所有录像
-        public String mAccountId;   ///< 用户账号Id
-        public String mProductID;   ///< 产品id
-        public String mDeviceID;    ///< 设备id
-        public String mDeviceName;  ///< 设备名称
-
-        public long mBeginTime;     ///< 录像开始时间戳
-        public long mEndTime;       ///< 录像结束时间戳
-        public String mFileName;    ///< 录像文件名（包括前面的目录）
-        public String mVodUrl;      ///< 录像文件路径URL，已经包含签名了
-        public String mBucket;      ///< 图片文件存储桶
-        public String mRemark;      ///< 备注
-
-        public boolean mDeleted;    ///< 是否已删除，0-未删除，1-已删除
-        public long mCreatedBy;     ///< 创建人id
-        public long mCreateTime;    ///< 创建时间戳
-
-        @Override
-        public String toString() {
-            String infoText = "{ mVideoRecordId=" + mVideoRecordId + ", mRecordType=" + mRecordType
-                    + ", mAccountId=" + mAccountId +  ", mProductID=" + mProductID
-                    + ", mDeviceID=" + mDeviceID + ", mDeviceName=" + mDeviceName
-                    + ", mBeginTime=" + mBeginTime + ", mEndTime=" + mEndTime
-                    + ", mFileName=" + mFileName + ", mVodUrl=" + mVodUrl
-                    + ", mBucket=" + mBucket + ", mRemark=" + mRemark
-                    + ", mDeleted=" + mDeleted + ", mCreatedBy=" + mCreatedBy
-                    + ", mCreateTime=" + mCreateTime + " }";
-            return infoText;
-        }
+        public int mErrCode = ErrCode.XOK;
+        public IotAlarmVideo mAlarmVideo = new IotAlarmVideo();
     }
 
     /**
@@ -1150,7 +1097,7 @@ public class AgoraService {
      */
     public CloudRecordResult queryAlarmRecordInfo(final String token, final String account,
                                                 final String deviceId, long beginTime)  {
-        CloudRecordResult queryResult = new CloudRecordResult();
+        CloudRecordResult result = new CloudRecordResult();
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
 
@@ -1177,65 +1124,65 @@ public class AgoraService {
 
         } catch (JSONException e) {
             e.printStackTrace();
-            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> [EXIT] failure with JSON exp!");
-            return queryResult;
+            return result;
         }
 
         AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
                 token, params, body);
         if (responseObj == null) {
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> [EXIT] failure with no response!");
-            queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return result;
         }
         if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
-            queryResult.mErrCode = ErrCode.XERR_ALARM_NUMBER;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
+            return result;
         }
         if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
-            queryResult.mErrCode = ErrCode.XERR_ALARM_NUMBER;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
+            return result;
         }
 
         // 解析呼叫请求返回结果
         try {
             JSONObject dataObj = responseObj.mRespJsonObj.getJSONObject("data");
 
-            queryResult.mVideoRecordId = dataObj.getLong("videoRecordId");  // 必须要有
-            queryResult.mRecordType = parseJsonIntValue(dataObj, "type", 0);
-            queryResult.mAccountId = parseJsonStringValue(dataObj, "userId", null);
-            queryResult.mBeginTime = parseJsonLongValue(dataObj, "beginTime", -1);
-            queryResult.mEndTime = parseJsonLongValue(dataObj, "endTime", -1);
-            queryResult.mFileName = parseJsonStringValue(dataObj, "fileName", null);
-            queryResult.mBucket = parseJsonStringValue(dataObj, "bucket", null);
-            queryResult.mRemark = parseJsonStringValue(dataObj, "remark", null);
-            queryResult.mVodUrl = parseJsonStringValue(dataObj, "vodUrl", null);
+            result.mAlarmVideo.mVideoRecordId = dataObj.getLong("videoRecordId");  // 必须要有
+            result.mAlarmVideo.mRecordType = parseJsonIntValue(dataObj, "type", 0);
+            result.mAlarmVideo.mAccountId = parseJsonStringValue(dataObj, "userId", null);
+            result.mAlarmVideo.mBeginTime = parseJsonLongValue(dataObj, "beginTime", -1);
+            result.mAlarmVideo.mEndTime = parseJsonLongValue(dataObj, "endTime", -1);
+            result.mAlarmVideo.mFileName = parseJsonStringValue(dataObj, "fileName", null);
+            result.mAlarmVideo.mBucket = parseJsonStringValue(dataObj, "bucket", null);
+            result.mAlarmVideo.mRemark = parseJsonStringValue(dataObj, "remark", null);
+            result.mAlarmVideo.mVideoUrl = parseJsonStringValue(dataObj, "vodUrl", null);
 
-            queryResult.mProductID = parseJsonStringValue(dataObj, "productId", null);
-            queryResult.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);
-            queryResult.mDeviceName = parseJsonStringValue(dataObj, "deviceName", null);
+            result.mAlarmVideo.mProductID = parseJsonStringValue(dataObj, "productId", null);
+            result.mAlarmVideo.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);
+            result.mAlarmVideo.mDeviceName = parseJsonStringValue(dataObj, "deviceName", null);
 
-            queryResult.mDeleted = parseJsonBoolValue(dataObj, "deleted", false);
-            queryResult.mCreatedBy = parseJsonLongValue(dataObj,"createdBy", 0);
-            queryResult.mCreateTime = parseJsonLongValue(dataObj,"createdTime", -1);
+            result.mAlarmVideo.mDeleted = parseJsonBoolValue(dataObj, "deleted", false);
+            result.mAlarmVideo.mCreatedBy = parseJsonLongValue(dataObj,"createdBy", 0);
+            result.mAlarmVideo.mCreateTime = parseJsonLongValue(dataObj,"createdTime", -1);
 
-            queryResult.mErrCode = ErrCode.XOK;
+            result.mErrCode = ErrCode.XOK;
 
         } catch (JSONException e) {
             e.printStackTrace();
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> failure with JSON exception");
-            queryResult.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
-            return queryResult;
+            result.mErrCode = ErrCode.XERR_HTTP_JSON_PARSE;
+            return result;
         }
 
         ALog.getInstance().d(TAG, "<queryAlarmRecordInfo> [EXIT], queryResult="
-                + queryResult.toString());
-        return queryResult;
+                + result.toString());
+        return result;
     }
 
 

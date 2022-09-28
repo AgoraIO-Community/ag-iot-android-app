@@ -21,7 +21,9 @@ import io.agora.iotlink.IAlarmMgr;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotAlarm;
+import io.agora.iotlink.IotAlarmImage;
 import io.agora.iotlink.IotAlarmPage;
+import io.agora.iotlink.IotAlarmVideo;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.callkit.CallkitContext;
@@ -254,6 +256,56 @@ public class AlarmMgr implements IAlarmMgr {
     }
 
 
+    @Override
+    public int queryImageById(final String imageId) {
+        ALog.getInstance().d(TAG, "<queryImageById> imageId=" + imageId);
+
+        mThreadPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
+                if (account == null) {
+                    ALog.getInstance().e(TAG, "<queryImageById> failure, cannot get account");
+                    CallbackQueryImageDone(ErrCode.XERR_ALARM_IMAGE, imageId, null);                 return;
+                }
+
+                AgoraService.AlarmImageResult imgResult;
+                imgResult = AgoraService.getInstance().queryAlarmImageInfo(account.mAgoraAccessToken,
+                        account.mInventDeviceName, imageId);
+
+                ALog.getInstance().d(TAG, "<queryImageById> done, errCode=" + imgResult.mErrCode
+                        + ", mAlarmImg=" + imgResult.mAlarmImg);
+                CallbackQueryImageDone(imgResult.mErrCode, imageId, imgResult.mAlarmImg);
+            }
+        });
+        return ErrCode.XOK;
+    }
+
+    @Override
+    public int queryVideoByTimestamp(final String deviceID, final long timestamp) {
+        ALog.getInstance().d(TAG, "<queryVideoByTimestamp> timestamp=" + timestamp);
+
+        mThreadPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
+                if (account == null) {
+                    ALog.getInstance().e(TAG, "<queryVideoByTimestamp> failure, cannot get account");
+                    CallbackQueryVideoDone(ErrCode.XERR_ALARM_VIDEO, deviceID, timestamp, null);                 return;
+                }
+
+                AgoraService.CloudRecordResult videoResult;
+                videoResult = AgoraService.getInstance().queryAlarmRecordInfo(account.mAgoraAccessToken,
+                        account.mInventDeviceName, deviceID, timestamp);
+
+                ALog.getInstance().d(TAG, "<queryVideoByTimestamp> done, errCode=" + videoResult.mErrCode
+                        + ", mAlarmImg=" + videoResult.mAlarmVideo);
+                CallbackQueryVideoDone(videoResult.mErrCode, deviceID, timestamp, videoResult.mAlarmVideo);
+            }
+        });
+        return ErrCode.XOK;
+    }
+
     ///////////////////////////////////////////////////////////////////////
     ///////////////// Callback Methods for Public Invoke ///////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -306,6 +358,22 @@ public class AlarmMgr implements IAlarmMgr {
         }
     }
 
+    void CallbackQueryImageDone(int errCode, final String imageId, final IotAlarmImage alarmImage) {
+        synchronized (mCallbackList) {
+            for (IAlarmMgr.ICallback listener : mCallbackList) {
+                listener.onAlarmImageQueryDone(errCode, imageId, alarmImage);
+            }
+        }
+    }
+
+    void CallbackQueryVideoDone(int errCode, final String deviceID, long timestamp,
+                                final IotAlarmVideo alarmVideo) {
+        synchronized (mCallbackList) {
+            for (IAlarmMgr.ICallback listener : mCallbackList) {
+                listener.onAlarmVideoQueryDone(errCode, deviceID, timestamp, alarmVideo);
+            }
+        }
+    }
 
     ///////////////////////////////////////////////////////////////////////
     ///////////////////// Inner Data Structure and Methods ////////////////

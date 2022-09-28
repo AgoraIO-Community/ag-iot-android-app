@@ -62,7 +62,13 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
             if (position == -1) {
                 getBinding().btnEdit.performClick();
             } else {
-                messageViewModel.requestAlarmMgrDetailById(data.mAlarmId);
+                 messageViewModel.requestAlarmMgrDetailById(data.mAlarmId);
+
+//                // TODO: test query alarm image
+//                messageViewModel.queryAlarmImage(data.mImageId);
+
+//                // TODO: test query alarm video
+//                messageViewModel.queryAlarmVideo(data.mDeviceID, data.mTriggerTime);
             }
         });
         getBinding().calendarView.setMaxDate(System.currentTimeMillis());

@@ -339,7 +339,7 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     public synchronized boolean setRemoteVideoView(SurfaceView remoteView)
     {
-        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_FIT, mPeerUid);
+        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_ADAPTIVE, mPeerUid);
         int ret = mRtcEngine.setupRemoteVideo(videoCanvas);
         ALog.getInstance().d(TAG, "<setRemoteVideoView> remoteView=" + remoteView
                 + ", mPeerUid=" + mPeerUid + ", ret=" + ret);

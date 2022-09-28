@@ -22,16 +22,8 @@ public interface IDeviceMgr {
     //
     // 设备管理的状态机
     //
-    public static final int DEVMGR_STATE_IDLE = 0x0000;            ///< 当前无设备操作
-    public static final int DEVMGR_STATE_QUERYING = 0x0001;        ///< 正在查询设备列表
-    public static final int DEVMGR_STATE_BINDING = 0x0002;         ///< 正在绑定设备
-    public static final int DEVMGR_STATE_UNBINDING = 0x0003;       ///< 正在解绑设备
-    public static final int DEVMGR_STATE_RENAMING = 0x0004;       ///< 正在重命名设备
-    public static final int DEVMGR_STATE_SHARING_DEV = 0x0008;     ///< 正在共享设备
-    public static final int DEVMGR_STATE_DESHARING_DEV = 0x0009;   ///< 正在解除共享
-    public static final int DEVMGR_STATE_ACCEPT_DEV = 0x000A;      ///< 正在接收设备
-    public static final int DEVMGR_STATE_SHAREMSG_QUERY = 0x0010;  ///< 正在查询分享消息
-    public static final int DEVMGR_STATE_SHAREMSG_DEL = 0x0011;    ///< 正在删除分享消息
+    public static final int DEVMGR_STATE_IDLE = 0x0000;            ///< 当前可以正常操作
+
 
 
     /**

@@ -134,8 +134,10 @@ public class ErrCode {
     public static final int XERR_ALARM_MARK = -60004;               ///< 告警标记失败
     public static final int XERR_ALARM_ADD = -60005;                ///< 告警添加失败
     public static final int XERR_ALARM_GETINFO = -60006;            ///< 获取告警信息
-    public static final int XERR_ALARM_PAGEQUERY = -60007;          ///< 查询一页告警信息
-    public static final int XERR_ALARM_NUMBER = -60008;             ///< 查询告警信息数量
+    public static final int XERR_ALARM_PAGEQUERY = -60007;          ///< 查询一页告警信息失败
+    public static final int XERR_ALARM_NUMBER = -60008;             ///< 查询告警信息数量失败
+    public static final int XERR_ALARM_IMAGE = -60009;              ///< 查询告警图片信息失败
+    public static final int XERR_ALARM_VIDEO = -60010;              ///< 查询告警云录视频失败
 
     //
     // 通知管理相关错误

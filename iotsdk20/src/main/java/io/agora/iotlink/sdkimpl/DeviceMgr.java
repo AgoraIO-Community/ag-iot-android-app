@@ -91,7 +91,7 @@ public class DeviceMgr implements IDeviceMgr {
 
     private ArrayList<IotDevice> mBindDevList = new ArrayList<>();  ///< 当前已经绑定的设备
     private IotDevice mBindingDev;
-    private String mUnbindingDevId;
+
 
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////// Public Methods  ////////////////////////////
@@ -341,18 +341,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryAllDevices() {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryAllDevices> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryAllDevices> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_QUERYING;  // 状态机切换到 正在查询中
         }
 
         sendMessage(MSGID_DEVMGR_QUERY, 0, 0, null);
@@ -369,18 +361,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int addDevice(String productKey, String deviceMac) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<addDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<addDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_BINDING;  // 状态机切换到 正在绑定中
         }
 
         mBindingDev = new IotDevice();
@@ -393,18 +377,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int removeDevice(IotDevice removingDevice) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<removeDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<removeDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_UNBINDING;  // 状态机切换到 正在解绑中
         }
 
         sendMessage(MSGID_DEVMGR_UNBIND, 0, 0, removingDevice);
@@ -414,18 +390,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int renameDevice(IotDevice iotDevice, String newName) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<renameDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<renameDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_RENAMING;  // 状态机切换到 正在解绑中
         }
 
         DevRenameParam renameParam = new DevRenameParam();
@@ -548,18 +516,10 @@ public class DeviceMgr implements IDeviceMgr {
     @Override
     public int shareDevice(final IotDevice iotDevice, final String sharingAccount,
                            int permission, boolean needPeerAgree) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<shareDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<shareDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_SHARING_DEV;  // 状态机切换到 设备分享中
         }
 
         ShareDevOptParam shareParam = new ShareDevOptParam();
@@ -576,18 +536,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int deshareDevice(final IotOutSharer outSharer) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<deshareDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<deshareDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_DESHARING_DEV;  // 状态机切换到 设备取消分享中
         }
 
         ShareDevOptParam deshareParam = new ShareDevOptParam();
@@ -599,18 +551,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int acceptDevice(final String deviceName, final String order) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<acceptDevice> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<acceptDevice> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_ACCEPT_DEV;  // 状态机切换到 设备接受中
         }
 
         ShareDevAcceptParam accpetParam = new ShareDevAcceptParam();
@@ -624,18 +568,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int querySharableDevList() {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<querySharableDevList> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<querySharableDevList> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_QUERYING;  // 状态机切换到 查询中
         }
 
         sendMessage(MSGID_DEVMGR_QUERY_SHARABLE, 0, 0, null);
@@ -645,18 +581,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryOutSharerList(final String deviceID) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryOutSharerList> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryOutSharerList> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_QUERYING;  // 状态机切换到 查询中
         }
 
         ShareDevOptParam deshareParam = new ShareDevOptParam();
@@ -669,18 +597,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryInSharedDevList() {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryInSharedDevList> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryInSharedDevList> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_QUERYING;  // 状态机切换到 查询中
         }
 
         sendMessage(MSGID_DEVMGR_QUERY_SHAREDIN, 0, 0, null);
@@ -691,18 +611,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryShareMsgByPage(int pageNumber, int pageSize, int auditStatus) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryShareMsgByPage> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryShareMsgByPage> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_SHAREMSG_QUERY;  // 状态机切换到 共享消息查询中
         }
 
         ShareMsgOptParam queryParam = new ShareMsgOptParam();
@@ -717,18 +629,10 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int queryShareMsgById(long messageId) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<queryShareMsgById> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<queryShareMsgById> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_SHAREMSG_QUERY;  // 状态机切换到 共享消息查询中
         }
 
         ShareMsgOptParam queryParam = new ShareMsgOptParam();
@@ -741,20 +645,11 @@ public class DeviceMgr implements IDeviceMgr {
 
     @Override
     public int deleteShareMsg(long messageId) {
-        if (getStateMachine() != DEVMGR_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<deleteShareMsg> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<deleteShareMsg> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
         }
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_SHAREMSG_DEL;  // 状态机切换到 共享消息删除中
-        }
-
 
         ShareMsgOptParam deleteParam = new ShareMsgOptParam();
         deleteParam.mMessageId = messageId;
@@ -853,9 +748,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeviceListQuery> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQueryDevListDone(ErrCode.XERR_DEVMGR_QUEYR, devList);
             return;
         }
@@ -887,7 +779,6 @@ public class DeviceMgr implements IDeviceMgr {
         synchronized (mDataLock) {
             mBindDevList.clear();
             mBindDevList.addAll(devList); // 更新绑定设备列表
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<DoDeviceListQuery> mAccount =" + account.mAccount
@@ -916,9 +807,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeviceBind> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackBindDeviceDone(ErrCode.XERR_DEVMGR_ADD, bindingDev, bindedDevList);
             return;
         }
@@ -969,7 +857,6 @@ public class DeviceMgr implements IDeviceMgr {
         synchronized (mDataLock) {
             mBindDevList.clear();
             mBindDevList.addAll(bindedDevList); // 更新绑定设备列表
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<DoDeviceBind> mAccount =" + account.mAccount
@@ -999,9 +886,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeviceUnbind> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackUnbindDeviceDone(ErrCode.XERR_DEVMGR_DEL, unbindingDev, bindedDevList);
             return;
         }
@@ -1040,7 +924,6 @@ public class DeviceMgr implements IDeviceMgr {
         synchronized (mDataLock) {
             mBindDevList.clear();
             mBindDevList.addAll(bindedDevList); // 更新绑定设备列表
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<DoDeviceUnbind> mAccount =" + account.mAccount
@@ -1069,9 +952,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeviceRename> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackRenameDone(ErrCode.XERR_DEVMGR_DEL, renameParam.mIotDevice, renameParam.mNewName);
             return;
         }
@@ -1082,9 +962,6 @@ public class DeviceMgr implements IDeviceMgr {
         AgoraLowService.AccountInfo gyAccount = convertToLowServiceAccount(account);
         int errCode = AgoraLowService.getInstance().deviceRename(gyAccount,
                             renameParam.mIotDevice.mDeviceID, renameParam.mNewName);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoDeviceRename> iotDevice =" + renameParam.mIotDevice
                 + ", newName=" + renameParam.mNewName);
@@ -1476,9 +1353,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoShareDevice> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackDevShareDone(ErrCode.XERR_DEVMGR_SHARE, shareParam);
             return;
         }
@@ -1489,9 +1363,6 @@ public class DeviceMgr implements IDeviceMgr {
         int errCode = AgoraLowService.getInstance().shareDevice(account.mPlatformToken,
                 shareParam.mForce, shareParam.mIotDevice.mDeviceID,
                 shareParam.mAccount, shareParam.mPermission);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoShareDevice> errCode=" + errCode
                 + ", deviceID=" + shareParam.mIotDevice.mDeviceID
@@ -1521,9 +1392,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeshareDevice> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackDevDeshareDone(ErrCode.XERR_DEVMGR_DESHARE, deshareParam.mOutSharer);
             return;
         }
@@ -1535,9 +1403,6 @@ public class DeviceMgr implements IDeviceMgr {
         String deshareAccount = deshareParam.mOutSharer.mAppUserId;
         int errCode = AgoraLowService.getInstance().deshareDevice(account.mPlatformToken,
                 deviceID, deshareAccount);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoDeshareDevice> errCode=" + errCode
                 + ", deviceNumber =" + deviceID
@@ -1564,9 +1429,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoAcceptDevice> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackDevAcceptDone(ErrCode.XERR_DEVMGR_ACCEPT, acceptParam);
             return;
         }
@@ -1576,9 +1438,6 @@ public class DeviceMgr implements IDeviceMgr {
         //
         int errCode = AgoraLowService.getInstance().acceptDevice(account.mPlatformToken,
                 acceptParam.mDeviceName, acceptParam.mOrder);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoAcceptDevice> errCode=" + errCode
                 + ", mDeviceName =" + acceptParam.mDeviceName
@@ -1604,9 +1463,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoQuerySharable> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQuerySharableDone(ErrCode.XERR_DEVMGR_QUERY_SHARABLE, null);
             return;
         }
@@ -1635,10 +1491,6 @@ public class DeviceMgr implements IDeviceMgr {
             }
         }
 
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
-
         ALog.getInstance().d(TAG, "<DoQuerySharable> errCode=" + queryResult.mErrCode
                 + ", deviceCount =" + queryResult.mDeviceList.size());
         processTokenErrCode(queryResult.mErrCode);  // Token过期统一处理
@@ -1664,9 +1516,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoQueryOutSharers> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQueryDesharableDone(ErrCode.XERR_DEVMGR_QUERY_DESHARABLE, deviceID,null);
             return;
         }
@@ -1677,10 +1526,6 @@ public class DeviceMgr implements IDeviceMgr {
         ArrayList<IotDevice> desharableDevList = new ArrayList<>();
         AgoraLowService.OutSharerQueryResult queryResult;
         queryResult = AgoraLowService.getInstance().queryOutSharerList(account.mPlatformToken, deviceID);
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoQuerySharable> errCode=" + queryResult.mErrCode
                 + ", outSharerCount=" + queryResult.mOutSharerList.size());
@@ -1704,9 +1549,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoQuerySharedIn> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQuerySharedinDone(ErrCode.XERR_DEVMGR_QUERY_SHARAEDIN, null);
             return;
         }
@@ -1735,10 +1577,6 @@ public class DeviceMgr implements IDeviceMgr {
             }
         }
 
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
-
         ALog.getInstance().d(TAG, "<DoQuerySharedIn> errCode=" + queryResult.mErrCode
                 + ", deviceCount =" + queryResult.mDeviceList.size());
         processTokenErrCode(queryResult.mErrCode);  // Token过期统一处理
@@ -1761,9 +1599,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoQueryShareMsgByPage> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQueryShareMsgPageDone(ErrCode.XERR_DEVMGR_QUERY_SHAREMSG, null);
             return;
         }
@@ -1774,10 +1609,6 @@ public class DeviceMgr implements IDeviceMgr {
         AgoraLowService.ShareMsgPageQueryResult queryResult;
         queryResult = AgoraLowService.getInstance().queryShareMsgByPage(account.mPlatformToken,
                     optParam.mPageNumber, optParam.mPageSize, optParam.mAuditStatus);
-
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoQueryShareMsgByPage> errCode=" + queryResult.mErrCode
                 + ", mPageInfo=" + queryResult.mPageInfo.toString());
@@ -1802,9 +1633,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoQueryShareMsgById> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackQueryShareMsgDone(ErrCode.XERR_DEVMGR_QUERY_SHAREDETAIL, null);
             return;
         }
@@ -1815,9 +1643,6 @@ public class DeviceMgr implements IDeviceMgr {
         AgoraLowService.ShareMsgInfoResult queryResult;
         queryResult = AgoraLowService.getInstance().queryShareMsgDetail(account.mPlatformToken,
                                                 optParam.mMessageId);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoQueryShareMsgById> errCode=" + queryResult.mErrCode
                 + ", queryResult.mShareMsg=" + queryResult.mShareMsg.toString());
@@ -1842,9 +1667,6 @@ public class DeviceMgr implements IDeviceMgr {
         AccountMgr.AccountInfo account = mSdkInstance.getAccountInfo();
         if (account == null) {
             ALog.getInstance().e(TAG, "<DoDeleteShareMsg> cannot get account");
-            synchronized (mDataLock) {
-                mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-            }
             CallbackDeleteShareMsgDone(ErrCode.XERR_DEVMGR_DEL_SHAREMSG, optParam.mMessageId);
             return;
         }
@@ -1854,9 +1676,6 @@ public class DeviceMgr implements IDeviceMgr {
         //
         int errCode = AgoraLowService.getInstance().deleteShareMsg(account.mPlatformToken,
                 optParam.mMessageId);
-        synchronized (mDataLock) {
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
-        }
 
         ALog.getInstance().d(TAG, "<DoDeleteShareMsg> errCode=" + errCode
                 + ", mMessageId=" + optParam.mMessageId);
@@ -1965,7 +1784,6 @@ public class DeviceMgr implements IDeviceMgr {
         synchronized (mDataLock) {
             mBindDevList.clear();
             mBindDevList.addAll(devList); // 更新绑定设备列表
-            mStateMachine = DEVMGR_STATE_IDLE;  // 状态机切换到 登录空闲 状态
         }
 
         ALog.getInstance().d(TAG, "<queryDevList> bindDeviceCount=" + devList.size());
