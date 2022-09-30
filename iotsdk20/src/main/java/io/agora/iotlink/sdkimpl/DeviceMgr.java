@@ -429,6 +429,10 @@ public class DeviceMgr implements IDeviceMgr {
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
         }
+        if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
+            ALog.getInstance().e(TAG, "<setDeviceProperty> bad state, Mqtt disconnected");
+            return ErrCode.XERR_MQTT_DISCONNECT;
+        }
 
         SetPropParam setPropParam = new SetPropParam();
         setPropParam.mIotDevice = iotDevice;
@@ -445,6 +449,10 @@ public class DeviceMgr implements IDeviceMgr {
             ALog.getInstance().e(TAG, "<getDeviceProperty> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
+        }
+        if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
+            ALog.getInstance().e(TAG, "<getDeviceProperty> bad state, Mqtt disconnected");
+            return ErrCode.XERR_MQTT_DISCONNECT;
         }
 
         sendMessage(MSGID_DEVMGR_GETPROP, 0, 0, iotDevice);

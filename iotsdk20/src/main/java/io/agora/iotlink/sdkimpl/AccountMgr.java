@@ -83,7 +83,6 @@ public class AccountMgr implements IAccountMgr {
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AccountMgr";
-    private static final long PORTRAIT_FILE_LIMITATION = 524288;        ///< 512 KB
 
 
     //
@@ -93,10 +92,7 @@ public class AccountMgr implements IAccountMgr {
     private static final int MSGID_ACCOUNT_LOGIN = 0x1001;
     private static final int MSGID_AWSLOGIN_DONE = 0x1002;
     private static final int MSGID_ACCOUNT_LOGOUT = 0x1003;
-    private static final int MSGID_ACCOUNT_USR_QUERY = 0x1004;
-    private static final int MSGID_ACCOUNT_USR_UPDATE = 0x1005;
-    private static final int MSGID_ACCOUNT_UPLOAD_PORTRAIT = 0x1006;
-    private static final int MSGID_ACCOUNT_TOKEN_INVALID = 0x1007;
+    private static final int MSGID_ACCOUNT_TOKEN_INVALID = 0x1004;
 
 
 
@@ -106,12 +102,9 @@ public class AccountMgr implements IAccountMgr {
     private ArrayList<IAccountMgr.ICallback> mCallbackList = new ArrayList<>();
     private AgoraIotAppSdk mSdkInstance;                        ///< 由外部输入的
     private Handler mWorkHandler;                               ///< 工作线程Handler，从SDK获取到
-    private Bundle mMetaData;
 
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
-    private volatile int mStateMachine = ACCOUNT_STATE_IDLE;    ///< 当前呼叫状态机
-    private AgoraService.AccountTokenInfo mAgoraAccount;        ///< 登录Agora的账号Token信息
-    private AgoraLowService.AccountInfo mLoginAccount;          ///< 当前正在登录的底层账号信息
+    private volatile int mStateMachine = ACCOUNT_STATE_IDLE;    ///< 当前账号系统状态机
     private AccountInfo mLocalAccount;                          ///< 当前已经登录账号, null表示未登录
 
 
@@ -122,18 +115,6 @@ public class AccountMgr implements IAccountMgr {
         mSdkInstance = sdkInstance;
         mWorkHandler = sdkInstance.getWorkHandler();
         mStateMachine = ACCOUNT_STATE_IDLE;
-
-        //获取applicationInfo标签内的数据
-        IAgoraIotAppSdk.InitParam initParam = mSdkInstance.getInitParam();
-        try {
-            PackageManager packageManager = initParam.mContext.getPackageManager();
-            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(
-                    initParam.mContext.getPackageName(), PackageManager.GET_META_DATA);
-            mMetaData = applicationInfo.metaData;
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-            ALog.getInstance().e(TAG, "<initialize> fail to get meta data");
-        }
 
         return ErrCode.XOK;
     }
@@ -152,27 +133,11 @@ public class AccountMgr implements IAccountMgr {
                 DoAccountLogin(msg);
             } break;
 
-            case MSGID_AWSLOGIN_DONE: {
-                DoAwsLoginDone(msg);
-            } break;
-
             case MSGID_ACCOUNT_LOGOUT: {
                 DoAccountLogout(msg);
             } break;
 
-            case MSGID_ACCOUNT_USR_QUERY: {
-                DoUserInfoQuery(msg);
-            } break;
-
-            case MSGID_ACCOUNT_USR_UPDATE: {
-                DoUserInfoUpdate(msg);
-            } break;
-
-            case MSGID_ACCOUNT_UPLOAD_PORTRAIT: {
-                DoUploadPortrait(msg);
-            } break;
-
-            case MSGID_ACCOUNT_TOKEN_INVALID: {
+           case MSGID_ACCOUNT_TOKEN_INVALID: {
                 DoTokenInvalid(msg);
             } break;
         }
@@ -183,9 +148,6 @@ public class AccountMgr implements IAccountMgr {
             mWorkHandler.removeMessages(MSGID_ACCOUNT_LOGIN);
             mWorkHandler.removeMessages(MSGID_AWSLOGIN_DONE);
             mWorkHandler.removeMessages(MSGID_ACCOUNT_LOGOUT);
-            mWorkHandler.removeMessages(MSGID_ACCOUNT_USR_QUERY);
-            mWorkHandler.removeMessages(MSGID_ACCOUNT_USR_UPDATE);
-            mWorkHandler.removeMessages(MSGID_ACCOUNT_UPLOAD_PORTRAIT);
             mWorkHandler.removeMessages(MSGID_ACCOUNT_TOKEN_INVALID);
             mWorkHandler = null;
         }
@@ -252,9 +214,7 @@ public class AccountMgr implements IAccountMgr {
 
         synchronized (mDataLock) {
             mStateMachine = ACCOUNT_STATE_LOGINING;  // 状态机切换到 正在登录中
-            mLoginAccount = null;
             mLocalAccount = null;
-            mAgoraAccount = null;
         }
         mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_LOGINING);
 
@@ -281,61 +241,6 @@ public class AccountMgr implements IAccountMgr {
     }
 
     @Override
-    public int queryUserInfo() {
-        if (getStateMachine() != ACCOUNT_STATE_RUNNING) {
-            ALog.getInstance().e(TAG, "<queryUserInfo> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_USRINF_QUERYING;  // 状态机切换到 正在查询用户信息中
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_USRINFO_QUERYING);
-
-        sendMessage(MSGID_ACCOUNT_USR_QUERY, 0, 0, null);
-        ALog.getInstance().d(TAG, "<queryUserInfo> account=" + mLocalAccount.mAccount);
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int updateUserInfo(final UserInfo newUserInfo) {
-        if (getStateMachine() != ACCOUNT_STATE_RUNNING) {
-            ALog.getInstance().e(TAG, "<updateUserInfo> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_USRINF_UPDATING;  // 状态机切换到 正在更新用户信息中
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_USRINFO_UPDATING);
-
-        sendMessage(MSGID_ACCOUNT_USR_UPDATE, 0, 0, newUserInfo);
-        ALog.getInstance().d(TAG, "<updateUserInfo> newUserInfo=" + newUserInfo.toString());
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int uploadPortrait(final byte[] fileContent) {
-        if (fileContent.length >= PORTRAIT_FILE_LIMITATION) {
-            ALog.getInstance().e(TAG, "<uploadPortrait> fileContent too large");
-            return ErrCode.XERR_INVALID_PARAM;
-        }
-        if (getStateMachine() != ACCOUNT_STATE_RUNNING) {
-            ALog.getInstance().e(TAG, "<uploadPortrait> bad state, mStateMachine=" + mStateMachine);
-            return ErrCode.XERR_BAD_STATE;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_UPLOADING_PORTRAIT;  // 状态机切换到 正在上传用户头像
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_UPLOADING_PORTRAIT);
-
-        sendMessage(MSGID_ACCOUNT_UPLOAD_PORTRAIT, 0, 0, fileContent);
-        ALog.getInstance().d(TAG, "<uploadPortrait> fileSize=" + fileContent.length);
-        return ErrCode.XOK;
-    }
-
-    @Override
     public String getLoggedAccount() {
         synchronized (mDataLock) {
             if (mLocalAccount == null) {
@@ -344,6 +249,12 @@ public class AccountMgr implements IAccountMgr {
             return mLocalAccount.mAccount;
         }
     }
+
+    @Override
+    public int getMqttState() {
+        return AWSUtils.getInstance().getAwsState();
+    }
+
 
     @Override
     public String getQRCodeUserId() {
@@ -371,7 +282,6 @@ public class AccountMgr implements IAccountMgr {
 
 
 
-
     ///////////////////////////////////////////////////////////////////////
     ///////////////////// Methods for Account Login //////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -383,42 +293,48 @@ public class AccountMgr implements IAccountMgr {
         IAgoraIotAppSdk.InitParam initParam = mSdkInstance.getInitParam();
 
         synchronized (mDataLock) {
-            mAgoraAccount = new AgoraService.AccountTokenInfo();
-            mAgoraAccount.mAccessToken = loginParam.mLsAccessToken;
-            mAgoraAccount.mTokenType = loginParam.mLsTokenType;
-            mAgoraAccount.mRefreshToken = loginParam.mLsRefreshToken;
-            mAgoraAccount.mExpriesIn = loginParam.mLsExpiresIn;
-            mAgoraAccount.mScope = loginParam.mLsScope;
+            // 设置当前已经登录账号信息
+            mLocalAccount = new AccountInfo();
+            mLocalAccount.mAccount = loginParam.mAccount;
+            mLocalAccount.mEndpoint = loginParam.mEndpoint;
+            mLocalAccount.mRegion = loginParam.mRegion;
+            mLocalAccount.mPlatformToken = loginParam.mPlatformToken;
+            mLocalAccount.mExpiration = loginParam.mExpiration;
+            mLocalAccount.mRefresh = loginParam.mRefresh;
+            mLocalAccount.mPoolIdentifier = loginParam.mPoolIdentifier;
+            mLocalAccount.mPoolIdentityId = loginParam.mPoolIdentityId;
+            mLocalAccount.mPoolToken = loginParam.mPoolToken;
+            mLocalAccount.mIdentityPoolId = loginParam.mIdentityPoolId;
+            mLocalAccount.mProofAccessKeyId = loginParam.mProofAccessKeyId;
+            mLocalAccount.mProofSecretKey = loginParam.mProofSecretKey;
+            mLocalAccount.mProofSessionToken = loginParam.mProofSessionToken;
+            mLocalAccount.mProofSessionExpiration = loginParam.mProofSessionExpiration;
+            mLocalAccount.mInventDeviceName = loginParam.mInventDeviceName;
 
-            mLoginAccount = new AgoraLowService.AccountInfo();
-            mLoginAccount.mAccount = loginParam.mAccount;
-            mLoginAccount.mEndpoint = loginParam.mEndpoint;
-            mLoginAccount.mRegion = loginParam.mRegion;
-            mLoginAccount.mPlatformToken = loginParam.mPlatformToken;
-            mLoginAccount.mExpiration = loginParam.mExpiration;
-            mLoginAccount.mRefresh = loginParam.mRefresh;
-            mLoginAccount.mPoolIdentifier = loginParam.mPoolIdentifier;
-            mLoginAccount.mPoolIdentityId = loginParam.mPoolIdentityId;
-            mLoginAccount.mPoolToken = loginParam.mPoolToken;
-            mLoginAccount.mIdentityPoolId = loginParam.mIdentityPoolId;
-            mLoginAccount.mProofAccessKeyId = loginParam.mProofAccessKeyId;
-            mLoginAccount.mProofSecretKey = loginParam.mProofSecretKey;
-            mLoginAccount.mProofSessionToken = loginParam.mProofSessionToken;
-            mLoginAccount.mProofSessionExpiration = loginParam.mProofSessionExpiration;
-            mLoginAccount.mInventDeviceName = loginParam.mInventDeviceName;
+            // 赋值Agora账号相关信息
+            mLocalAccount.mAgoraScope = loginParam.mLsScope;
+            mLocalAccount.mAgoraTokenType = loginParam.mLsTokenType;
+            mLocalAccount.mAgoraAccessToken = loginParam.mLsAccessToken;
+            mLocalAccount.mAgoraRefreshToken = loginParam.mLsRefreshToken;
+            mLocalAccount.mAgoraExpriesIn = loginParam.mLsExpiresIn;
+
+            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 登录成 状态
         }
+        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
+        ALog.getInstance().d(TAG, "<DoAccountLogin> done, successful");
+        CallbackLogInDone(ErrCode.XOK, mLocalAccount.mAccount);
 
         //
         // 初始化 AWS 联接
         //
-        String aws_account = mLoginAccount.mAccount;
-        String aws_endpoint = mLoginAccount.mEndpoint;
-        String aws_identityId = mLoginAccount.mPoolIdentityId;
-        String aws_token = mLoginAccount.mPoolToken;
-        String aws_accountId = mLoginAccount.mPoolIdentifier;
-        String aws_identityPoolId = mLoginAccount.mIdentityPoolId;
-        String aws_region = mLoginAccount.mRegion;
-        String aws_inventDeviceName = mLoginAccount.mInventDeviceName;
+        String aws_account = mLocalAccount.mAccount;
+        String aws_endpoint = mLocalAccount.mEndpoint;
+        String aws_identityId = mLocalAccount.mPoolIdentityId;
+        String aws_token = mLocalAccount.mPoolToken;
+        String aws_accountId = mLocalAccount.mPoolIdentifier;
+        String aws_identityPoolId = mLocalAccount.mIdentityPoolId;
+        String aws_region = mLocalAccount.mRegion;
+        String aws_inventDeviceName = mLocalAccount.mInventDeviceName;
         AWSUtils.getInstance().initIoTClient(initParam.mContext,
                 aws_identityId, aws_endpoint, aws_token, aws_accountId,
                 aws_identityPoolId, aws_region, aws_inventDeviceName);
@@ -433,102 +349,6 @@ public class AccountMgr implements IAccountMgr {
                 + ", aws_region=" + aws_region);
     }
 
-
-    /*
-     * @brief 在AWS回调中被调用，用于处理AWS登录状态
-     */
-    void onAwsConnectStatusChange(String status) {
-        ALog.getInstance().d(TAG, "<onAwsConnectStatusChange> status=" + status
-                + ", mStateMachine=" + mStateMachine);
-        if (getStateMachine() != ACCOUNT_STATE_LOGINING) {  // 当前非正在登录，直接忽略
-            return;
-        }
-
-        if (status.compareToIgnoreCase("Connecting") == 0) {
-
-        } else if (status.compareToIgnoreCase("Connected") == 0) {
-            // sendMessage(MSGID_AWSLOGIN_DONE, ErrCode.XOK, 0, null);  // AWS成功
-
-        } else if (status.compareToIgnoreCase("Subscribed") == 0) {
-            sendMessage(MSGID_AWSLOGIN_DONE, ErrCode.XOK, 0, null);  // 订阅成功才算完整成功
-
-        } else if (status.compareToIgnoreCase("ConnectionLost") == 0) {
-            sendMessage(MSGID_AWSLOGIN_DONE, ErrCode.XERR_ACCOUNT_LOGIN, 0, null);  // AWS失败
-        }
-    }
-
-    /*
-     * @brief 在AWS回调中被调用，用于处理AWS登录状态
-     */
-    void onAwsConnectFail(String message) {
-        ALog.getInstance().d(TAG, "<onAwsConnectFail> message=" + message);
-        if (getStateMachine() != ACCOUNT_STATE_LOGINING) {  // 当前非正在登录，直接忽略
-            return;
-        }
-
-        sendMessage(MSGID_AWSLOGIN_DONE, ErrCode.XERR_ACCOUNT_LOGIN, 0, null);  // AWS失败
-    }
-
-
-    /*
-     * @brief 工作线程中进行AWS的初始化完成处理
-     */
-    void DoAwsLoginDone(Message msg) {
-        int errCode = msg.arg1;
-        ALog.getInstance().d(TAG, "<DoAwsLoginDone> errCode=" + errCode);
-
-        if (errCode == ErrCode.XOK)   // AWS 登录成功
-        {
-            synchronized (mDataLock) {
-                // 设置当前已经登录账号信息
-                mLocalAccount = new AccountInfo();
-                mLocalAccount.mAccount = mLoginAccount.mAccount;
-                mLocalAccount.mEndpoint = mLoginAccount.mEndpoint;
-                mLocalAccount.mRegion = mLoginAccount.mRegion;
-                mLocalAccount.mPlatformToken = mLoginAccount.mPlatformToken;
-                mLocalAccount.mExpiration = mLoginAccount.mExpiration;
-                mLocalAccount.mRefresh = mLoginAccount.mRefresh;
-                mLocalAccount.mPoolIdentifier = mLoginAccount.mPoolIdentifier;
-                mLocalAccount.mPoolIdentityId = mLoginAccount.mPoolIdentityId;
-                mLocalAccount.mPoolToken = mLoginAccount.mPoolToken;
-                mLocalAccount.mIdentityPoolId = mLoginAccount.mIdentityPoolId;
-                mLocalAccount.mProofAccessKeyId = mLoginAccount.mProofAccessKeyId;
-                mLocalAccount.mProofSecretKey = mLoginAccount.mProofSecretKey;
-                mLocalAccount.mProofSessionToken = mLoginAccount.mProofSessionToken;
-                mLocalAccount.mProofSessionExpiration = mLoginAccount.mProofSessionExpiration;
-                mLocalAccount.mInventDeviceName = mLoginAccount.mInventDeviceName;
-                mLoginAccount = null;
-
-                if (mAgoraAccount != null) {    // 赋值Agora账号相关信息
-                    mLocalAccount.mAgoraScope = mAgoraAccount.mScope;
-                    mLocalAccount.mAgoraTokenType = mAgoraAccount.mTokenType;
-                    mLocalAccount.mAgoraAccessToken = mAgoraAccount.mAccessToken;
-                    mLocalAccount.mAgoraRefreshToken = mAgoraAccount.mRefreshToken;
-                    mLocalAccount.mAgoraExpriesIn = mAgoraAccount.mExpriesIn;
-                }
-
-                mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 已经登录 状态
-            }
-            mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
-            ALog.getInstance().d(TAG, "<DoAwsLoginDone> finished successful");
-            CallbackLogInDone(ErrCode.XOK, mLocalAccount.mAccount);
-
-        }
-        else // AWS登录失败
-        {
-            String account = mLoginAccount.mAccount;
-            synchronized (mDataLock) {
-                mStateMachine = ACCOUNT_STATE_IDLE;    // 状态机切换回 账号未登录 状态
-                mLocalAccount = null;                  // 清空已经登录的本地账号
-                mLoginAccount = null;
-                mAgoraAccount = null;
-            }
-            mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_READY);
-            ALog.getInstance().e(TAG, "<DoAwsLoginDone> finished with AWS failure");
-            CallbackLogInDone(errCode, account);
-        }
-    }
-
     void CallbackLogInDone(int errCode, String account) {
         synchronized (mCallbackList) {
             for (IAccountMgr.ICallback listener : mCallbackList) {
@@ -537,6 +357,50 @@ public class AccountMgr implements IAccountMgr {
         }
     }
 
+    /*
+     * @brief 在AWS回调中被调用，用于处理AWS登录状态
+     */
+    void onAwsConnectStatusChange(String status) {
+        ALog.getInstance().d(TAG, "<onAwsConnectStatusChange> status=" + status
+                + ", mStateMachine=" + mStateMachine);
+
+        if (status.compareToIgnoreCase("Connecting") == 0) {
+            CallbackAwsStateChaned(MQTT_STATE_CONNECTING);
+
+        } else if (status.compareToIgnoreCase("Connected") == 0) {
+            CallbackAwsStateChaned(MQTT_STATE_CONNECTED);
+
+        } else if (status.compareToIgnoreCase("Subscribed") == 0) {
+
+        } else if (status.compareToIgnoreCase("ConnectionLost") == 0) {
+            CallbackAwsStateChaned(MQTT_STATE_DISCONNECTED);
+
+        }
+    }
+
+    void CallbackAwsStateChaned(int mqttState) {
+        synchronized (mCallbackList) {
+            for (IAccountMgr.ICallback listener : mCallbackList) {
+                listener.onMqttStateChanged(mqttState);
+            }
+        }
+    }
+
+    /**
+     * @brief 在AWS回调中被调用，用于处理AWS联接错误
+     */
+    void onAwsConnectFail(final String errMessage) {
+        ALog.getInstance().d(TAG, "<onAwsConnectFail> errMessage=" + errMessage);
+        CallbackAwsError(errMessage);
+    }
+
+    void CallbackAwsError(final String errMessage) {
+        synchronized (mCallbackList) {
+            for (IAccountMgr.ICallback listener : mCallbackList) {
+                listener.onMqttError(errMessage);
+            }
+        }
+    }
 
     ///////////////////////////////////////////////////////////////////////
     ///////////////////// Methods for Account Logout //////////////////////
@@ -566,100 +430,6 @@ public class AccountMgr implements IAccountMgr {
             }
         }
     }
-
-
-
-    ///////////////////////////////////////////////////////////////////////
-    /////////////////// Methods for UserInfo Querying /////////////////////
-    ///////////////////////////////////////////////////////////////////////
-    void DoUserInfoQuery(Message msg){
-        // 调用底层的账号系统进行用户信息查询
-        AgoraLowService.UsrInfQueryResult queryResult;
-        queryResult = AgoraLowService.getInstance().accountUserInfoQuery(mLocalAccount.mPlatformToken);
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 账号登录 状态
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
-
-        if (queryResult.mErrCode != ErrCode.XOK) {
-            ALog.getInstance().d(TAG, "<DoUserInfoQuery> failure "
-                    + ", account=" + mLocalAccount.mAccount);
-        } else {
-            ALog.getInstance().d(TAG, "<DoUserInfoQuery> successful "
-                    + ", account=" + mLocalAccount.mAccount
-                    + ", userInfo=" + queryResult.mUserInfo.toString());
-        }
-        if (queryResult.mErrCode == ErrCode.XERR_TOKEN_INVALID) {  // Token过期统一处理
-            onTokenInvalid();
-        }
-
-        synchronized (mCallbackList) {  // 回调给应用层
-            for (IAccountMgr.ICallback listener : mCallbackList) {
-                listener.onQueryUserInfoDone(queryResult.mErrCode, queryResult.mUserInfo);
-            }
-        }
-    }
-
-
-    ///////////////////////////////////////////////////////////////////////
-    /////////////////// Methods for UserInfo Updating /////////////////////
-    ///////////////////////////////////////////////////////////////////////
-    void DoUserInfoUpdate(Message msg) {
-        UserInfo updatedUserInfo = (UserInfo) (msg.obj);
-
-        // 调用底层的账号系统进行用户信息查询
-        int errCode = AgoraLowService.getInstance().accountUserInfoUpdate(
-                        mLocalAccount.mPlatformToken, updatedUserInfo);
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 账号登录 状态
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
-
-        ALog.getInstance().d(TAG, "<DoUserInfoUpdate> done "
-                + ", account=" + mLocalAccount.mAccount + ", errCode=" + errCode);
-        if (errCode == ErrCode.XERR_TOKEN_INVALID) {  // Token过期统一处理
-            onTokenInvalid();
-        }
-
-        synchronized (mCallbackList) {  // 回调给应用层
-            for (IAccountMgr.ICallback listener : mCallbackList) {
-                listener.onUpdateUserInfoDone(errCode, updatedUserInfo);
-            }
-        }
-    }
-
-    ///////////////////////////////////////////////////////////////////////
-    /////////////////// Methods for Upload Portrait ///////////////////////
-    ///////////////////////////////////////////////////////////////////////
-    void DoUploadPortrait(Message msg) {
-        byte[] fileContent = (byte[]) (msg.obj);
-
-        // 调用AgoraService上传头像图片
-        AgoraService.ImgUploadResult uploadResult;
-        String fileName = "Avator.jpg";   // 固定人像名字
-        String fileDir = "Portrait";  // 固定人像目录
-        uploadResult = AgoraService.getInstance().uploadImage(fileName, fileDir, true, fileContent);
-
-        synchronized (mDataLock) {
-            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 账号登录 状态
-        }
-        mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
-
-        ALog.getInstance().d(TAG, "<DoUploadPortrait> done, errCode=" + uploadResult.mErrCode);
-        if (uploadResult.mErrCode == ErrCode.XERR_TOKEN_INVALID) {  // Token过期统一处理
-            onTokenInvalid();
-        }
-
-        synchronized (mCallbackList) {  // 回调给应用层
-            for (IAccountMgr.ICallback listener : mCallbackList) {
-                listener.onUploadPortraitDone(uploadResult.mErrCode, fileContent,
-                        uploadResult.mCloudFilePath);
-            }
-        }
-    }
-
 
 
     ///////////////////////////////////////////////////////////////////////

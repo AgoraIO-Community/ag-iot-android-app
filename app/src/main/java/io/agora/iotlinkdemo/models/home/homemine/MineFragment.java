@@ -65,43 +65,29 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
             }
         });
         getBinding().tvAbout.setOnClickListener(view -> PagePilotManager.pageAbout());
-        userInfoViewModel.setISingleCallback((type, var2) -> {
-            if (type == Constant.CALLBACK_TYPE_USER_GET_USERINFO) {
-                if (var2 instanceof IAccountMgr.UserInfo) {
-                    setUserInfo((IAccountMgr.UserInfo) var2);
-                }
-            }
-        });
-    }
+        setUserInfo();
+     }
 
-    private void setUserInfo(IAccountMgr.UserInfo userInfo) {
-        if (userInfo == null) return;
+    private void setUserInfo() {
         getBinding().tvUserMobile.post(() -> {
             String accountName = ThirdAccountMgr.getInstance().getLoginAccountName();
             getBinding().tvUserMobile.setText(accountName);
 
             int count = DevicesListManager.deviceSize;
             getBinding().tvDeviceCount.setText(count + " 台设备");
-            GlideApp.with(this).load(userInfo.mAvatar).error(R.mipmap.userimage)
-                    .skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
-                    .transform(new CenterCropRoundCornerTransform(100)).into(getBinding().ivUserAvatar);
-        });
+         });
 
     }
 
     @Override
     public void requestData() {
         if (NetUtils.INSTANCE.isNetworkConnected()) {
-            userInfoViewModel.requestUserInfo();
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (UserInfoViewModel.userInfo != null) {
-            setUserInfo(UserInfoViewModel.userInfo);
-        }
     }
 
     @Override

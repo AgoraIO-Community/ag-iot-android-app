@@ -83,9 +83,7 @@ public class UserInfoActivity extends BaseViewBindingActivity<ActivityUserInfoBi
         });
         userInfoViewModel.setISingleCallback((type, var2) -> {
             if (type == Constant.CALLBACK_TYPE_USER_GET_USERINFO) {
-                if (var2 instanceof IAccountMgr.UserInfo) {
-                    setUserInfo((IAccountMgr.UserInfo) var2);
-                }
+             setUserInfo();
             } else if (type == Constant.CALLBACK_TYPE_USER_UPLOAD_AVATAR_SUCCESS) {
                 hideLoadingView();
 //                SPUtil.Companion.getInstance(this).putString("AVATAR", (String) var2);
@@ -97,58 +95,23 @@ public class UserInfoActivity extends BaseViewBindingActivity<ActivityUserInfoBi
         if (changeAvatarDialog == null) {
             changeAvatarDialog = new ChangeAvatarDialog(this);
             changeAvatarDialog.iSingleCallback = (type, var2) -> {
-                uploadDrawablePath(type);
             };
         }
         changeAvatarDialog.show();
     }
 
-    private void uploadDrawablePath(int type) {
-        showLoadingView();
-        int drawableId = 0;
-        if (type == 1) {
-            drawableId = R.mipmap.boy;
-        } else if (type == 2) {
-            drawableId = R.mipmap.girl;
-        } else if (type == 3) {
-            drawableId = R.mipmap.dog;
-        } else if (type == 4) {
-            drawableId = R.mipmap.cat;
-        }
-        userInfoViewModel.uploadPortrait(ContextCompat.getDrawable(this, drawableId));
-        getBinding().ivUserAvatar.setImageResource(drawableId);
-    }
-
-    private void setUserInfo(IAccountMgr.UserInfo userInfo) {
-        getBinding().tvNickname.post(() -> {
-            if (!TextUtils.isEmpty(userInfo.mName)) {
-                getBinding().tvNickname.setText(userInfo.mName);
-            } else if (!TextUtils.isEmpty(userInfo.mPhoneNumber)) {
-                getBinding().tvNickname.setText(userInfo.mPhoneNumber);
-            } else if (!TextUtils.isEmpty(userInfo.mEmail)) {
-                getBinding().tvNickname.setText(userInfo.mEmail);
-            }
-            getBinding().tvNickname.post(() -> {
-                GlideApp.with(this).load(userInfo.mAvatar).error(R.mipmap.userimage)
-                        .transform(new CenterCropRoundCornerTransform(100))
-                        .skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .into(getBinding().ivUserAvatar);
-            });
-        });
+    private void setUserInfo() {
 
     }
 
     @Override
     public void requestData() {
-        userInfoViewModel.requestUserInfo();
+
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (UserInfoViewModel.userInfo != null) {
-            setUserInfo(UserInfoViewModel.userInfo);
-        }
     }
 
     @Override
@@ -163,80 +126,4 @@ public class UserInfoActivity extends BaseViewBindingActivity<ActivityUserInfoBi
         userInfoViewModel.onStop();
     }
 
-    private void showSelectPhotoFromDialog() {
-        if (selectPhotoFromDialog == null) {
-            selectPhotoFromDialog = new SelectPhotoFromDialog(this);
-            selectPhotoFromDialog.setOnButtonClickListener(new BaseDialog.OnButtonClickListener() {
-                @Override
-                public void onLeftButtonClick() {
-                    openAlbum();
-                }
-
-                @Override
-                public void onRightButtonClick() {
-                    takePhoto();
-                }
-            });
-        }
-        selectPhotoFromDialog.show();
-    }
-
-    String mTempPhotoPath = null;
-
-    private void takePhoto() {
-        Intent intentToTakePhoto = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intentToTakePhoto.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        File fileDir = new File(
-                FileUtils.getTempSDPath()
-        );
-        if (!fileDir.exists()) {
-            fileDir.mkdirs();
-        }
-        File photoFile = new File(fileDir, "photo.jpg");
-        mTempPhotoPath = photoFile.getAbsolutePath();
-        Uri imageUri = FileProvider.getUriForFile(
-                this,
-                BuildConfig.APPLICATION_ID + ".fileProvider",
-                photoFile
-        );
-        intentToTakePhoto.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-        startActivityForResult(intentToTakePhoto, TAKE_PHOTO);
-    }
-
-    private void openAlbum() {
-        Intent intentToPickPic = new Intent(Intent.ACTION_PICK, null);
-        intentToPickPic.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intentToPickPic.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
-        startActivityForResult(intentToPickPic, CHOOSE_PHOTO);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == CHOOSE_PHOTO) {
-                Uri uri = data.getData();
-                if (uri != null) {
-                    String filePath = UriUtils.INSTANCE.getFilePathByUri(this, uri);
-                    if (!TextUtils.isEmpty(filePath)) {
-                        setImage(filePath);
-                    }
-                }
-            }
-        } else if (requestCode == TAKE_PHOTO) {
-            setImage(mTempPhotoPath);
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void setImage(String filePath) {
-        if (filePath == null) return;
-        String path = ImageCompressUtil.displayPath(this, filePath);
-        if (TextUtils.isEmpty(path) || new File(filePath).length() <= 150000) {
-            path = filePath;
-        }
-        mTempPhotoPath = path;
-        UserInfoViewModel.userInfo.mAvatar = mTempPhotoPath;
-        userInfoViewModel.uploadPortrait(mTempPhotoPath);
-
-    }
 }

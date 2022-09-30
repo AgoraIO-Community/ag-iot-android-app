@@ -40,7 +40,7 @@ public class UserEditNicknameActivity extends BaseViewBindingActivity<ActivityUs
                 mHealthActivityManager.popActivity();
             }
         });
-        getBinding().etNickname.setText(UserInfoViewModel.userInfo.mName);
+
     }
 
     @Override
@@ -50,8 +50,6 @@ public class UserEditNicknameActivity extends BaseViewBindingActivity<ActivityUs
                 ToastUtils.INSTANCE.showToast("请输入昵称");
                 return;
             }
-            //执行保存用户昵称操作
-            userInfoViewModel.requestSetUsername(UserInfoViewModel.userInfo, getBinding().etNickname.getText().toString());
         });
     }
 

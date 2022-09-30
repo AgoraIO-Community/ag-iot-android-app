@@ -24,11 +24,20 @@ import java.util.StringTokenizer;
 public class AWSUtils {
     private static final String TAG = "IOTSDK/AWSUtils";
 
+    //
+    // MQTT 的状态
+    //
+    public static final int STATE_DISCONNECTED = 0x0000;        ///< MQTT 没有联接
+    public static final int STATE_CONNECTING = 0x0001;          ///< MQTT 正在联接中
+    public static final int STATE_CONNECTED = 0x0002;           ///< MQTT 已经联接
+
+    private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
     private AWSIotMqttManager mqttManager;
     CognitoCachingCredentialsProvider mCredentialsProvider;
     private String mClientId;
     private String mUserInventThingName;
     private int mTopicSum = 0;
+    private int mMqttState = STATE_DISCONNECTED;    ///< 当前AWS是否已经联接
 
 
     private AWSUtils() {
@@ -67,7 +76,13 @@ public class AWSUtils {
                     //连接成功订阅所需topic
                     if (String.valueOf(status).equals("Connected")) {
                         subscribe(mClientId, mUserInventThingName);
+                        setMqttState(STATE_CONNECTED);
+                    } else if (String.valueOf(status).equals("ConnectionLost")) {
+                        setMqttState(STATE_DISCONNECTED);
+                    } else if (String.valueOf(status).equals("Connecting")) {
+                        setMqttState(STATE_CONNECTING);
                     }
+
                     //通知连接状态事件
                     if (awsListener != null) {
                         awsListener.onConnectStatusChange(status.toString());
@@ -92,6 +107,9 @@ public class AWSUtils {
             mqttManager.disconnect();
             //销毁AWS服务证书
             mCredentialsProvider.clear();
+
+            setMqttState(STATE_DISCONNECTED);
+
         } catch (Exception e) {
             Log.v(TAG, "disConnect,exception=" + e.getMessage());
         }
@@ -129,6 +147,7 @@ public class AWSUtils {
                     public void onSuccess() {
                         Log.d(TAG, "Subscribe Shadow Success,topic=" + topic);
                         mTopicSum -= 1;
+                        setMqttState(STATE_CONNECTED);
                         if (mTopicSum == 0) {
                             awsListener.onConnectStatusChange("Subscribed");
                         }
@@ -141,6 +160,7 @@ public class AWSUtils {
                 new AWSIotMqttNewMessageCallback() {
                     @Override
                     public void onMessageArrived(final String topic, final byte[] data) {
+                        setMqttState(STATE_CONNECTED);
                         try {
                             String payload = new String(data, "UTF-8");
                             handleMessage(topic, payload);
@@ -428,6 +448,18 @@ public class AWSUtils {
         mqttManager.setKeepAlive(10);
         // connect to AWS service
         connect(context, clientID, token, accountId, identityPoolId, mRegion, thingName, awsListener);
+    }
+
+    private void setMqttState(int state) {
+        synchronized (mDataLock) {
+            mMqttState = state;
+        }
+    }
+
+    public int getAwsState() {
+        synchronized (mDataLock) {
+            return mMqttState;
+        }
     }
 
     /**

@@ -185,9 +185,13 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         // 设置广播模式
         mRtcEngine.setClientRole(mRtcEngCfg.mClientRole);
 
-        // 设置私参：音频默认G722 编码
-        String param = "{\"che.audio.custom_payload_type\":9}";
-        int ret = mRtcEngine.setParameters(param);
+        // 设置私参：  音频G722编码--9;  音频G711U--0;  音频G711A--8
+        String codecParam = "{\"che.audio.custom_payload_type\":9}";
+        int ret = mRtcEngine.setParameters(codecParam);
+
+//        // 设置私参：采样率
+//        String smplRate = "{\"che.audio.input_sample_rate\":8000}";
+//        ret = mRtcEngine.setParameters(smplRate);
 
         mRtcEngine.registerVideoFrameObserver(this);
 
@@ -208,9 +212,16 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
             mRtcEngEventHandler = null;
             ALog.getInstance().d(TAG, "<release> done");
         }
+
+        mLocalUid = 0;
+        mPeerUid = 0;
     }
 
     public synchronized int setParameters(String param) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setParameters> bad state");
+            return Constants.ERR_NOT_READY;
+        }
         int ret = mRtcEngine.setParameters(param);
         ALog.getInstance().d(TAG, "<setParameter> param=" + param + " , ret=" + ret);
         return ret;
@@ -266,6 +277,10 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     public synchronized boolean joinChannel(String channel, String token,
                                             int localUid   ) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<joinChannel> bad state");
+            return false;
+        }
         ALog.getInstance().d(TAG, "<joinChannel> Enter, channel=" + channel
                 + ", token=" + token + ", localUid=" + localUid);
         mLocalUid = localUid;
@@ -293,6 +308,10 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     public synchronized boolean leaveChannel()
     {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<leaveChannel> bad state");
+            return false;
+        }
         if (mLocalUid == 0 && mPeerUid == 0) {   // 已经离开频道了
             return true;
         }
@@ -313,11 +332,16 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     public synchronized boolean isInChannel()
     {
-        return (mLocalUid != 0);
+        return (mRtcEngine != null);
     }
 
     public synchronized boolean setLocalVideoView(SurfaceView localView, int localUid)
     {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setLocalVideoView> bad state");
+            return false;
+        }
+
         if (localView != null) {
             VideoCanvas videoCanvas = new VideoCanvas(localView, VideoCanvas.RENDER_MODE_FIT, localUid);
             mRtcEngine.setupLocalVideo(videoCanvas);
@@ -333,12 +357,20 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     }
 
     public synchronized void setPeerUid(int peerUid) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setPeerUid> bad state");
+            return;
+        }
         mPeerUid = peerUid;
         ALog.getInstance().d(TAG, "<setPeerUid> peerUid=" + peerUid);
     }
 
     public synchronized boolean setRemoteVideoView(SurfaceView remoteView)
     {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setRemoteVideoView> bad state");
+            return false;
+        }
         VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_ADAPTIVE, mPeerUid);
         int ret = mRtcEngine.setupRemoteVideo(videoCanvas);
         ALog.getInstance().d(TAG, "<setRemoteVideoView> remoteView=" + remoteView
@@ -348,30 +380,51 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
 
     public synchronized boolean muteLocalVideoStream(boolean mute) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<muteLocalVideoStream> bad state");
+            return false;
+        }
         int ret = mRtcEngine.muteLocalVideoStream(mute);
         ALog.getInstance().d(TAG, "<muteLocalVideoStream> mute=" + mute + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean muteLocalAudioStream(boolean mute) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<muteLocalAudioStream> bad state");
+            return false;
+        }
+
         int ret = mRtcEngine.muteLocalAudioStream(mute);
         ALog.getInstance().d(TAG, "<muteLocalAudioStream> mute=" + mute + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean mutePeerVideoStream(boolean mute) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<mutePeerVideoStream> bad state");
+            return false;
+        }
         int ret = mRtcEngine.muteAllRemoteVideoStreams(mute);
         ALog.getInstance().d(TAG, "<mutePeerVideoStream> mute=" + mute + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean mutePeerAudioStream(boolean mute) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<mutePeerAudioStream> bad state");
+            return false;
+        }
         int ret = mRtcEngine.muteAllRemoteAudioStreams(mute);
         ALog.getInstance().d(TAG, "<mutePeerAudioStream> mute=" + mute + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean setAudioEffect(int voice_changer) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setAudioEffect> bad state");
+            return false;
+        }
         int ret = mRtcEngine.setAudioEffectPreset(voice_changer);
         ALog.getInstance().d(TAG, "<setAudioEffect> voice_changer=" + voice_changer + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
@@ -379,6 +432,10 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     public synchronized Bitmap capturePeerVideoFrame()
     {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> bad state");
+            return null;
+        }
         synchronized (mDumpVideoEvent) {
             mDumpVideoFrame = true;
             mDumpBitmap = null;
@@ -410,6 +467,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         Log.d(TAG, "<onFirstRemoteVideoDecoded> uid=" + uid
                 + ", width=" + width + ", height=" + height
                 + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
     }
 
     @Override
@@ -418,6 +478,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         ALog.getInstance().d(TAG, "<onFirstRemoteVideoFrame> uid=" + uid
                 + ", width=" + width + ", height=" + height
                 + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
 
         if (uid == mPeerUid) {  // 对端首帧出图
             if (mInitParam.mCallback != null) {
@@ -431,6 +494,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     {
         ALog.getInstance().d(TAG, "<onFirstLocalVideoFrame> width=" + width + ", height=" + height
                 + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
     }
 
     @Override
@@ -438,6 +504,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     {
         ALog.getInstance().d(TAG, "<onJoinChannelSuccess> channel=" + channel
                 + ", uid=" + uid + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
 
         if (mInitParam.mCallback != null) {
             mInitParam.mCallback.onTalkingJoinDone(channel, uid);
@@ -448,6 +517,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     public void onLeaveChannelSuccess()
     {
         Log.d(TAG, "<onLeaveChannelSuccess> ");
+        if (mRtcEngine == null) {
+            return;
+        }
 
         if (mInitParam.mCallback != null) {
             mInitParam.mCallback.onTalkingLeftDone();
@@ -458,6 +530,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     public void onUserJoined(int uid, int elapsed)
     {
         ALog.getInstance().d(TAG, "<onUserJoined> uid=" + uid + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
 
         if (uid == mPeerUid) {  // 对端加入频道
             if (mInitParam.mCallback != null) {
@@ -474,6 +549,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     public void onUserOffline(int uid, int reason)
     {
         ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid + ", reason=" + reason);
+        if (mRtcEngine == null) {
+            return;
+        }
 
         if (uid == mPeerUid) {
             if (mInitParam.mCallback != null) {
@@ -498,6 +576,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     @Override
     public void onRtcStats(IRtcEngineEventHandler.RtcStats stats)
     {
+        if (mRtcEngine == null) {
+            return;
+        }
         synchronized (mRtcStatus) {
             mRtcStatus.totalDuration = stats.totalDuration;
             mRtcStatus.txBytes = stats.txBytes;
@@ -562,7 +643,9 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
 
     @Override
     public boolean onRenderVideoFrame(String channelId, int uid, VideoFrame videoFrame)  {
-
+        if (mRtcEngine == null) {
+            return false;
+        }
         synchronized (mDumpVideoEvent) {
             if (!mDumpVideoFrame) {
                 return false;

@@ -97,7 +97,7 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
 
     @Override
     public void onLoginOtherDevice(String account) {
-        Log.d("cwtsw", "onLoginOtherDevice account = " + account);
+        Log.d(TAG, "<onLoginOtherDevice> account = " + account);
         if (account.equals(AIotAppSdkFactory.getInstance().getAccountMgr().getLoggedAccount())) {
             EventBus.getDefault().post(new UserLogoutEvent());
             getISingleCallback().onSingleCallback(999, null);
@@ -111,4 +111,16 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
         getISingleCallback().onSingleCallback(999, null);
         PagePilotManager.pagePhoneLogin();
     }
+
+    @Override
+    public void onMqttStateChanged(int mqttState) {
+        Log.d(TAG, "<onMqttStateChanged> mqttState=" + mqttState);
+    }
+
+    @Override
+    public void onMqttError(final String errMessage) {
+        Log.d(TAG, "<onMqttError> errMessage=" + errMessage);
+    }
+
+
 }

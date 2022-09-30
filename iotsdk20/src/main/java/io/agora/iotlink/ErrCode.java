@@ -42,6 +42,7 @@ public class ErrCode {
     public static final int XERR_USERID_INVALID = -10017;       ///< UserId无效
     public static final int XERR_NOT_AUTHORIZED = -10018;       ///< 未认证
     public static final int XERR_INVOKE_TOO_OFTEN = -10019;     ///< 调用太频繁
+    public static final int XERR_MQTT_DISCONNECT = -10020;      ///< MQTT未联接
 
     //
     // 文件操作错误码

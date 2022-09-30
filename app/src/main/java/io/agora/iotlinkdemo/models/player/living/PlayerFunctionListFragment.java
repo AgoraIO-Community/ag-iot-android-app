@@ -137,8 +137,6 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             });
         });
         playerViewModel.initMachine();
-//        playerViewModel.initPeerVideo(getBinding().peerView);
-        playerViewModel.setMutePeer(true);
     }
 
     @Override
@@ -353,7 +351,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
     @Override
     public void requestData() {
         playerViewModel.requestViewModelData();
-        playerViewModel.queryAllPropDesc();
+        //playerViewModel.queryAllPropDesc();
     }
 
     /**
