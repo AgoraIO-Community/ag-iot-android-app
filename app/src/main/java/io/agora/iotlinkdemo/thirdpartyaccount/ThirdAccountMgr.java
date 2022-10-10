@@ -81,9 +81,11 @@ public class ThirdAccountMgr {
     private ExecutorService mExecSrv = Executors.newSingleThreadExecutor();
 
     ///< 服务器请求站点
-    private String mThirdBaseUrl = "https://third-user.sh3.agoralab.co/third-party";
+    //private String mThirdBaseUrl = "https://third-user.sh3.agoralab.co/third-party";
+    private String mThirdBaseUrl = "https://third-user.la3.agoralab.co/third-party";  // 针对北美区域
 
     private String mLoginAccountName;       ///< 当前已经登录的账号名称
+    private String mLoginAccountId;         ///< 当前已登录账号Id
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -234,6 +236,14 @@ public class ThirdAccountMgr {
      */
     public String getLoginAccountName() {
         return mLoginAccountName;
+    }
+
+    /**
+     * @brief 获取当前已经登录的账号ID
+     * @return 登录的账号ID
+     */
+    public String getLoginAccountId() {
+        return mLoginAccountId;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -478,6 +488,10 @@ public class ThirdAccountMgr {
             result.mLoginParam.mLsScope = parseJsonStringValue(lsTokenObj,"scope", null);
 
             mLoginAccountName = accountName;
+            String [] splitArray = result.mLoginParam.mInventDeviceName.split("-");
+            if ((splitArray != null) && (splitArray.length >= 2)) {
+                mLoginAccountId = splitArray[1];
+            }
             result.mErrCode = ErrCode.XOK;
 
         } catch (JSONException e) {

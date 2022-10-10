@@ -149,6 +149,11 @@ public class RtmMgr implements IRtmMgr {
 
     @Override
     public int connect(final IotDevice iotDevice) {
+        if (!mSdkInstance.isAccountReady()) {
+            ALog.getInstance().e(TAG, "<connect> bad state, sdkState="
+                    + mSdkInstance.getStateMachine());
+            return ErrCode.XERR_BAD_STATE;
+        }
         mPeerDevice = iotDevice;
         mEntryHandler= new Handler(Looper.myLooper());
         sendTaskMessage(MSGID_RTMMGR_REQTOKEN, 0, 0, iotDevice);
