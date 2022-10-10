@@ -662,6 +662,7 @@ public class AgoraService {
             queryResult.mAlarm.mProductID = parseJsonStringValue(dataObj, "productId", null);
             queryResult.mAlarm.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);
             queryResult.mAlarm.mDeviceName = parseJsonStringValue(dataObj, "deviceName", null);
+            queryResult.mAlarm.mOwnerUserId = parseJsonStringValue(dataObj, "tenantId", null);
 
             queryResult.mAlarm.mImageId = parseJsonStringValue(dataObj, "imageId", null);
             queryResult.mAlarm.mTriggerTime = parseJsonLongValue(dataObj, "beginTime", -1);
@@ -832,6 +833,7 @@ public class AgoraService {
                     iotAlarm.mProductID = parseJsonStringValue(alarmObj, "productId", null);
                     iotAlarm.mDeviceID = parseJsonStringValue(alarmObj, "deviceId", null);
                     iotAlarm.mDeviceName = parseJsonStringValue(alarmObj, "deviceName", null);
+                    iotAlarm.mOwnerUserId = parseJsonStringValue(alarmObj, "tenantId", null);
 
                     iotAlarm.mImageId = parseJsonStringValue(alarmObj, "imageId", null);
                     iotAlarm.mTriggerTime = parseJsonLongValue(alarmObj, "beginTime", -1);

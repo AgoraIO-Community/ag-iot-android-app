@@ -233,9 +233,11 @@ public interface IAlarmMgr  {
     /**
      * @brief 根据时间戳 来查询告警云录视频信息，触发 onAlarmVideoQueryDone() 回调
      * @param deviceID : 要查询的设备ID
+     * @param ownerUserId : 要查询的告警所属的用户账号Id,如果输入null则使用当前账号Id
      * @param timestamp : 要查询的时间戳，该时间戳位于 云录视频过程中
      * @return 错误码
      */
-    int queryVideoByTimestamp(final String deviceID, final long timestamp);
+    int queryVideoByTimestamp(final String deviceID, final String ownerUserId,
+                              final long timestamp);
 
 }

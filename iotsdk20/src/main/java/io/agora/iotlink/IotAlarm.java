@@ -37,6 +37,7 @@ public class IotAlarm {
     public String mProductID;       ///< 产品Id
     public String mDeviceID;        ///< 设备Id
     public String mDeviceName;      ///< 设备名
+    public String mOwnerUserId;     ///< 告警上报给用户的账号Id
 
     public int mMessageType;        ///< 消息类型，{0:声音检测, 1:移动侦测，2: PIR红外侦测； 3：按钮警报；}
     public String mDescription;     ///< 消息内容
@@ -60,6 +61,7 @@ public class IotAlarm {
     public String toString() {
         String infoText = "{ mAlarmId=" + mAlarmId + ", mProductID=" + mProductID
                 + ", mDeviceID=" + mDeviceID + ", mDeviceName=" + mDeviceName
+                + ", mOwnerUserId=" + mOwnerUserId
                 + ", mMessageType=" + mMessageType + ", mDescription=" + mDescription
                 + ", mStatus=" + mStatus + ", mTriggerTime=" + mTriggerTime
                 + ", mImageId=" + mImageId + ", mImageUrl=" + mImageUrl

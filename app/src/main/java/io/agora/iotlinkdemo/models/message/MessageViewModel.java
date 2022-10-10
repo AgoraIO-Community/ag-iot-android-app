@@ -311,7 +311,7 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
      */
     public void queryAlarmVideo(final String deviceID, long timestamp) {
         int errCode = AIotAppSdkFactory.getInstance().getAlarmMgr().queryVideoByTimestamp(
-                        deviceID, timestamp);
+                        deviceID, null, timestamp);
         if (errCode != ErrCode.XOK) {
             ToastUtils.INSTANCE.showToast("查询告警云录视频失败，错误码=" + errCode);
         }

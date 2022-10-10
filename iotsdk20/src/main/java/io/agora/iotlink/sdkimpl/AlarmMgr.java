@@ -282,7 +282,8 @@ public class AlarmMgr implements IAlarmMgr {
     }
 
     @Override
-    public int queryVideoByTimestamp(final String deviceID, final long timestamp) {
+    public int queryVideoByTimestamp(final String deviceID, final String ownerUserId,
+                                     final long timestamp) {
         ALog.getInstance().d(TAG, "<queryVideoByTimestamp> timestamp=" + timestamp);
 
         mThreadPool.execute(new Runnable() {
@@ -295,8 +296,9 @@ public class AlarmMgr implements IAlarmMgr {
                 }
 
                 AgoraService.CloudRecordResult videoResult;
+                String userId = (ownerUserId == null) ? account.mInventDeviceName : ownerUserId;
                 videoResult = AgoraService.getInstance().queryAlarmRecordInfo(account.mAgoraAccessToken,
-                        account.mInventDeviceName, deviceID, timestamp);
+                                userId, deviceID, timestamp);
 
                 ALog.getInstance().d(TAG, "<queryVideoByTimestamp> done, errCode=" + videoResult.mErrCode
                         + ", mAlarmImg=" + videoResult.mAlarmVideo);
