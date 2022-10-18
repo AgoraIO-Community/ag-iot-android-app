@@ -67,7 +67,7 @@ public class RtmMgr implements IRtmMgr {
     private RtmClient mRtmClient;                               ///< RTM Client SDK
     private SendMessageOptions mSendMsgOptions;                 ///< RTM消息配置
     private IotDevice mPeerDevice;                              ///< 通信的对端设备
-    private volatile int mStateMachine = RTMMGR_STATE_ABORTED;  ///< 当前呼叫状态机
+    private volatile int mStateMachine = RTMMGR_STATE_DISCONNECTED;  ///< 当前呼叫状态机
 
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////// Public Methods  ////////////////////////////
@@ -154,6 +154,9 @@ public class RtmMgr implements IRtmMgr {
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
         }
+        synchronized (mDataLock) {
+            mStateMachine = RTMMGR_STATE_CONNECTING;
+        }
         mPeerDevice = iotDevice;
         mEntryHandler= new Handler(Looper.myLooper());
         sendTaskMessage(MSGID_RTMMGR_REQTOKEN, 0, 0, iotDevice);
@@ -164,6 +167,9 @@ public class RtmMgr implements IRtmMgr {
     @Override
     public int disconnect() {
         rtmEngDestroy();
+        synchronized (mDataLock) {
+            mStateMachine = RTMMGR_STATE_DISCONNECTED;
+        }
         return ErrCode.XOK;
     }
 
@@ -216,6 +222,9 @@ public class RtmMgr implements IRtmMgr {
                 accountInfo.mAgoraAccessToken, mSdkInitParam.mRtcAppId, controllerId, controlledId);
         if (rtmAccountInfo.mErrCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<DoRequestToken> fail to request token");
+            synchronized (mDataLock) {
+                mStateMachine = RTMMGR_STATE_DISCONNECTED;
+            }
             synchronized (mCallbackList) {
                 for (IRtmMgr.ICallback listener : mCallbackList) {
                     listener.onConnectDone(rtmAccountInfo.mErrCode, iotDevice);
@@ -248,6 +257,10 @@ public class RtmMgr implements IRtmMgr {
         int errCode = msg.arg1;
         IotDevice iotDevice = (IotDevice)msg.obj;
         ALog.getInstance().e(TAG, "<DoConnectDone> errCode=" + errCode);
+
+        synchronized (mDataLock) {
+            mStateMachine = (errCode == ErrCode.XOK) ? RTMMGR_STATE_CONNECTED : RTMMGR_STATE_DISCONNECTED;
+        }
 
         synchronized (mCallbackList) {
             for (IRtmMgr.ICallback listener : mCallbackList) {
@@ -328,6 +341,9 @@ public class RtmMgr implements IRtmMgr {
             @Override
             public void onSuccess(Void responseInfo) {
                 ALog.getInstance().d(TAG, "<rtmEngCreate.login.onSuccess> success");
+                synchronized (mDataLock) {
+                    mStateMachine = RTMMGR_STATE_CONNECTED;
+                }
                 synchronized (mCallbackList) {
                     for (IRtmMgr.ICallback listener : mCallbackList) {
                         listener.onConnectDone(ErrCode.XOK, mPeerDevice);
@@ -340,7 +356,9 @@ public class RtmMgr implements IRtmMgr {
                 ALog.getInstance().i(TAG, "<rtmEngCreate.login.onFailure> failure"
                         + ", errInfo=" + errorInfo.getErrorCode()
                         + ", errDesc=" + errorInfo.getErrorDescription());
-
+                synchronized (mDataLock) {
+                    mStateMachine = RTMMGR_STATE_DISCONNECTED;
+                }
                 int errCode = mapErrCode(errorInfo.getErrorCode());
                 synchronized (mCallbackList) {
                     for (IRtmMgr.ICallback listener : mCallbackList) {

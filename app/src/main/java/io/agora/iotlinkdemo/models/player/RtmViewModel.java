@@ -65,6 +65,12 @@ public class RtmViewModel extends BaseViewModel implements IRtmMgr.ICallback {
         }
     }
 
+    public int getRtmState() {
+        IRtmMgr rtmMgr = AIotAppSdkFactory.getInstance().getRtmMgr();
+        int state = rtmMgr.getStateMachine();
+        return state;
+    }
+
     public void sendMessage(byte[] messageData) {
         IRtmMgr rtmMgr = AIotAppSdkFactory.getInstance().getRtmMgr();
         rtmMgr.sendMessage(messageData, new IRtmMgr.ISendCallback() {

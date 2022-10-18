@@ -67,7 +67,7 @@ public class PermissionHandler {
     public static final int PERM_ID_WIFISTATE = 0x1003;
     public static final int PERM_ID_FINELOCAL = 0x1004;
     public static final int PERM_ID_READ_STORAGE = 0x1005;
-
+    public static final int PERM_ID_WRITE_STORAGE = 0x1006;
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
@@ -211,6 +211,9 @@ public class PermissionHandler {
 
             case PERM_ID_READ_STORAGE:
                 return Manifest.permission.READ_EXTERNAL_STORAGE;
+
+            case PERM_ID_WRITE_STORAGE:
+                return Manifest.permission.WRITE_EXTERNAL_STORAGE;
         }
 
         return "";

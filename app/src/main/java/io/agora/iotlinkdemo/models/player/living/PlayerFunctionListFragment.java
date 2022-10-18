@@ -1,10 +1,16 @@
 package io.agora.iotlinkdemo.models.player.living;
 
-import android.app.Application;
+import static com.huawei.hms.hmsscankit.RemoteView.REQUEST_CODE_PHOTO;
+
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.drawable.ClipDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -21,11 +27,18 @@ import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.utils.ScreenUtils;
 import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
+import com.alibaba.android.arouter.facade.annotation.Route;
 
+import java.util.List;
+
+import io.agora.iotlink.ErrCode;
+import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlink.IotPropertyDesc;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
+import io.agora.iotlinkdemo.base.PermissionHandler;
+import io.agora.iotlinkdemo.base.PermissionItem;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.databinding.FagmentPlayerFunctionBinding;
 import io.agora.iotlinkdemo.dialog.ChangeOfVoiceDialog;
@@ -37,17 +50,22 @@ import io.agora.iotlinkdemo.dialog.SelectPirDialog;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.player.PlayerViewModel;
-import io.agora.iotlink.ICallkitMgr;
-import com.alibaba.android.arouter.facade.annotation.Route;
-
-import java.util.List;
 
 /**
  * 播放页功能列表
  */
 @Route(path = PagePathConstant.pagePlayerFunction)
-public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentPlayerFunctionBinding> {
+public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentPlayerFunctionBinding>
+        implements PermissionHandler.ICallback {
     private final String TAG = "IOTLINK/PlayFuncFrag";
+
+    //
+    // message Id
+    //
+    public static final int MSGID_CHECK_STATE = 0x1001;    ///< 检测当前呼叫状态
+
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
+    private Handler mMsgHandler = null;                 ///< 主线程中的消息处理
 
     /**
      * 电量不足提示
@@ -93,50 +111,97 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         playerViewModel.setLifecycleOwner(this);
         playerViewModel.initHandler();
         playerViewModel.setISingleCallback((type, var2) -> {
-            getBinding().loadingBG.post(() -> {
-                if (type == Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY) {
-                    setSwitchStatus();
-                } else if (type == Constant.CALLBACK_TYPE_PLAYER_SAVE_SCREENSHOT) {
-                    showSaveTip(false);
-                } else if (type == Constant.CALLBACK_TYPE_DEVICE_CONNING) {
-                    getBinding().tvTips1.setVisibility(View.VISIBLE);
-                    getBinding().tvTips2.setVisibility(View.GONE);
-                } else if (type == Constant.CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED) {
-                    getBinding().loadingBG.setVisibility(View.GONE);
-                    getBinding().tvNetSpeed.setText(var2 + "kb");
-                    getBinding().tvNetSpeedFull.setText(var2 + "kb");
-                } else if (type == Constant.CALLBACK_TYPE_DEVICE_LAST_MILE_DELAY) {
-                    getBinding().tvPlaySaveTime.setText(StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis() / 1000));
-                    getBinding().tvPlaySaveTimeFull.setText(StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis() / 1000));
-                } else if (type == Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO) {
-                    getBinding().loadingBG.setVisibility(View.GONE);
-                } else if (type == Constant.CALLBACK_TYPE_FIRM_GETVERSION) {  // 获取固件版本
-                    IDeviceMgr.McuVersionInfo mcuVerInfo = (IDeviceMgr.McuVersionInfo)var2;
-                    Log.d(TAG, "<ISingleCallback> mcuVerInfo=" + mcuVerInfo.toString());
-                    PlayerPreviewActivity playerActivity = (PlayerPreviewActivity)getActivity();
-                    if (playerActivity != null) {
-                        if ((mcuVerInfo.mIsupgradable) && (mcuVerInfo.mUpgradeId > 0)) {
-                            ((PlayerPreviewActivity) getActivity()).updateTitle(true);
-                        } else {
-                            ((PlayerPreviewActivity) getActivity()).updateTitle(false);
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (type == Constant.CALLBACK_TYPE_PLAYER_UPDATE_PROPERTY) {
+                        setSwitchStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_PLAYER_SAVE_SCREENSHOT) {
+                        showSaveTip(false);
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_CONNING) {  // 正在呼叫中
+                        getBinding().tvTips1.setVisibility(View.VISIBLE);
+                        getBinding().tvTips2.setVisibility(View.GONE);
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED) {  // 获取到网络信息
+                        getBinding().tvNetSpeed.setText(var2 + "kb");
+                        getBinding().tvNetSpeedFull.setText(var2 + "kb");
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_LAST_MILE_DELAY) {
+                        getBinding().tvPlaySaveTime.setText(StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis() / 1000));
+                        getBinding().tvPlaySaveTimeFull.setText(StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis() / 1000));
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_DIAL_DONE) {  // 呼叫设备完成
+                        updateCallWgtStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_DIAL_TIMEOUT) {  // 呼叫设备超时
+                        updateCallWgtStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_ANSWER) {  // 设备端接听
+                        updateCallWgtStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_HANGUP) {  // 设备端挂断
+                        updateCallWgtStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO) {  // 首帧出图
+                        updateCallWgtStatus();
+
+                    } else if (type == Constant.CALLBACK_TYPE_FIRM_GETVERSION) {  // 获取固件版本
+                        IDeviceMgr.McuVersionInfo mcuVerInfo = (IDeviceMgr.McuVersionInfo)var2;
+                        Log.d(TAG, "<ISingleCallback> mcuVerInfo=" + mcuVerInfo.toString());
+                        PlayerPreviewActivity playerActivity = (PlayerPreviewActivity)getActivity();
+                        if (playerActivity != null) {
+                            if ((mcuVerInfo.mIsupgradable) && (mcuVerInfo.mUpgradeId > 0)) {
+                                ((PlayerPreviewActivity) getActivity()).updateTitle(true);
+                            } else {
+                                ((PlayerPreviewActivity) getActivity()).updateTitle(false);
+                            }
                         }
-                    }
-                } else if (type == Constant.CALLBACK_TYPE_PLAYER_UPDATEPROPDESC) { // 查询到属性描述符列表
-                    List<IotPropertyDesc> propDescList = (List<IotPropertyDesc>)var2;
-                    if (propDescList == null) {  // 查询属性描述列表失败
-                        return;
-                    }
+                    } else if (type == Constant.CALLBACK_TYPE_PLAYER_UPDATEPROPDESC) { // 查询到属性描述符列表
+                        List<IotPropertyDesc> propDescList = (List<IotPropertyDesc>)var2;
+                        if (propDescList == null) {  // 查询属性描述列表失败
+                            return;
+                        }
+                        // 打印所有属性描述符信息
+                        for (int i = 0; i < propDescList.size(); i++) {
+                            IotPropertyDesc propertyDesc = propDescList.get(i);
+                            Log.d(TAG, "<ISingleCallback> propDesc[" + i + "] " + propertyDesc.toString());
+                        }
 
-                    // 打印所有属性描述符信息
-                    for (int i = 0; i < propDescList.size(); i++) {
-                        IotPropertyDesc propertyDesc = propDescList.get(i);
-                        Log.d(TAG, "<ISingleCallback> propDesc[" + i + "] " + propertyDesc.toString());
+                    } else if (type == Constant.CALLBACK_TYPE_USER_ONLINE ||  // 其他用户上下线
+                            type == Constant.CALLBACK_TYPE_USER_OFFLINE) {
+                        int userCount = (Integer)var2;
+                        getBinding().tvUserCount.post(() -> {
+                            String str_usercnt = getString(R.string.user_count) + userCount;
+                            getBinding().tvUserCount.setText(str_usercnt);
+                        });
                     }
-
                 }
             });
         });
         playerViewModel.initMachine();
+        updateCallWgtStatus();
+        mMsgHandler = new Handler(getActivity().getMainLooper()) {
+            @SuppressLint("HandlerLeak")
+            public void handleMessage(Message msg)
+            {
+                switch (msg.what)
+                {
+                    case MSGID_CHECK_STATE: {
+                        Log.d(TAG, "<handleMessage> MSGID_CHECK_STATE");
+                        updateCallWgtStatus();
+                    } break;
+                }
+            }
+        };
+        mMsgHandler.removeMessages(MSGID_CHECK_STATE);
+        mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_STATE, 1000);
+
+        getBinding().tvUserCount.setVisibility(View.VISIBLE);
+        int userCount = playerViewModel.getOnlineUserCount();
+        String str_usercnt = getString(R.string.user_count) + userCount;
+        getBinding().tvUserCount.setText(str_usercnt);
     }
 
     @Override
@@ -163,8 +228,8 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         getBinding().ivChangeOfVoice.setOnClickListener(view -> showChangeOfVoiceDialog());
         getBinding().ivChangeOfVoiceFull.setOnClickListener(view -> showChangeOfVoiceDialog());
 
-        getBinding().ivClip.setOnClickListener(view -> getBinding().ivCover.setImageBitmap(playerViewModel.saveScreenshotToSD()));
-        getBinding().ivClipFull.setOnClickListener(view -> getBinding().ivCover.setImageBitmap(playerViewModel.saveScreenshotToSD()));
+        getBinding().ivClip.setOnClickListener(view -> onBtnCapturePeerFrame());
+        getBinding().ivClipFull.setOnClickListener(view -> onBtnCapturePeerFrame());
         getBinding().cbRecord.setOnCheckedChangeListener((compoundButton, b) -> {
             if (b) {
                 ToastUtils.INSTANCE.showToast(R.string.function_not_open);
@@ -194,6 +259,10 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         getBinding().cbMotionDetection.setOnClickListener(view -> showMotionDetectionDialog());
         getBinding().ivBack.setOnClickListener(view -> onBtnLandscape());
         getBinding().landscapeLayout.setOnClickListener(view -> showLandScapeLayout());
+
+        getBinding().tvTips2.setOnClickListener(view -> {
+            onBtnRetry();
+        });
     }
 
     private void showLandScapeLayout() {
@@ -224,6 +293,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
     public void onBtnLandscape() {
         ConstraintLayout.LayoutParams lp = (ConstraintLayout.LayoutParams) getBinding().peerView.getLayoutParams();
         if (mIsOrientLandscape) {
+            Log.d(TAG, "<onBtnLandscape> switching to portrait display...");
             if (lp == null) {
                 lp = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ScreenUtils.dp2px(200));
             } else {
@@ -237,9 +307,12 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             getBinding().btnSelectLegibility.setVisibility(View.VISIBLE);
             getBinding().tvNetSpeed.setVisibility(View.VISIBLE);
             getBinding().tvPlaySaveTime.setVisibility(View.VISIBLE);
+            getBinding().loadingBG.setVisibility(View.VISIBLE);
             getActivity().getWindow().getDecorView().setSystemUiVisibility(uiOptionsOld);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(15);
+
         } else {
+            Log.d(TAG, "<onBtnLandscape> switching to landscape display...");
             if (lp == null) {
                 lp = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
             } else {
@@ -258,10 +331,12 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             getBinding().btnSelectLegibility.setVisibility(View.GONE);
             getBinding().tvNetSpeed.setVisibility(View.GONE);
             getBinding().tvPlaySaveTime.setVisibility(View.GONE);
+            getBinding().loadingBG.setVisibility(View.GONE);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(90);
         }
         mIsOrientLandscape = !mIsOrientLandscape;
         getBinding().peerView.setLayoutParams(lp);
+
     }
 
     /**
@@ -313,6 +388,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         new android.os.Handler(Looper.getMainLooper()).postDelayed(
                 new Runnable() {
                     public void run() {
+                        updateCallWgtStatus();
                         playerViewModel.queryMcuVersion();
                     }
                 },
@@ -332,13 +408,19 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
     public void onDestroy() {
         super.onDestroy();
         playerViewModel.release();
+        if (mMsgHandler != null) {
+            mMsgHandler.removeMessages(MSGID_CHECK_STATE);
+            mMsgHandler = null;
+        }
     }
 
-    public void onBtnBack() {
+    public boolean onBtnBack() {
         if (mIsOrientLandscape) { // 退回到 portrait竖屏显示
             onBtnLandscape();
+            return true;
         } else {
             playerViewModel.callHangup();
+            return false;
         }
     }
 
@@ -434,21 +516,30 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         if (changeOfVoiceDialog == null) {
             changeOfVoiceDialog = new ChangeOfVoiceDialog(getActivity());
             changeOfVoiceDialog.iSingleCallback = (type, var2) -> {
-                if (type == 1) {
+                if (type == 0) {
                     getBinding().tvChangeVoiceTip.setVisibility(View.GONE);
                     playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.NORMAL);
                     getBinding().ivChangeOfVoice.setSelected(false);
                     getBinding().ivChangeOfVoiceFull.setSelected(false);
                 } else {
-                    if (type == 2) {
-                        getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type2));
+                    if (type == 1) {
+                        getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type1));
                         playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.OLDMAN);
+                    } else if (type == 2) {
+                        getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type2));
+                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.BABYBOY);
                     } else if (type == 3) {
                         getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type3));
-                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.BABYBOY);
+                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.BABYGIRL);
                     } else if (type == 4) {
                         getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type4));
-                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.BABYGIRL);
+                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.ZHUBAJIE);
+                    } else if (type == 5) {
+                        getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type5));
+                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.ETHEREAL);
+                    } else if (type == 6) {
+                        getBinding().tvChangeVoiceTip.setText(getString(R.string.change_voice_type6));
+                        playerViewModel.setAudioEffect(ICallkitMgr.AudioEffectId.HULK);
                     }
                     getBinding().tvChangeVoiceTip.setVisibility(View.VISIBLE);
                     getBinding().ivChangeOfVoice.setSelected(true);
@@ -456,7 +547,28 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
                 }
             };
         }
+
+        ICallkitMgr.AudioEffectId effectId = playerViewModel.getAudioEffect();
+        int position = cvtAudioEffectToPos(effectId);
+        changeOfVoiceDialog.setSelect(position);
         changeOfVoiceDialog.show();
+    }
+
+    int cvtAudioEffectToPos(ICallkitMgr.AudioEffectId effectId) {
+        if (effectId == ICallkitMgr.AudioEffectId.OLDMAN) {
+            return 1;
+        } else if (effectId == ICallkitMgr.AudioEffectId.BABYBOY) {
+            return 2;
+        } else if (effectId == ICallkitMgr.AudioEffectId.BABYGIRL) {
+            return 3;
+        } else if (effectId == ICallkitMgr.AudioEffectId.ZHUBAJIE) {
+            return 4;
+        } else if (effectId == ICallkitMgr.AudioEffectId.ETHEREAL) {
+            return 5;
+        } else if (effectId == ICallkitMgr.AudioEffectId.HULK) {
+            return 6;
+        }
+        return 0;
     }
 
     private void showNightVisionDialog() {
@@ -495,6 +607,95 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             selectMotionDetectionDialog.setSelect(0);
         }
         selectMotionDetectionDialog.show();
+    }
+
+
+    /**
+     * @brief 根据呼叫状态刷新相应控件
+     */
+    private void updateCallWgtStatus() {
+        if (mIsOrientLandscape) {
+            Log.d(TAG, "<updateCallWgtStatus> OrientLandscape, do nothing");
+            return;
+        }
+        int callkitStatus = playerViewModel.getCallStatus();
+
+        if (callkitStatus == PlayerViewModel.CALL_STATE_CONNECTED) {    // 已经接通
+            Log.d(TAG, "<updateCallWgtStatus> CONNECTED");
+            getBinding().progressLoading.setVisibility(View.INVISIBLE);
+            getBinding().tvTips1.setVisibility(View.INVISIBLE);
+            getBinding().tvTips2.setVisibility(View.INVISIBLE);
+            getBinding().loadingBG.setVisibility(View.INVISIBLE);
+
+        } else if (callkitStatus == PlayerViewModel.CALL_STATE_CONNECTING) { // 正在接通中
+            Log.d(TAG, "<updateCallWgtStatus> CONNECTING...");
+            getBinding().progressLoading.setVisibility(View.VISIBLE);
+            getBinding().tvTips1.setVisibility(View.VISIBLE);
+            getBinding().tvTips2.setVisibility(View.INVISIBLE);
+            getBinding().loadingBG.setVisibility(View.VISIBLE);
+
+        } else {  // 断开
+            Log.d(TAG, "<updateCallWgtStatus> DISCONNECTED");
+            getBinding().progressLoading.setVisibility(View.INVISIBLE);
+            getBinding().tvTips1.setVisibility(View.INVISIBLE);
+            getBinding().tvTips2.setVisibility(View.VISIBLE);
+            getBinding().loadingBG.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * @brief 重新呼叫设备端
+     */
+    void onBtnRetry() {
+        int ret = playerViewModel.callDial("This is app");
+        if (ret != ErrCode.XOK) {
+            return;
+        }
+        updateCallWgtStatus();
+    }
+
+    /**
+     * @brief 视频帧截屏处理
+     */
+    void onBtnCapturePeerFrame() {
+        //
+        // 截图写存储 权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnCapturePeerFrame> requesting permission...");
+            mPermHandler.requestNextPermission();
+        } else {
+            Log.d(TAG, "<onBtnCapturePeerFrame> permission ready");
+            captureDeviceFrame();
+        }
+    }
+
+    public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                               @NonNull int[] grantResults) {
+        Log.d(TAG, "<onFragRequestPermissionsResult> requestCode=" + requestCode);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (permItems[0].requestId == PermissionHandler.PERM_ID_WRITE_STORAGE) {  // 截图权限
+            if (allGranted) {
+                captureDeviceFrame();
+            } else {
+                popupMessage(getString(R.string.no_permission));
+            }
+        }
+    }
+
+    private void captureDeviceFrame() {
+        getBinding().ivCover.setImageBitmap(playerViewModel.saveScreenshotToSD());
     }
 
     @Override

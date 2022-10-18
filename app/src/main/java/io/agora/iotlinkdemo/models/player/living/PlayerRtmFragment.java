@@ -66,6 +66,7 @@ public class PlayerRtmFragment extends BaseViewBindingFragment<FagmentPlayerRtmB
         super.initView();
         mRtmViewModel = new ViewModelProvider(this).get(RtmViewModel.class);
         mRtmViewModel.setLifecycleOwner(this);
+        getBinding().btnRtmConnect.setOnClickListener(view -> onBtnConnect());
         getBinding().btnRtmSend.setOnClickListener(view -> onBtnSend());
         getBinding().btnRtmTimersend.setOnClickListener(view -> onBtnTimerSend());
         getBinding().etRtmMessage.setEnabled(true);
@@ -148,7 +149,7 @@ public class PlayerRtmFragment extends BaseViewBindingFragment<FagmentPlayerRtmB
         Log.d(TAG, "<onStart>");
         super.onStart();
         mRtmViewModel.onStart();
-        mRtmViewModel.connect();
+ //       mRtmViewModel.connect();
     }
 
     @Override
@@ -172,8 +173,24 @@ public class PlayerRtmFragment extends BaseViewBindingFragment<FagmentPlayerRtmB
     }
 
 
-    void onBtnBack() {
+    public boolean onBtnBack() {
+        return false;
+    }
 
+    /**
+     * @brief 联接/断开 操作
+     */
+    void onBtnConnect() {
+        int rtmState = mRtmViewModel.getRtmState();
+
+        if (rtmState == IRtmMgr.RTMMGR_STATE_CONNECTED) {
+            mRtmViewModel.disconnect();
+            getBinding().btnRtmConnect.setText("联接");
+
+        } else if (rtmState == IRtmMgr.RTMMGR_STATE_DISCONNECTED) {
+            mRtmViewModel.connect();
+            getBinding().btnRtmConnect.setText("断开");
+        }
     }
 
     /**

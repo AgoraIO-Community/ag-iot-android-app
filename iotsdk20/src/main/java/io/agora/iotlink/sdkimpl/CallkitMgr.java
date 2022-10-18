@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.icu.util.Calendar;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.view.SurfaceView;
 
@@ -36,6 +37,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import io.agora.rtc2.Constants;
 
@@ -50,6 +54,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitMgr";
     private static final long AWS_EVENT_TIMEOUT = 35000;        ///< HTTP请求后，AWS事件超时35秒
+    private static final int EXIT_WAIT_TIMEOUT = 3000;
+    private static final int HANGUP_WAIT_TIMEOUT = 3000;
+
 
     //
     // Request Id
@@ -70,6 +77,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3006;  ///< 对端RTC掉线
     private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3007;  ///< 对端RTC首帧出图
     private static final int MSGID_CALL_AWSEVENT_TIMEOUT = 0x3008;  ///< HTTP请求后, AWS超时无响应
+    private static final int MSGID_WORK_EXIT = 0x30FF;
 
     //
     // Reason code
@@ -87,10 +95,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     //////////////////////// Variable Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private ArrayList<ICallkitMgr.ICallback> mCallbackList = new ArrayList<>();
-    private AgoraIotAppSdk mSdkInstance;                        ///< 由外部输入的
-    private Handler mWorkHandler;                               ///< 工作线程Handler，从SDK获取到
+    private AgoraIotAppSdk mSdkInstance;    ///< 由外部输入的
+    private HandlerThread mWorkThread;      ///< 呼叫系统使用内部自己独立的工作线程
+    private Handler mWorkHandler;           ///< 呼叫系统工作线程处理器
 
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
+    private final Object mWorkExitEvent = new Object();
     private final Object mReqDialEvent = new Object();
     private final Object mReqHangupEvent = new Object();
     private final Object mReqAnswerEvent = new Object();
@@ -106,8 +116,8 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private boolean mMuteLocalAudio;
     private boolean mMutePeerVideo;
     private boolean mMutePeerAudio;
-    private int mAudioEffect;
-
+    private int mAudioEffect = Constants.AUDIO_EFFECT_OFF;
+    private volatile int mOnlineUserCount = 0;               ///< 在线的用户数量（不包括设备端）
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -115,7 +125,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     ///////////////////////////////////////////////////////////////////////
     int initialize(AgoraIotAppSdk sdkInstance) {
         mSdkInstance = sdkInstance;
-        mWorkHandler = sdkInstance.getWorkHandler();
+        workThreadCreate();
         mStateMachine = CALLKIT_STATE_IDLE;
 
         IAgoraIotAppSdk.InitParam sdkInitParam = sdkInstance.getInitParam();
@@ -133,7 +143,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     }
 
     void release() {
-        workThreadClearMessage();
+        workThreadDestroy();
 
         // 销毁通话引擎
         if (mTalkEngine != null) {  // 正常情况下,通话引擎此时应该已经释放了
@@ -147,8 +157,6 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().d(TAG, "<release> done");
         }
     }
-
-
     /*
      * @brief 在AWS事件中被调用，对APP端的控制事件
      */
@@ -159,6 +167,42 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             msg.what = MSGID_CALL_PROCESS_AWSEVENT;
             msg.obj = jsonState;
             mWorkHandler.sendMessage(msg);   // 所有事件都不要遗漏，全部发送
+        }
+    }
+
+    void workThreadCreate() {
+        mWorkThread = new HandlerThread("Callkit");
+        mWorkThread.start();
+        mWorkHandler = new Handler(mWorkThread.getLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                workThreadProcessMessage(msg);
+            }
+        };
+    }
+
+    void workThreadDestroy() {
+        if (mWorkHandler != null) {
+            // 清除所有消息队列中消息
+            workThreadClearMessage();
+
+            // 同步等待线程中所有任务处理完成后，才能正常退出线程
+            mWorkHandler.sendEmptyMessage(MSGID_WORK_EXIT);
+            synchronized (mWorkExitEvent) {
+                try {
+                    mWorkExitEvent.wait(EXIT_WAIT_TIMEOUT);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    ALog.getInstance().e(TAG, "<release> exception=" + e.getMessage());
+                }
+            }
+            mWorkHandler = null;
+        }
+
+        if (mWorkThread != null) {
+            mWorkThread.quit();
+            mWorkThread = null;
         }
     }
 
@@ -194,6 +238,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
             case MSGID_CALL_RTC_PEER_FIRSTVIDEO:
                 DoRtcPeerFirstVideo(msg);
+                break;
+
+            case MSGID_WORK_EXIT:  // 工作线程退出消息
+                synchronized (mWorkExitEvent) {
+                    mWorkExitEvent.notify();    // 事件通知
+                }
                 break;
         }
     }
@@ -297,11 +347,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             return ErrCode.XERR_BAD_STATE;
         }
         int currState = getStateMachine();
-        if ((currState != CALLKIT_STATE_DIALING) &&
-            (currState != CALLKIT_STATE_TALKING) &&
-            (currState != CALLKIT_STATE_INCOMING)) {
-            ALog.getInstance().e(TAG, "<callHangup> bad state, currState=" + currState);
-            return ErrCode.XERR_BAD_STATE;
+        if ((currState == CALLKIT_STATE_IDLE) || (currState == CALLKIT_STATE_HANGUP_REQING)) {
+            ALog.getInstance().e(TAG, "<callHangup> already hangup, currState=" + currState);
+            return ErrCode.XOK;
         }
         synchronized (mDataLock) {
             if (mCallkitCtx == null) {
@@ -311,10 +359,20 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         // 发送请求消息，同步等待执行完成
+        ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
         sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);
+        synchronized (mReqHangupEvent) {
+            try {
+                mReqHangupEvent.wait(HANGUP_WAIT_TIMEOUT);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                ALog.getInstance().e(TAG, "<callHangup> exception=" + e.getMessage());
+            }
+        }
 
-        ALog.getInstance().d(TAG, "<callHangup> done");
+        setStateMachine(CALLKIT_STATE_IDLE);  // 强制进入空闲状态
+        ALog.getInstance().d(TAG, "<callHangup> <==END done");
         return ErrCode.XOK;
     }
 
@@ -415,41 +473,81 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
     @Override
     public int setAudioEffect(AudioEffectId effectId) {
+        synchronized (mDataLock) {
+            mAudioEffect = Constants.AUDIO_EFFECT_OFF;
+            switch (effectId) {
+                case OLDMAN:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
+                    break;
 
+                case BABYBOY:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_BOY;
+                    break;
 
-        mAudioEffect = Constants.AUDIO_EFFECT_OFF;
-        switch (effectId) {
-            case OLDMAN:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
-                break;
+                case BABYGIRL:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_GIRL;
+                    break;
 
-            case BABYBOY:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_BOY;
-                break;
+                case ZHUBAJIE:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_PIGKING;
+                    break;
 
-            case BABYGIRL:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_GIRL;
-                break;
+                case ETHEREAL:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_SISTER;
+                    break;
 
-            case ZHUBAJIE:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_PIGKING;
-                break;
-
-            case ETHEREAL:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_SISTER;
-                break;
-
-            case HULK:
-                mAudioEffect = Constants.VOICE_CHANGER_EFFECT_HULK;
-                break;
+                case HULK:
+                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_HULK;
+                    break;
+            }
         }
 
-        if (mTalkEngine == null) {
+        if (mTalkEngine != null) {
             boolean ret = mTalkEngine.setAudioEffect(mAudioEffect);
             return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
         }
 
         return ErrCode.XOK;
+    }
+
+    @Override
+    public AudioEffectId getAudioEffect() {
+        AudioEffectId effectId = AudioEffectId.NORMAL;
+
+        synchronized (mDataLock) {
+            switch (mAudioEffect) {
+                case Constants.VOICE_CHANGER_EFFECT_OLDMAN:
+                    effectId = AudioEffectId.OLDMAN;
+                    break;
+
+                case Constants.VOICE_CHANGER_EFFECT_BOY:
+                    effectId = AudioEffectId.BABYBOY;
+                    break;
+
+                case Constants.VOICE_CHANGER_EFFECT_GIRL:
+                    effectId = AudioEffectId.BABYGIRL;
+                    break;
+
+                case Constants.VOICE_CHANGER_EFFECT_PIGKING:
+                    effectId = AudioEffectId.ZHUBAJIE;
+                    break;
+
+                case Constants.VOICE_CHANGER_EFFECT_SISTER:
+                    effectId = AudioEffectId.ETHEREAL;
+                    break;
+
+                case Constants.VOICE_CHANGER_EFFECT_HULK:
+                    effectId = AudioEffectId.HULK;
+                    break;
+
+                default:
+                    effectId = AudioEffectId.NORMAL;
+                    break;
+            }
+        }
+
+        ALog.getInstance().d(TAG, "<getAudioEffect> effectId=" + effectId);
+        return effectId;
     }
 
     @Override
@@ -495,6 +593,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         return (ret == Constants.ERR_OK) ? ErrCode.XOK : ErrCode.XERR_INVALID_PARAM;
     }
 
+    @Override
+    public int getOnlineUserCount() {
+        synchronized (mDataLock) {
+            return mOnlineUserCount;
+        }
+    }
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -578,12 +682,16 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
             mPeerDevice = null;
+            mOnlineUserCount = 0;
         }
         if (mWorkHandler != null) {   // 取消AWS Event超时定时器
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
         }
 
         ALog.getInstance().d(TAG, "<DoRequestHangup> done, errCode=" + errCode);
+        synchronized (mReqHangupEvent) {
+            mReqHangupEvent.notify();    // 事件通知
+        }
     }
 
 
@@ -791,14 +899,18 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIALING)) {
             // 主叫时对端接听
-            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during dialing");
+            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during from dialing");
             talkingStart(); // 在频道内推送音频流，开始通话
             CallbackPeerAnswer(ErrCode.XOK, mPeerDevice); // 回调对端接听，进入通话状态
 
         } else if ((reason == REASON_LOCAL_ANSWER) && (stateMachine == CALLKIT_STATE_ANSWER_RSPING)) {
             // 被叫时本地接听
-            ALog.getInstance().d(TAG, "<DoAwsEventProcess> enter talk during incoming");
+            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during from incoming");
             talkingStart(); // 在频道内推送音频流，开始通话
+
+        } else if (stateMachine == CALLKIT_STATE_TALKING) {
+            // 当前已经在通话状态了，不管什么Reason，不做任何处理
+            ALog.getInstance().e(TAG, "<DoAwsEventToTalking> already in talking");
 
         } else {
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking>  bad state machine, auto hangup");
@@ -877,8 +989,13 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mTalkEngine.muteLocalVideoStream(mMuteLocalVideo);     // 本地不推视频流
             mTalkEngine.muteLocalAudioStream(mMuteLocalAudio);     // 本地不推音频流
             mTalkEngine.mutePeerVideoStream(mMutePeerVideo);     // 订阅对端视频流
-            mTalkEngine.mutePeerAudioStream(mMutePeerVideo);     // 订阅对端音频流
+            mTalkEngine.mutePeerAudioStream(mMutePeerAudio);     // 订阅对端音频流
             mTalkEngine.setAudioEffect(mAudioEffect);       // 设置音频效果
+
+            synchronized (mDataLock) {  // 至少有一个在线用户了
+                mOnlineUserCount = 1;
+                mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
+            }
         }
     }
 
@@ -911,6 +1028,8 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
             mPeerDevice = null;
+            mOnlineUserCount = 0;
+            mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
         }
 
         if (mWorkHandler != null) {   // 取消AWS Event超时定时器
@@ -939,12 +1058,14 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mTalkEngine.leaveChannel();     // 离开频道，结束通话
             mTalkEngine.release();
             mTalkEngine = null;
+            mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
         }
 
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
             mPeerDevice = null;
+            mOnlineUserCount = 0;
         }
 
         if (mWorkHandler != null) {   // 取消AWS Event超时定时器
@@ -1152,7 +1273,49 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
     }
 
+    @Override
+    public void onUserOnline(int uid) {
+        boolean eventReport = false;
+        synchronized (mDataLock) {
+            if (uid != mCallkitCtx.mPeerUid) {  // 不是设备端
+                mOnlineUserCount++;
+                eventReport = true;
+            }
+        }
+        ALog.getInstance().d(TAG, "<onUserOnline> uid=" + uid
+                + ", mOnlineUserCount=" + mOnlineUserCount);
 
+        if (eventReport) {  // 回调用户上线事件
+            ALog.getInstance().d(TAG, "<onUserOnline> callback online event");
+            synchronized (mCallbackList) {
+                for (ICallkitMgr.ICallback listener : mCallbackList) {
+                    listener.onUserOnline(uid, mOnlineUserCount);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onUserOffline(int uid) {
+        boolean eventReport = false;
+        synchronized (mDataLock) {
+            if (uid != mCallkitCtx.mPeerUid) {  // 不是设备端
+                mOnlineUserCount--;
+                eventReport = true;
+            }
+        }
+        ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid
+                + ", mOnlineUserCount=" + mOnlineUserCount);
+
+        if (eventReport) {  // 回调用户下线事件
+            ALog.getInstance().d(TAG, "<onUserOffline> callback offline event");
+            synchronized (mCallbackList) {
+                for (ICallkitMgr.ICallback listener : mCallbackList) {
+                    listener.onUserOffline(uid, mOnlineUserCount);
+                }
+            }
+        }
+    }
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// 所有的对上层回调处理 //////////////////////////
     /////////////////////////////////////////////////////////////////////////////

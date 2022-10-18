@@ -30,7 +30,7 @@
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvChangeVoiceTip"
-        android:layout_width="109dp"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="17dp"
         android:ellipsize="end"
@@ -43,6 +43,23 @@
         app:layout_constraintStart_toEndOf="@id/ivPowerBg"
         app:layout_constraintTop_toTopOf="@id/ivPowerBg"
         tools:text="@string/change_voice_type2"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvUserCount"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:textColor="@color/grey_c8"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@id/ivPowerBg"
+        app:layout_constraintStart_toEndOf="@id/tvChangeVoiceTip"
+        app:layout_constraintTop_toTopOf="@id/ivPowerBg"
+        tools:text="@string/user_count"
         tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatImageButton
@@ -90,14 +107,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer
-        android:id="@+id/gsy_player"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginTop="55dp"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -116,7 +125,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/peer_view"
-        tools:text="录像时间太短"
+        tools:text="peer_view"
         tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -222,7 +231,7 @@
         android:id="@+id/loadingBG"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/black_57"
+        android:background="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="@id/peer_view"
         app:layout_constraintEnd_toEndOf="@id/peer_view"
         app:layout_constraintStart_toStartOf="@id/peer_view"
@@ -245,7 +254,7 @@
             android:layout_marginTop="116dp"
             android:text="@string/video_loading"
             android:textColor="@color/grey_e5"
-            android:textSize="12sp"
+            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -255,12 +264,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:text="@string/click_retry"
             android:textColor="@color/blue_1d"
-            android:textSize="12sp"
+            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTips1"
-            tools:text="@string/click_retry" />
+            app:layout_constraintTop_toBottomOf="@id/tvTips1"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

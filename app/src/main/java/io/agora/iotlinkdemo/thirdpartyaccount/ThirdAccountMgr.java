@@ -81,8 +81,8 @@ public class ThirdAccountMgr {
     private ExecutorService mExecSrv = Executors.newSingleThreadExecutor();
 
     ///< 服务器请求站点
-    //private String mThirdBaseUrl = "https://third-user.sh3.agoralab.co/third-party";
-    private String mThirdBaseUrl = "https://third-user.la3.agoralab.co/third-party";  // 针对北美区域
+    private String mThirdBaseUrl = "https://third-user.sh3.agoralab.co/third-party";
+    //private String mThirdBaseUrl = "https://third-user.la3.agoralab.co/third-party";  // 针对北美区域
 
     private String mLoginAccountName;       ///< 当前已经登录的账号名称
     private String mLoginAccountId;         ///< 当前已登录账号Id

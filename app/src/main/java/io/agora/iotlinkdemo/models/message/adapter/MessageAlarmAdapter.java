@@ -1,11 +1,13 @@
 package io.agora.iotlinkdemo.models.message.adapter;
 
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatImageView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.agora.baselibrary.base.BaseAdapter;
 import com.agora.baselibrary.utils.StringUtils;
@@ -19,6 +21,8 @@ import java.util.ArrayList;
  * 告警消息 Adapter
  */
 public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
+    private static final String TAG = "IOTLINK/MsgAlarmAdpt";
+
     /**
      * 是否处于编辑模式
      */
@@ -35,6 +39,7 @@ public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
 
     @Override
     public void onBindViewHolder(@NonNull CommonViewHolder holder, int position) {
+        Log.d(TAG, "<onBindViewHolder> [DBGCLICK] position=" + position);
         IotAlarm iotAlarm = getDatas().get(position);
         if (iotAlarm != null) {
             if (!TextUtils.isEmpty(iotAlarm.mImageUrl)) {
@@ -63,19 +68,62 @@ public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
             }
             ((AppCompatCheckBox) holder.getView(R.id.cbSelect)).setChecked(iotAlarm.mDeleted);
             holder.itemView.setOnLongClickListener(view -> {
+                Log.d(TAG, "<setOnLongClickListener> [DBGCLICK]");
                 iotAlarm.mDeleted = !iotAlarm.mDeleted;
-                holder.getView(R.id.cbSelect).performClick();
+                ((AppCompatCheckBox) holder.getView(R.id.cbSelect)).setChecked(iotAlarm.mDeleted);
                 getMRVItemClickListener().onItemClick(view, -1, iotAlarm);
                 return false;
             });
-            holder.itemView.setOnClickListener(view -> {
-                if (isEdit) {
-                    iotAlarm.mDeleted = !iotAlarm.mDeleted;
-                    holder.getView(R.id.cbSelect).performClick();
-                } else {
-                    getMRVItemClickListener().onItemClick(view, position, iotAlarm);
-                }
+            holder.setOnItemClickListener(view -> {
+                Log.d(TAG, "<setOnItemClickListener> [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.lyAlarmBg).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> Layout BG [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.ivMessageCover).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> MsgCover [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.tvMsgTitle).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> MsgTitle [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.tvMsgDesc).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> MsgDesc [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.tvMsgTime).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> MsgTime [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.tvMsgFrom).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> MsgFrom [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
+            });
+
+            holder.getView(R.id.cbSelect).setOnClickListener(view -> {
+                Log.d(TAG, "<setOnClickListener> CHECK BOX [DBGCLICK]");
+                performItemClick(holder, view, position, iotAlarm);
             });
         }
     }
+
+    void performItemClick(CommonViewHolder holder, View view, int position, IotAlarm iotAlarm) {
+        if (isEdit) {
+            iotAlarm.mDeleted = !iotAlarm.mDeleted;
+            ((AppCompatCheckBox) holder.getView(R.id.cbSelect)).setChecked(iotAlarm.mDeleted);
+        } else {
+            getMRVItemClickListener().onItemClick(view, position, iotAlarm);
+        }
+    }
+
+
 }

@@ -179,4 +179,9 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
         super.onStop();
         messageViewModel.onStop();
     }
+
+    public boolean onBtnBack() {
+        return false;
+    }
+
 }

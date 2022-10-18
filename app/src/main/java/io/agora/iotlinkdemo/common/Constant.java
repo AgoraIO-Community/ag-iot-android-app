@@ -91,11 +91,19 @@ public class Constant {
     public static final int CALLBACK_TYPE_DEVICE_SHARE_CANCEL_FAIL = 23;
 
     /* 设备接收速率 */
-    public static final int CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED = 18;
+    public static final int CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED = 30;
     /* 设备延迟 */
-    public static final int CALLBACK_TYPE_DEVICE_LAST_MILE_DELAY = 19;
+    public static final int CALLBACK_TYPE_DEVICE_LAST_MILE_DELAY = 31;
     /* 视频第一帧显示 */
-    public static final int CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO = 20;
+    public static final int CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO = 32;
+    /* 设备端接听 */
+    public static final int CALLBACK_TYPE_DEVICE_ANSWER = 33;
+    /* 呼叫设备完成 */
+    public static final int CALLBACK_TYPE_DEVICE_DIAL_DONE = 34;
+    /* 呼叫设备超时未接 */
+    public static final int CALLBACK_TYPE_DEVICE_DIAL_TIMEOUT = 35;
+    /* 设备挂断 */
+    public static final int CALLBACK_TYPE_DEVICE_HANGUP = 36;
 
     /* 用户登录状态改变*/
     public static final int CALLBACK_TYPE_USER_STATUS_CHANGE = 100;
@@ -173,6 +181,11 @@ public class Constant {
 
     /* 查询到属性描述符列表 */
     public static final int CALLBACK_TYPE_PLAYER_UPDATEPROPDESC = 311;
+
+    /* 其他用户上线 */
+    public static final int CALLBACK_TYPE_USER_ONLINE = 312;
+    /* 其他用户下线 */
+    public static final int CALLBACK_TYPE_USER_OFFLINE = 312;
 
     /* 第三方账号注册完成 */
     public static final int CALLBACK_TYPE_THIRD_REGISTER_DONE = 401;

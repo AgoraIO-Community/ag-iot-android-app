@@ -36,6 +36,14 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     private final String TAG = "IOTLINK/PlayerViewModel";
 
     /**
+     * @brief 通话状态机
+     */
+    public final static int CALL_STATE_DISCONNECTED = 0x0000;    // 已经断开
+    public final static int CALL_STATE_CONNECTING = 0x0001;      // 正在接通中
+    public final static int CALL_STATE_CONNECTED = 0x0002;       // 已经接通
+
+
+    /**
      * 当前设备信息
      */
     public IotDevice mLivingDevice = AgoraApplication.getInstance().getLivingDevice();
@@ -150,6 +158,75 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         mMsgHandler.sendEmptyMessageDelayed(MSGID_UPDATE_NETSTATUS, TIMER_UPDATE_NETSATUS);
     }
 
+    public int getCallStatus() {
+        int callkitStatus = AIotAppSdkFactory.getInstance().getCallkitMgr().getStateMachine();
+        int callStatus = CALL_STATE_DISCONNECTED;
+
+        switch (callkitStatus) {
+            case ICallkitMgr.CALLKIT_STATE_TALKING: {  // 正在通话中
+                callStatus = CALL_STATE_CONNECTED;
+            } break;
+
+            case ICallkitMgr.CALLKIT_STATE_DIALING:
+            case ICallkitMgr.CALLKIT_STATE_DIAL_REQING:
+            case ICallkitMgr.CALLKIT_STATE_DIAL_RSPING: {   // 正在呼叫中
+                callStatus = CALL_STATE_CONNECTING;
+            } break;
+
+            case ICallkitMgr.CALLKIT_STATE_INCOMING:
+            case ICallkitMgr.CALLKIT_STATE_ANSWER_REQING:
+            case ICallkitMgr.CALLKIT_STATE_ANSWER_RSPING: {   // 正在接听中
+                callStatus = CALL_STATE_CONNECTING;
+            } break;
+
+            case ICallkitMgr.CALLKIT_STATE_IDLE:
+            case ICallkitMgr.CALLKIT_STATE_HANGUP_REQING: {   // 正在挂断或者已经挂断
+                callStatus = CALL_STATE_DISCONNECTED;
+            } break;
+        }
+
+        Log.d(TAG, "<getCallStatus> callkitStatus=" + callkitStatus
+                + ", callStatus=" + callStatus);
+        return callStatus;
+    }
+
+    @Override
+    public void onDialDone(int errCode, IotDevice iotDevice) {
+        Log.d(TAG, "<onDialDone> errCode=" + errCode);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_DIAL_DONE, errCode);
+    }
+
+    @Override
+    public void onPeerIncoming(IotDevice iotDevice, String attachMsg) {}
+
+    @Override
+    public void onPeerAnswer(IotDevice iotDevice) {
+        Log.d(TAG, "<onPeerAnswer> iotDevice=" + iotDevice.mDeviceID);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ANSWER, 0);
+    }
+
+    @Override
+    public void onPeerHangup(IotDevice iotDevice) {
+        Log.d(TAG, "<onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
+        if (mLivingDevice == null) {
+            return;
+        }
+        if (mLivingDevice.mDeviceID.compareToIgnoreCase(iotDevice.mDeviceID) == 0) {
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_HANGUP, 0);
+        }
+    }
+
+    @Override
+    public void onPeerTimeout(IotDevice iotDevice) {
+        Log.e(TAG, "<onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
+        if (mLivingDevice == null) {
+            return;
+        }
+        if (mLivingDevice.mDeviceID.compareToIgnoreCase(iotDevice.mDeviceID) == 0) {
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_DIAL_TIMEOUT, 0);
+        }
+    }
+
     @Override
     public void onPeerFirstVideo(IotDevice iotDevice, int videoWidth, int videoHeight) {
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO, null);
@@ -235,6 +312,10 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         AIotAppSdkFactory.getInstance().getCallkitMgr().setAudioEffect(effectId);
     }
 
+    public ICallkitMgr.AudioEffectId getAudioEffect() {
+        return AIotAppSdkFactory.getInstance().getCallkitMgr().getAudioEffect();
+    }
+
     /**
      * 本地挂断
      */
@@ -306,8 +387,11 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     /**
      * 呼叫设备 即连接设备
      */
-    public int callDial(IotDevice iotDevice, String attachMsg) {
-        return AIotAppSdkFactory.getInstance().getCallkitMgr().callDial(iotDevice, attachMsg);
+    public int callDial(String attachMsg) {
+        if (mLivingDevice == null) {
+            return ErrCode.XERR_BAD_STATE;
+        }
+        return AIotAppSdkFactory.getInstance().getCallkitMgr().callDial(mLivingDevice, attachMsg);
     }
 
 
@@ -349,5 +433,25 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         AgoraApplication.getInstance().setLivingMcuVersion(mcuVerInfo);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_FIRM_GETVERSION, mcuVerInfo);
     }
+
+
+    public int getOnlineUserCount() {
+        int userCount = AIotAppSdkFactory.getInstance().getCallkitMgr().getOnlineUserCount();
+        Log.d(TAG, "<getOnlineUserCount> userCount=" + userCount);
+        return userCount;
+    }
+
+    @Override
+    public void onUserOnline(int uid, int onlineUserCount) {
+        Log.d(TAG, "<onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_ONLINE, onlineUserCount);
+    }
+
+    @Override
+    public void onUserOffline(int uid, int onlineUserCount) {
+        Log.d(TAG, "<onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_OFFLINE, onlineUserCount);
+    }
+
 
 }

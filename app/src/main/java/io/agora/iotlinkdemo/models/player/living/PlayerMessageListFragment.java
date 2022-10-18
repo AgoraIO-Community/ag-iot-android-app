@@ -122,7 +122,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             customDate.month = calendar.get(Calendar.MONTH) + 1;
             customDate.day = calendar.get(Calendar.DAY_OF_MONTH);
         }
-//        messageViewModel.queryParam.mDeviceId = AgoraApplication.getInstance().getLivingDevice().mDeviceId;
+        messageViewModel.queryParam.mDeviceID = AgoraApplication.getInstance().getLivingDevice().mDeviceID;
         messageViewModel.queryParam.mBeginDate = messageViewModel.beginDateToString(customDate);
         messageViewModel.queryParam.mEndDate = messageViewModel.endDateToString(customDate);
     }
@@ -137,6 +137,32 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
                     mMessages.addAll(((IotAlarmPage) data).mAlarmList);
                     getBinding().rvMsgList.post(() -> {
                         previewMessageAdapter.notifyDataSetChanged();
+
+                        IotAlarmPage alarmPage = (IotAlarmPage)data;
+                        if (alarmPage.mAlarmList.size() <= 0) {
+                            // 没有告警消息，播放组件不能用
+                            getBinding().cbChangeSound.setEnabled(false);
+                            getBinding().pbPlayProgress.setEnabled(false);
+                            getBinding().pbPlayProgressFull.setEnabled(false);
+                            getBinding().ivChangeScreen.setEnabled(false);
+                            getBinding().ivDownload.setEnabled(false);
+                            getBinding().ivPlaying.setEnabled(false);
+                            getBinding().ivClip.setEnabled(false);
+                            getBinding().ivDelete.setEnabled(false);
+                            getBinding().btnEdit.setEnabled(false);
+
+                        } else {
+                            // 有告警消息，播放组件可以使用
+                            getBinding().cbChangeSound.setEnabled(true);
+                            getBinding().pbPlayProgress.setEnabled(true);
+                            getBinding().pbPlayProgressFull.setEnabled(true);
+                            getBinding().ivChangeScreen.setEnabled(true);
+                            getBinding().ivDownload.setEnabled(true);
+                            getBinding().ivPlaying.setEnabled(true);
+                            getBinding().ivClip.setEnabled(true);
+                            getBinding().ivDelete.setEnabled(true);
+                            getBinding().btnEdit.setEnabled(true);
+                        }
                     });
                     if (!mMessages.isEmpty()) {
                         messageViewModel.requestAlarmMgrDetailById(mMessages.get(0).mAlarmId);
@@ -321,11 +347,19 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         getBinding().ivBack.setVisibility(getBinding().ivBack.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
     }
 
-    public void onBtnBack() {
+    public boolean onBtnBack() {
         if (mIsOrientLandscape) { // 退回到 portrait竖屏显示
             onBtnLandscape();
             getBinding().gsyPlayer.onBackFullscreen();
+            return true;
         }
+
+        if (previewMessageAdapter.isEdit) {
+            changeEditStatus(false);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -354,8 +388,14 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             getBinding().tvCurrentTime.setVisibility(View.VISIBLE);
             getBinding().pbPlayProgress.setVisibility(View.VISIBLE);
             getBinding().tvTotalTime.setVisibility(View.VISIBLE);
+            getBinding().ivChangeScreen.setVisibility(View.VISIBLE);
+            getBinding().ivDownload.setVisibility(View.VISIBLE);
+            getBinding().ivPlaying.setVisibility(View.VISIBLE);
+            getBinding().ivClip.setVisibility(View.VISIBLE);
+            getBinding().ivDelete.setVisibility(View.VISIBLE);
             getActivity().getWindow().getDecorView().setSystemUiVisibility(uiOptionsOld);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(15);
+
         } else {
             if (lp == null) {
                 lp = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
@@ -376,6 +416,11 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             getBinding().tvCurrentTime.setVisibility(View.GONE);
             getBinding().pbPlayProgress.setVisibility(View.GONE);
             getBinding().tvTotalTime.setVisibility(View.GONE);
+            getBinding().ivChangeScreen.setVisibility(View.GONE);
+            getBinding().ivDownload.setVisibility(View.GONE);
+            getBinding().ivPlaying.setVisibility(View.GONE);
+            getBinding().ivClip.setVisibility(View.GONE);
+            getBinding().ivDelete.setVisibility(View.GONE);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(90);
         }
         mIsOrientLandscape = !mIsOrientLandscape;

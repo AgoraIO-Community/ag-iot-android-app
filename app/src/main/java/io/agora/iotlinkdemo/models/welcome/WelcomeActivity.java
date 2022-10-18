@@ -127,6 +127,10 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
         Log.d(TAG, "<onStart>");
         super.onStart();
 
+        if (phoneLoginViewModel != null) {
+            phoneLoginViewModel.onStart();
+        }
+
         if ((mUiState == UI_STATE_OVERLAYWND) && (mOverlyWndSetted)) {
             mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
         }
@@ -227,15 +231,16 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     void onMsgCheckOverlayWnd() {
         // TODO: 只有需要离线推送功能时，才需要申请悬浮窗权限，否则可以跳过
 
-//        mUiState = UI_STATE_OVERLAYWND;
-//        mOverlyWndSetted = false;
-//        if (!Settings.canDrawOverlays(this)) {
-//            showRequestSuspensionDialog();
-//        } else {
-//            mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
-//        }
+        mUiState = UI_STATE_OVERLAYWND;
+        mOverlyWndSetted = false;
+        if (!Settings.canDrawOverlays(this)) {
+            showRequestSuspensionDialog();
+        } else {
+            Log.d(TAG, "<onMsgCheckOverlayWnd> already have overlay permission");
+            mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
+        }
 
-        mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
+//        mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
     }
 
     /**
@@ -249,12 +254,14 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             commonDialog.setOnButtonClickListener(new BaseDialog.OnButtonClickListener() {
                 @Override
                 public void onLeftButtonClick() {
+                    Log.d(TAG, "<showRequestSuspensionDialog> onLeftButtonClick");
                     mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
                 }
 
                 @RequiresApi(api = Build.VERSION_CODES.M)
                 @Override
                 public void onRightButtonClick() {
+                    Log.d(TAG, "<showRequestSuspensionDialog> onRightButtonClick");
                     Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
                     startActivity(intent);
                     mOverlyWndSetted = true;

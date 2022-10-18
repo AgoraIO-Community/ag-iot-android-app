@@ -18,25 +18,36 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btn_rtm_send"
+        android:id="@+id/btn_rtm_connect"
         style="@style/rtm_btn_full"
         android:layout_width="140dp"
         android:layout_height="56dp"
-        android:layout_marginTop="20dp"
-        android:text="@string/send"
+        android:layout_marginTop="15dp"
+        android:text="@string/connect"
         android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/et_rtm_message" />
 
     <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_rtm_send"
+        style="@style/rtm_btn_full"
+        android:layout_width="140dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="15dp"
+        android:text="@string/send"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_rtm_connect" />
+
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_rtm_timersend"
         style="@style/rtm_btn_full"
         android:layout_width="140dp"
         android:layout_height="56dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="15dp"
         android:text="开始发送"
         android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"

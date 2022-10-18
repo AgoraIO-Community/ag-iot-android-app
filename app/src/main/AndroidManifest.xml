@@ -8,6 +8,10 @@
     <!-- 允许应用程序改变任务的z顺序，来电时将APP从后台拉到前台显示 -->
     <uses-permission android:name="android.permission.REORDER_TASKS" />
 
+    <!-- 悬浮窗系统权限，用于支持来电时将APP从后台拉到前台显示 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+
     <!-- ==================== 添加设备配网权限 BEGIN ==================== -->
         <!-- 允许应用程序获取wifi状态，Android 10以上要求权限 -->
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

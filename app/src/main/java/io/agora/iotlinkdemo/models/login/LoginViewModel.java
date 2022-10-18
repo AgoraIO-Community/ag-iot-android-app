@@ -32,7 +32,8 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
     }
 
 
-    private volatile boolean mUnregistering = false;    // 是否正在注销
+    private volatile boolean mUnregistering = false;    ///< 是否正在注销
+    private volatile boolean mIsListening = false;      ///< 是否已经注册回调监听,确保只注册一次回调监听
 
     public LoginViewModel() {
         EventBus.getDefault().register(this);
@@ -53,16 +54,18 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
     public void onStart() {
         // 注册账号管理监听
         IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
-        if (accountMgr != null) {
+        if ((accountMgr != null) && (!mIsListening)) {
             accountMgr.registerListener(this);
+            mIsListening = true;
         }
     }
 
     public void onStop() {
         // 注册账号管理监听
         IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
-        if (accountMgr != null) {
+        if ((accountMgr != null) && (mIsListening)) {
             accountMgr.unregisterListener(this);
+            mIsListening = false;
         }
     }
 

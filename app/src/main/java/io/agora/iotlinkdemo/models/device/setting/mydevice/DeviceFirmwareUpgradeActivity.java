@@ -151,7 +151,8 @@ public class DeviceFirmwareUpgradeActivity extends
         final View upgradeView = inflater.inflate(R.layout.dialog_firmware_lastversion, null);
         final TextView tvTitle = (TextView) upgradeView.findViewById(R.id.tvFirmLastVerTitle);
 
-        String newVersion = "当前已是最新版本，版本号: " + version;
+        String versionTxt = (version == null) ? " " : version;
+        String newVersion = "当前已是最新版本，版本号: " + versionTxt;
         tvTitle.setText(newVersion);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -176,7 +177,8 @@ public class DeviceFirmwareUpgradeActivity extends
         final Button btnCanel = (Button) upgradeView.findViewById(R.id.btnFirmUpgradeCancel);
         final Button btnUpgrade = (Button) upgradeView.findViewById(R.id.btnFirmUpgradeUpdate);
 
-        String newVersion = "最新版本号: " + mMcuVersionInfo.mUpgradeVersion;
+        String version = (mMcuVersionInfo.mUpgradeVersion == null) ? " " : mMcuVersionInfo.mUpgradeVersion;
+        String newVersion = "最新版本号: " + version;
         tvTitle.setText(newVersion);
 
         String remark = "";
@@ -340,7 +342,8 @@ public class DeviceFirmwareUpgradeActivity extends
      * @brief 显示更新进度组件
      */
     void showUpdatingWgts() {
-        String newVersion = "最新版本号: " + mMcuVersionInfo.mUpgradeVersion;
+        String versionText = (mMcuVersionInfo.mUpgradeVersion == null) ? " " : mMcuVersionInfo.mUpgradeVersion;
+        String newVersion = "最新版本号: " + versionText;
         getBinding().tvUpdateTitle.setText(newVersion);
 
         String remark = "";

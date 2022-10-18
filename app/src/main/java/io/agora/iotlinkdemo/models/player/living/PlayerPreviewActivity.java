@@ -7,6 +7,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +23,7 @@ import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
 import io.agora.iotlinkdemo.databinding.ActivityPreviewPlayBinding;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
+import io.agora.iotlinkdemo.models.home.homeindex.HomeIndexFragment;
 import io.agora.iotlinkdemo.models.player.adapter.ViewPagerAdapter;
 import io.agora.iotlinkdemo.utils.AnimUtils;
 import io.agora.iotlink.IotDevice;
@@ -33,6 +35,7 @@ import com.alibaba.android.arouter.launcher.ARouter;
  */
 @Route(path = PagePathConstant.pagePreviewPlay)
 public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPreviewPlayBinding> {
+    private static final String TAG = "LINK/PlayerPrevAct";
 
     @Override
     protected ActivityPreviewPlayBinding getViewBinding(@NonNull LayoutInflater inflater) {
@@ -104,23 +107,25 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (getBinding().titleView.getVisibility() == View.GONE) {
-                if (getBinding().viewPager.getCurrentItem() == 0) {
-                    ((PlayerFunctionListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
-                            .registeredFragments.get(0)).onBtnBack();
-                } else if (getBinding().viewPager.getCurrentItem() == 1) {
-                    ((PlayerMessageListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
-                            .registeredFragments.get(1)).onBtnBack();
-                } else if (getBinding().viewPager.getCurrentItem() == 2) {
-                    ((PlayerRtmFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
-                            .registeredFragments.get(2)).onBtnBack();
-                } else if (getBinding().viewPager.getCurrentItem() == 3) {
-                    ((PlayerRtcFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
-                            .registeredFragments.get(3)).onBtnBack();
-                }
+
+            boolean bHookBackKey = false;
+            if (getBinding().viewPager.getCurrentItem() == 0) {
+                bHookBackKey = ((PlayerFunctionListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                         .registeredFragments.get(0)).onBtnBack();
+            } else if (getBinding().viewPager.getCurrentItem() == 1) {
+                bHookBackKey = ((PlayerMessageListFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                        .registeredFragments.get(1)).onBtnBack();
+            } else if (getBinding().viewPager.getCurrentItem() == 2) {
+                bHookBackKey = ((PlayerRtmFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                        .registeredFragments.get(2)).onBtnBack();
+            } else if (getBinding().viewPager.getCurrentItem() == 3) {
+                bHookBackKey = ((PlayerRtcFragment) ((ViewPagerAdapter) getBinding().viewPager.getAdapter())
+                        .registeredFragments.get(3)).onBtnBack();
+            }
+            if (bHookBackKey) {
                 return true;
             }
-        }
+         }
         return super.onKeyDown(keyCode, event);
     }
 
@@ -169,5 +174,20 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
     @Override
     public boolean isBlackDarkStatus() {
         return false;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        Log.d(TAG, "<onRequestPermissionsResult> requestCode=" + requestCode);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (getBinding().viewPager.getCurrentItem() == 0) {
+            PlayerFunctionListFragment devPlayerFrag;
+            devPlayerFrag = ((PlayerFunctionListFragment)((ViewPagerAdapter) getBinding().viewPager.getAdapter()).registeredFragments.get(0));
+            if (devPlayerFrag != null) {
+                devPlayerFrag.onFragRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
+        }
     }
 }

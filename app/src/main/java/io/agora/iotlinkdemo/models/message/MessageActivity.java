@@ -1,6 +1,7 @@
 package io.agora.iotlinkdemo.models.message;
 
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -12,6 +13,11 @@ import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
 import io.agora.iotlinkdemo.databinding.ActivityMessageBinding;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.models.message.adapter.MessageViewPagerAdapter;
+import io.agora.iotlinkdemo.models.player.adapter.ViewPagerAdapter;
+import io.agora.iotlinkdemo.models.player.living.PlayerFunctionListFragment;
+import io.agora.iotlinkdemo.models.player.living.PlayerMessageListFragment;
+import io.agora.iotlinkdemo.models.player.living.PlayerRtcFragment;
+import io.agora.iotlinkdemo.models.player.living.PlayerRtmFragment;
 import io.agora.iotlinkdemo.utils.AnimUtils;
 import com.alibaba.android.arouter.facade.annotation.Route;
 
@@ -86,5 +92,24 @@ public class MessageActivity extends BaseViewBindingActivity<ActivityMessageBind
                 getBinding().tvNotificationCount.setVisibility(View.GONE);
             }
         });
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+
+            boolean bHookBackKey = false;
+            if (getBinding().viewPager.getCurrentItem() == 0) {
+                bHookBackKey = ((MessageAlarmFragment) ((MessageViewPagerAdapter) getBinding().viewPager.getAdapter())
+                        .registeredFragments.get(0)).onBtnBack();
+            } else if (getBinding().viewPager.getCurrentItem() == 1) {
+                bHookBackKey = ((MessageNotifyFragment) ((MessageViewPagerAdapter) getBinding().viewPager.getAdapter())
+                        .registeredFragments.get(1)).onBtnBack();
+            }
+            if (bHookBackKey) {
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

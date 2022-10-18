@@ -11,7 +11,7 @@ import io.agora.iotlinkdemo.manager.PagePilotManager;
 import java.util.ArrayList;
 
 public class MessageViewPagerAdapter extends FragmentStateAdapter {
-    private ArrayList<Fragment> registeredFragments = new ArrayList<>();
+    public ArrayList<Fragment> registeredFragments = new ArrayList<>();
 
     public MessageViewPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
         super(fragmentActivity);

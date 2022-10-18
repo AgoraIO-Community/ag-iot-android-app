@@ -90,9 +90,12 @@
     <string name="replay">回放</string>
     <string name="album">相册</string>
     <string name="change_voice_call">变声通话</string>
-    <string name="change_voice_type2">变声通话中 (大叔) …</string>
-    <string name="change_voice_type3">变声通话中 (萝莉) …</string>
-    <string name="change_voice_type4">变声通话中 (少年) …</string>
+    <string name="change_voice_type1">变声(大叔)</string>
+    <string name="change_voice_type2">变声(少年)</string>
+    <string name="change_voice_type3">变声(萝莉)</string>
+    <string name="change_voice_type4">变声(猪八戒)</string>
+    <string name="change_voice_type5">变声(空灵)</string>
+    <string name="change_voice_type6">变声(沉闷)</string>
     <string name="save_video_tip">视频已保存至相册</string>
     <string name="save_pic_tip">截图已保存至相册</string>
     <string name="view_album">查看相册</string>
@@ -200,4 +203,13 @@
     <string name="no_permission">没有相应的操作权限</string>
     <string name="send">发送</string>
     <string name="video">视频</string>
+    <string name="user_count">在线用户数: </string>
+    <string name="voice_orignal">原 声</string>
+    <string name="voice_oldman">大 叔</string>
+    <string name="voice_boy">少 年</string>
+    <string name="voice_girl">萝 莉</string>
+    <string name="voice_zhubajie">猪八戒</string>
+    <string name="voice_ethereal">空 灵</string>
+    <string name="voice_hulu">沉 闷</string>
+
 </resources>

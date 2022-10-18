@@ -1,5 +1,6 @@
 package io.agora.iotlinkdemo.models.message;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +34,7 @@ import java.util.List;
  */
 @Route(path = PagePathConstant.pageMessageAlarm)
 public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessageAlarmBinding> {
+    private static final String TAG = "IOTLINK/MsgAlarmFrag";
     /**
      * 消息ViewModel
      */
@@ -59,6 +61,7 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         messageViewModel.setLifecycleOwner(this);
         messageAlarmAdapter = new MessageAlarmAdapter(mMessages);
         messageAlarmAdapter.setMRVItemClickListener((view, position, data) -> {
+            Log.d(TAG, "<setMRVItemClickListener> [DBGCLICK]");
             if (position == -1) {
                 getBinding().btnEdit.performClick();
             } else {
@@ -300,4 +303,14 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         super.onStop();
         messageViewModel.onStop();
     }
+
+    public boolean onBtnBack() {
+        if (messageAlarmAdapter.isEdit) {
+            changeEditStatus(false);
+            return true;
+        }
+
+        return false;
+    }
+
 }

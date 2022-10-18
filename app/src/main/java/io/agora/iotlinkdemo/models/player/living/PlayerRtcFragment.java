@@ -161,16 +161,10 @@ public class PlayerRtcFragment extends BaseViewBindingFragment<FagmentPlayerRtcB
 
             getBinding().btnRtcPlay.setText("开始");
         }
-
-
-
-
-
-
     }
 
-    void onBtnBack() {
-
+    public boolean onBtnBack() {
+        return false;
     }
 
 

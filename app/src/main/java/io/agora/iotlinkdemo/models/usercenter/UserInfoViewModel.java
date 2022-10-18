@@ -45,11 +45,19 @@ public class UserInfoViewModel extends BaseViewModel implements IAccountMgr.ICal
     }
 
     public void onStart() {
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr == null) {
+            return;
+        }
         // 注册账号管理监听
         AIotAppSdkFactory.getInstance().getAccountMgr().registerListener(this);
     }
 
     public void onStop() {
+        IAccountMgr accountMgr = AIotAppSdkFactory.getInstance().getAccountMgr();
+        if (accountMgr == null) {
+            return;
+        }
         // 注册账号管理监听
         AIotAppSdkFactory.getInstance().getAccountMgr().unregisterListener(this);
     }

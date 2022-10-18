@@ -2,6 +2,7 @@ package io.agora.iotlinkdemo.models.home.homemine;
 
 import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -41,6 +42,8 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
     public void initView() {
         userInfoViewModel = new ViewModelProvider(this).get(UserInfoViewModel.class);
         userInfoViewModel.setLifecycleOwner(this);
+        getBinding().ivToEdit.setVisibility(View.INVISIBLE);
+        getBinding().vToEdit.setVisibility(View.INVISIBLE);
     }
 
     @Override
@@ -51,7 +54,7 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
 
         getBinding().vToEdit.setOnClickListener(view -> {
             if (NetUtils.INSTANCE.isNetworkConnected()) {
-                PagePilotManager.pageUserInfo();
+            //    PagePilotManager.pageUserInfo();
             }
         });
         getBinding().tvGeneralSettings.setOnClickListener(view -> {
@@ -72,7 +75,7 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
         getBinding().tvUserMobile.post(() -> {
             String accountName = ThirdAccountMgr.getInstance().getLoginAccountName();
             String accountId = ThirdAccountMgr.getInstance().getLoginAccountId();
-            String txtName = accountName + "\n (" + accountId + ")";
+            String txtName = accountName; // + "\n (" + accountId + ")";
             getBinding().tvUserMobile.setText(txtName);
 
             int count = DevicesListManager.deviceSize;
