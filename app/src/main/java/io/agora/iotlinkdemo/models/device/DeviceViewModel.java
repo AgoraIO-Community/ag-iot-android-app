@@ -106,7 +106,8 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      */
     @Override
     public void onAllDevicesQueryDone(int errCode, List<IotDevice> deviceList) {
-//        Log.d("cwtsw", "获取数据列表" + deviceList);
+        Log.d(TAG, "<onAllDevicesQueryDone> errCode=" + errCode
+                + "deviceList = " + deviceList);
         DevicesListManager.devicesList.clear();
         DevicesListManager.devicesList.addAll(deviceList);
         Log.d(TAG, "mBeforeBindDevList " + mBeforeBindDevList);
@@ -143,7 +144,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public void removeDevice(IotDevice removingDev) {
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().removeDevice(removingDev);
         if (ret != ErrCode.XOK) {
-            Log.d("cwtsw", "要移除设备失败, 错误码: " + ret);
+            Log.d(TAG, "<removeDevice> errCode=" + ret);
         }
     }
 
@@ -226,7 +227,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public void queryOutSharerList(final String deviceId) {
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryOutSharerList(deviceId);
         if (ret != ErrCode.XOK) {
-            Log.d("cwtsw", "要查询可取消分享的设备列表, 错误码: " + ret);
+            Log.d(TAG, "<queryOutSharerList> errCode=" + ret);
         }
     }
 
@@ -250,7 +251,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public void deshareDevice(final IotOutSharer outSharer) {
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().deshareDevice(outSharer);
         if (ret != ErrCode.XOK) {
-            Log.d("cwtsw", "要取消的已经分享失败, 错误码: " + ret);
+            Log.d(TAG, "<deshareDevice> errCode=" + ret);
         }
     }
 
@@ -378,7 +379,7 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     private void onMsgRefreshDevList(Message msg) {
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().queryAllDevices();
         if (ret != ErrCode.XOK) {
-            Log.d("cwtsw", "查询绑定设备失败, 错误码: " + ret);
+            Log.d(TAG, "<onMsgRefreshDevList> ret=" + ret);
         }
     }
 }

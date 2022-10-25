@@ -150,9 +150,11 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
             showLoadingView();
             String account = getBinding().etAccounts.getText().toString();
             String password = getBinding().etPwd.getText().toString();
-            phoneLoginViewModel.accountRegister(account, password);
+            phoneLoginViewModel.accountRegister(account, password, null);
             SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, account);
             SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, password);
+
+//            PagePilotManager.pagePhoneRegister();
         });
 
         getBinding().iBtnClear.setOnClickListener(view -> {

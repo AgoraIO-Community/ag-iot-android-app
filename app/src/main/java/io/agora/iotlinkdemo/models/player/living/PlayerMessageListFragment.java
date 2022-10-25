@@ -106,7 +106,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
     public void requestMsgData() {
         getSelectDate();
-        messageViewModel.requestAllAlarmMgr();
+        messageViewModel.queryAlarmsByFilter();
     }
 
     @Override
@@ -122,9 +122,9 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             customDate.month = calendar.get(Calendar.MONTH) + 1;
             customDate.day = calendar.get(Calendar.DAY_OF_MONTH);
         }
-        messageViewModel.queryParam.mDeviceID = AgoraApplication.getInstance().getLivingDevice().mDeviceID;
-        messageViewModel.queryParam.mBeginDate = messageViewModel.beginDateToString(customDate);
-        messageViewModel.queryParam.mEndDate = messageViewModel.endDateToString(customDate);
+        messageViewModel.setQueryDeviceID(AgoraApplication.getInstance().getLivingDevice().mDeviceID);
+        messageViewModel.setQueryBeginDate(customDate);
+        messageViewModel.setQueryEndDate(customDate);
     }
 
     @SuppressLint("SetTextI18n")
@@ -558,19 +558,19 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             selectVideoTypeDialog.iSingleCallback = (type, var2) -> {
                 if (type == 1) {
                     getBinding().btnSelectType.setText(getString(R.string.all_type));
-                    messageViewModel.queryParam.mMsgType = -1;
+                    messageViewModel.setQueryMsgType(-1);
                 } else if (type == 2) {
                     getBinding().btnSelectType.setText(getString(R.string.sound_detection));
-                    messageViewModel.queryParam.mMsgType = 0;
+                    messageViewModel.setQueryMsgType(0);
                 } else if (type == 3) {
                     getBinding().btnSelectType.setText(getString(R.string.motion_detection));
-                    messageViewModel.queryParam.mMsgType = 2;
+                    messageViewModel.setQueryMsgType(2);
                 } else if (type == 4) {
                     getBinding().btnSelectType.setText(getString(R.string.human_infrared_detection));
-                    messageViewModel.queryParam.mMsgType = 1;
+                    messageViewModel.setQueryMsgType(1);
                 } else if (type == 5) {
                     getBinding().btnSelectType.setText(getString(R.string.call_button));
-                    messageViewModel.queryParam.mMsgType = 3;
+                    messageViewModel.setQueryMsgType(3);
                 }
                 requestMsgData();
             };

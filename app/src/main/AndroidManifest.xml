@@ -79,6 +79,15 @@
             android:name=".models.login.ui.PhoneLoginActivity"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".models.login.ui.PhoneRegisterActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.InputVCodeActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.login.ui.SetPwdActivity"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".models.login.ui.WebViewActivity"
             android:screenOrientation="portrait" />
         <activity

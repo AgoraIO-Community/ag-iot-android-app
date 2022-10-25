@@ -63,6 +63,12 @@ public class ErrorToastUtils {
         switch (errorCode) {
             case ErrCode.XOK:
                 break;
+            case ErrCode.XERR_ACCOUNT_LOGIN:
+                showErrorText("用户账号还未登录");
+                break;
+            case ErrCode.XERR_MQTT_DISCONNECT:
+                showErrorText("MQTT还在联接中,等待联接就绪");
+                break;
             case ErrCode.XERR_CALLKIT_TIMEOUT:
                 showErrorText("呼叫超时无响应");
                 break;

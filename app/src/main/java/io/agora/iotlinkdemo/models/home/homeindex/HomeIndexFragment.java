@@ -20,11 +20,13 @@ import com.agora.baselibrary.utils.ToastUtils;
 import com.agora.baselibrary.utils.UiUtils;
 
 import io.agora.iotlink.AIotAppSdkFactory;
+import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
 import io.agora.iotlinkdemo.base.PermissionHandler;
 import io.agora.iotlinkdemo.base.PermissionItem;
+import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.databinding.FragmentHomeIndexBinding;
 import io.agora.iotlinkdemo.manager.DevicesListManager;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
@@ -69,6 +71,7 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
 
     @Override
     public void initView() {
+        DevicesListManager.getInstance().queryAllProductList();  // 查询所有产品列表
         homeIndexViewModel = new ViewModelProvider(this).get(HomeIndexViewModel.class);
         homeIndexViewModel.setLifecycleOwner(this);
         initAdapter();
@@ -94,7 +97,7 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
         homeIndexViewModel.setISingleCallback((type, var2) -> {
             if (type == 999) {
                 getActivity().finish();
-            } else if (type == 2) {
+            } else if (type == Constant.CALLBACK_TYPE_DEVICE_QUERY_SUCCESS) {
                 mSwipeRefreshLayout.post(() -> {
                     devices.clear();
                     if (UserManager.isLogin()) {
@@ -147,22 +150,17 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
                 PagePilotManager.pageDeviceAddScanning();
             }
         }
-
-//
-//        TODO: Test code for query product list
-//        IDeviceMgr.ProductQueryParam queryParam = new IDeviceMgr.ProductQueryParam();
-//        queryParam.mPageNo = 1;
-//        queryParam.mPageSize = 64;
-//
-//        showLoadingView();
-//        int errCode = AIotAppSdkFactory.getInstance().getDeviceMgr().queryProductList(queryParam);
-//        if (errCode != ErrCode.XOK) {
-//            hideLoadingView();
-//            popupMessage("查询所有产品列表失败，错误码=" + errCode);
-//        }
     }
 
     void onBtnDevItemClick(View view, int position, IotDevice iotDevice) {
+        int callkitState = homeIndexViewModel.getCallkitState();
+        if (callkitState == ICallkitMgr.CALLKIT_STATE_DIALING ||
+            callkitState == ICallkitMgr.CALLKIT_STATE_DIAL_REQING ||
+            callkitState == ICallkitMgr.CALLKIT_STATE_DIAL_RSPING) {
+            Log.e(TAG, "<onBtnDevItemClick> already in dialing...");
+            return;
+        }
+
         //
         // Microphone权限判断处理
         //

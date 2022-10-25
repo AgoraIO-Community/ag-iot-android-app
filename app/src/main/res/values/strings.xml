@@ -196,6 +196,7 @@
     <string name="function_not_open">功能未开放</string>
     <string name="all_select">全选</string>
     <string name="vcode_has_send">验证码已发送</string>
+    <string name="vcode_send_err">验证码申请失败</string>
     <string name="please_input_accounts">请输入注册的账号</string>
     <string name="select_devices">选择设备</string>
     <string name="flashlight">手电筒</string>

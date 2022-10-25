@@ -1,5 +1,7 @@
 package io.agora.iotlinkdemo.models.message;
 
+import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,14 +30,12 @@ import java.util.List;
  */
 @Route(path = PagePathConstant.pageMessageNotify)
 public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessageNotifyBinding> {
-    /**
-     * 消息ViewModel
-     */
-    private MessageViewModel messageViewModel;
+    private final String TAG = "IOTLINK/MsgNotifyFrag";
 
-
+    private NotificationViewModel mNotificationViewModel;
     private MessageNotifyAdapter messageNotifyAdapter;
-    private ArrayList<IotDevMessage> mMessages = new ArrayList<>();
+    private ArrayList<IotDevMessage> mMessages = new ArrayList<>();  ///< 当前所有通知消息列表
+    private int mUnreadedCount = 0;
 
     @NonNull
     @Override
@@ -45,22 +45,17 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
 
     @Override
     public void initView() {
-        messageViewModel = new ViewModelProvider(this).get(MessageViewModel.class);
-        messageViewModel.setLifecycleOwner(this);
+        mNotificationViewModel = new ViewModelProvider(this).get(NotificationViewModel.class);
+        mNotificationViewModel.setLifecycleOwner(this);
         messageNotifyAdapter = new MessageNotifyAdapter(mMessages);
         getBinding().rlMsgList.setAdapter(messageNotifyAdapter);
         getBinding().rlMsgList.setLayoutManager(new LinearLayoutManager(getActivity()));
     }
 
     @Override
-    public void requestData() {
-        messageViewModel.requestAllNotificationMgr();
-    }
-
-    @Override
     public void initListener() {
-        messageViewModel.setISingleCallback((type, data) -> {
-            if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_RESULT) {
+        mNotificationViewModel.setISingleCallback((type, data) -> {
+            if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_RESULT) {   // 查询所有通知消息成功
                 if (data instanceof IotDevMsgPage) {
                     mMessages.clear();
                     mMessages.addAll(((IotDevMsgPage) data).mDevMsgList);
@@ -70,9 +65,11 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
                             list.add(iotDevMessage.mMessageId);
                         }
                     }
-                    if (!list.isEmpty()) {
-                        messageViewModel.markNotifyMessage(list);
-                    }
+
+                    // 设置所有未读通知的数量
+                    refreshUnreadDisplay();
+
+                    // 刷新通知列表显示
                     getBinding().rlMsgList.post(() -> {
                         messageNotifyAdapter.notifyDataSetChanged();
                         if (mMessages.isEmpty()) {
@@ -86,26 +83,13 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
                         }
                     });
                 }
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT) {
-                if (data instanceof IotAlarm) {
-                    PagePilotManager.pagePlayMessage((IotAlarm) data);
-                }
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_FAIL) {
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_QUERY_FAIL) {   // 查询所有通知消息失败
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         int errCode = (Integer)data;
-                        popupMessage("查询通知消息失败, 错误码: " + errCode);
-                    }
-                });
-
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_FAIL) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int errCode = (Integer) data;
-                        popupMessage("查询通知消息数量失败, 错误码: " + errCode);
+                        popupMessage("查询通知消息失败, 错误码=" + errCode);
                     }
                 });
 
@@ -114,74 +98,89 @@ public class MessageNotifyFragment extends BaseViewBindingFragment<FagmentMessag
                     @Override
                     public void run() {
                         int errCode = (Integer) data;
-                        popupMessage("标记通知消息已读失败, 错误码: " + errCode);
+                        //popupMessage("标记通知消息已读失败, 错误码=" + errCode);
                     }
                 });
-                requestData();
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG) {
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_SUCCESS) {
+                List<Long> markedIdList = (List<Long>)data;
+
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        popupMessage("标记通知消息已读成功！");
+
+                        // 将通知列表中相应的通知标记为已读
+                        int markedCount = markedIdList.size();
+                        int msgCount = mMessages.size();
+                        for (int i = 0; i < markedCount; i++) {
+                            long markedId = markedIdList.get(i);
+
+                            for (int j = 0; j < msgCount; j++) {  // 找到相应的通知，标记为已读
+                                IotDevMessage iotDevMessage = mMessages.get(j);
+                                if (iotDevMessage.mMessageId == markedId) {
+                                    iotDevMessage.mStatus = 1;
+                                    mMessages.set(j, iotDevMessage);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 刷新未读通知数量
+                        refreshUnreadDisplay();
                     }
                 });
             }
+        });
+
+        messageNotifyAdapter.setMRVItemClickListener((view, position, data) -> {
+            IotDevMessage iotDevMessage = (IotDevMessage)data;
+            Log.d(TAG, "<setMRVItemClickListener>");
+            if (position < 0) {
+                return;
+            }
+            if (iotDevMessage.mStatus == 1) {       // 消息已读
+                return;
+            }
+
+            List<Long> msgIdList = new ArrayList<>();
+            msgIdList.add(iotDevMessage.mMessageId);
+            mNotificationViewModel.markNotifyMessage(msgIdList);
 
         });
-        getBinding().btnEdit.setOnClickListener(view -> {
-            changeEditStatus(!messageNotifyAdapter.isEdit);
-        });
-//        getBinding().btnDoDelete.setOnClickListener(view -> {
-//            List<String> deletes = new ArrayList<>();
-//            for (IotDevMessage iotDevMessage : mMessages) {
-//                if (iotNotification.mMarkFlag == 1) {
-//                    deletes.add(iotNotification.mNotificationId);
-//                }
-//            }
-//            messageViewModel.requestDeleteNotifyMgr(deletes);
-//            messageNotifyAdapter.notifyDataSetChanged();
-//            changeEditStatus(false);
-//        });
-//        getBinding().cbAllSelect.setOnCheckedChangeListener((compoundButton, b) -> {
-//            for (IotNotification iotNotification : messageNotifyAdapter.getDatas()) {
-//                if (b) {
-//                    iotNotification.mMarkFlag = 1;
-//                } else {
-//                    iotNotification.mMarkFlag = 0;
-//                }
-//            }
-//            messageNotifyAdapter.notifyDataSetChanged();
-//        });
-    }
 
-    private void changeEditStatus(boolean toEdit) {
-        if (!toEdit) {
-            messageNotifyAdapter.isEdit = false;
-            getBinding().bgBottomDel.setVisibility(View.GONE);
-            getBinding().btnEdit.setText("编辑");
-        } else {
-            messageNotifyAdapter.isEdit = true;
-            getBinding().bgBottomDel.setVisibility(View.VISIBLE);
-            getBinding().btnEdit.setText("完成");
-        }
-        messageNotifyAdapter.notifyDataSetChanged();
+        // 查询所有通知消息
+        mNotificationViewModel.queryAllNotifications();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        messageViewModel.onStart();
+        mNotificationViewModel.onStart();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        messageViewModel.onStop();
+        mNotificationViewModel.onStop();
     }
 
     public boolean onBtnBack() {
         return false;
+    }
+
+
+    void refreshUnreadDisplay() {
+        long unreadedCount = 0;
+        for (IotDevMessage iotDevMessage : mMessages) {
+            if (iotDevMessage.mStatus == 0) {
+                unreadedCount++;
+            }
+        }
+        // 设置所有未读通知的数量
+        if (getActivity() instanceof MessageActivity) {
+            ((MessageActivity)getActivity()).setNotificationCount(unreadedCount);
+            Log.d(TAG, "<refreshUnreadDisplay> unreadedCount=" + unreadedCount);
+        }
     }
 
 }

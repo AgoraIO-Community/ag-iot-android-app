@@ -317,7 +317,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<callDial> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_BAD_STATE;
+            return ErrCode.XERR_ACCOUNT_LOGIN;
         }
         if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
             ALog.getInstance().e(TAG, "<callDial> bad state, Mqtt disconnected");
@@ -344,7 +344,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<callHangup> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_BAD_STATE;
+            return ErrCode.XERR_ACCOUNT_LOGIN;
         }
         int currState = getStateMachine();
         if ((currState == CALLKIT_STATE_IDLE) || (currState == CALLKIT_STATE_HANGUP_REQING)) {
@@ -381,7 +381,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<callAnswer> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_BAD_STATE;
+            return ErrCode.XERR_ACCOUNT_LOGIN;
         }
         if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
             ALog.getInstance().e(TAG, "<callAnswer> bad state, Mqtt disconnected");
@@ -608,6 +608,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
      * @brief 工作线程中运行，发送HTTP呼叫请求
      */
     void DoRequestDial(Message msg) {
+        if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
+            ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
+            return;
+        }
         Object[] callParams = (Object[]) (msg.obj);
         IotDevice iotDevice = (IotDevice)(callParams[0]);
         String attachMsg = (String)(callParams[1]);
@@ -627,6 +631,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             return;
         }
 
+        if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
+            ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status 2, state=" + getStateMachine());
+            return;
+        }
 
         // 更新呼叫上下文数据
         synchronized (mDataLock) {
@@ -658,7 +666,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         int errCode;
-        if ((callkitCtx != null) || (callkitCtx.sessionId != null)) {
+        if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
             // 发送挂断请求
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
             errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
@@ -699,6 +707,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
      * @brief 工作线程中运行，发送HTTP接听请求
      */
     void DoRequestAnswer(Message msg) {
+        if (getStateMachine() != CALLKIT_STATE_ANSWER_REQING) {
+            ALog.getInstance().e(TAG, "<DoRequestAnswer> failure, bad status, state=" + getStateMachine());
+            return;
+        }
+
         CallkitContext callkitCtx;
         synchronized (mDataLock) {
             callkitCtx = mCallkitCtx;
@@ -720,6 +733,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().d(TAG, "<DoRequestAnswer> failure, errCode=" + errCode);
             exceptionProcess();         // 直接退出频道和挂断处理
             CallbackError(errCode);  // 回调错误
+            return;
+        }
+
+        if (getStateMachine() != CALLKIT_STATE_ANSWER_REQING) {
+            ALog.getInstance().e(TAG, "<DoRequestAnswer> failure, bad status 2, state=" + getStateMachine());
             return;
         }
 

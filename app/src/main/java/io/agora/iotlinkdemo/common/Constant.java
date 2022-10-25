@@ -55,7 +55,7 @@ public class Constant {
     public static final String COUNTRY_NAME = "country_name";
 
     /* 每页最大值 */
-    public static final int MAX_RECORD_CNT = 512;
+    public static final int MAX_RECORD_CNT = 4096;
 
     /* 退出流程回调 */
     public static final int CALLBACK_TYPE_EXIT_STEP = -1;
@@ -89,6 +89,10 @@ public class Constant {
     public static final int CALLBACK_TYPE_DEVICE_SHARE_CANCEL_SUCCESS = 22;
     /* 取消分享失败 */
     public static final int CALLBACK_TYPE_DEVICE_SHARE_CANCEL_FAIL = 23;
+    /* 设备查询成功 */
+    public static final int CALLBACK_TYPE_DEVICE_QUERY_SUCCESS = 24;
+    /* 设备查询失败 */
+    public static final int CALLBACK_TYPE_DEVICE_QUERY_FAIL = 25;
 
     /* 设备接收速率 */
     public static final int CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED = 30;
@@ -153,6 +157,12 @@ public class Constant {
     public static final int CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG_FAIL = 217;
     /* 标记通知已读失败 */
     public static final int CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_FAIL = 218;
+    /* 标记通知已读成功 */
+    public static final int CALLBACK_TYPE_MESSAGE_MARK_NOTIFY_MSG_SUCCESS = 219;
+    /* 查询到未读告警消息数量 */
+    public static final int CALLBACK_TYPE_MESSAGE_UNREAD_ALARM_COUNT = 220;
+    /* 查询到未读通知消息数量 */
+    public static final int CALLBACK_TYPE_MESSAGE_UNREAD_NOTIFIY_COUNT = 221;
 
     /* 对方挂断 */
     public static final int CALLBACK_TYPE_PLAYER_CALL_HANG_UP = 300;
@@ -195,6 +205,8 @@ public class Constant {
     public static final int CALLBACK_TYPE_THIRD_LOGIN_DONE = 403;
     /* 第三方账号登出完成 */
     public static final int CALLBACK_TYPE_THIRD_LOGOUT_DONE = 404;
+    /* 第三方账号请求验证码完成 */
+    public static final int CALLBACK_TYPE_THIRD_REQVCODE_DONE = 405;
 
     /* RTM联接完成 */
     public static final int CALLBACK_TYPE_RTM_CONNECT_DONE = 501;

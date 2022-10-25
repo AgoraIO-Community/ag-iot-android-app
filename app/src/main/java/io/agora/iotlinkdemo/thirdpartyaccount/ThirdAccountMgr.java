@@ -65,6 +65,10 @@ public class ThirdAccountMgr {
                                         final String accountName, final String accountId);
     }
 
+    public interface IReqVerifyCodeCallback{
+        void onThirdAccountReqVCodeDone( int errCode, final String errMessage,
+                                         final String phoneNumber);
+    }
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Constant Definition ///////////////////////////
@@ -83,6 +87,7 @@ public class ThirdAccountMgr {
     ///< 服务器请求站点
     private String mThirdBaseUrl = "https://third-user.sh3.agoralab.co/third-party";
     //private String mThirdBaseUrl = "https://third-user.la3.agoralab.co/third-party";  // 针对北美区域
+    //private String mThirdBaseUrl = "https://third-user.sh.agoralab.co/third-party";  // 测试环境
 
     private String mLoginAccountName;       ///< 当前已经登录的账号名称
     private String mLoginAccountId;         ///< 当前已登录账号Id
@@ -106,16 +111,19 @@ public class ThirdAccountMgr {
     class AccountMgrCallable implements Callable<Integer> {
         private String mAccount;
         private String mPassword;
+        private String mVerifyCode;
         private int mOperation;
         private IRegisterCallback mRegCallback;
         private IUnregisterCallback mUnregCallback;
         private ILoginCallback mLoginCallback;
         private IQueryIdCallback mQueryIdCallback;
+        private IReqVerifyCodeCallback mReqVCodeCallback;
 
         public AccountMgrCallable(final String account, final String password,
-                                  IRegisterCallback callback) {
+                                  final String verifyCode, IRegisterCallback callback) {
             mAccount = account;
             mPassword = password;
+            mVerifyCode = verifyCode;
             mOperation = 1;
             mRegCallback = callback;
         }
@@ -142,13 +150,19 @@ public class ThirdAccountMgr {
             mQueryIdCallback = callback;
         }
 
+        public AccountMgrCallable(final String phoneNumber, IReqVerifyCodeCallback callback) {
+            mAccount = phoneNumber;
+            mOperation = 5;
+            mReqVCodeCallback = callback;
+        }
+
         @Override
         public Integer call() {
             int errCode = ErrCode.XOK;
 
             switch (mOperation) {
                 case 1: {
-                    CommonResult result = accountRegister(mAccount, mPassword);
+                    CommonResult result = accountRegister(mAccount, mPassword, mVerifyCode);
                     if (mRegCallback != null) {
                         mRegCallback.onThirdAccountRegisterDone(result.mErrCode, result.mMessage,
                                                                 mAccount, mPassword);
@@ -181,6 +195,15 @@ public class ThirdAccountMgr {
                     }
                     errCode = result.mErrCode;
                 } break;
+
+                case 5: {
+                    CommonResult result = requestVerifyCode(mAccount);
+                    if (mReqVCodeCallback != null) {
+                        mReqVCodeCallback.onThirdAccountReqVCodeDone(result.mErrCode, result.mMessage,
+                                mAccount);
+                    }
+                    errCode = result.mErrCode;
+                } break;
             }
 
             return errCode;
@@ -191,10 +214,13 @@ public class ThirdAccountMgr {
      * @brief 在独立线程中执行第三方用户注册
      * @param accoutName : 要注册的用户账号
      * @param password : 要注册的账号密码
+     * @param verifyCode : 手机验证码
      * @return 错误码
      */
-    public int register(final String accoutName, final String password, IRegisterCallback callback) {
-        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, password, callback));
+    public int register(final String accoutName, final String password,
+                        final String verifyCode, IRegisterCallback callback) {
+        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, password,
+                                    verifyCode, callback));
         return ErrCode.XOK;
     }
 
@@ -226,6 +252,16 @@ public class ThirdAccountMgr {
      */
     public int queryId(final String accoutName, IQueryIdCallback callback) {
         Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, callback));
+        return ErrCode.XOK;
+    }
+
+    /**
+     * @brief 在独立线程中执行 请求手机验证码
+     * @param phoneNumber : 要请求的手机号码
+     * @return 错误码
+     */
+    public int requestPhoneVCode(final String phoneNumber, IReqVerifyCodeCallback callback) {
+        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(phoneNumber, callback));
         return ErrCode.XOK;
     }
 
@@ -278,12 +314,63 @@ public class ThirdAccountMgr {
     }
 
     /**
+     * @brief 请求手机验证码
+     * @param phoneNumber : 请求的手机号
+     * @return 错误码
+     */
+    public CommonResult requestVerifyCode(final String phoneNumber)  {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+        CommonResult result = new CommonResult();
+        Log.d(TAG, "<requestVerifyCode> [Enter] phoneNumber=" + phoneNumber);
+
+        // 请求URL
+        String requestUrl = mThirdBaseUrl + "/sys-verification-code/v1/sendRegisterCode";
+
+        // param内容
+        params.put("mobile", phoneNumber);
+
+        ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                null, params, body);
+        if (responseObj == null) {
+            Log.e(TAG, "<requestVerifyCode> [EXIT] failure with no response!");
+            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return result;
+        }
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            Log.e(TAG, "<requestVerifyCode> [EXIT] failure, mRespCode="
+                    + responseObj.mRespCode);
+            result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
+            result.mMessage = responseObj.mTip;
+            return result;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            Log.e(TAG, "<requestVerifyCode> [EXIT] failure, mErrorCode="
+                    + responseObj.mErrorCode);
+
+            if ((responseObj.mErrorCode == 999) && (responseObj.mTip != null) &&
+                    responseObj.mTip.contains("上一个验证码仍然有效")) {
+                result.mErrCode = ErrCode.XERR_VCODE_VALID;
+            } else {
+                result.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
+            }
+            result.mMessage = responseObj.mTip;
+            return result;
+        }
+
+        Log.d(TAG, "<requestVerifyCode> [EXIT] successful");
+        return result;
+    }
+
+
+    /**
      * @brief 第三方用户注册
      * @param accountName : 要注册的用户账号
      * @param password : 要注册的账号密码
      * @return 错误码
      */
-    public CommonResult accountRegister(final String accountName, final String password)  {
+    public CommonResult accountRegister(final String accountName, final String password,
+                                        final String verifyCode)  {
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
         CommonResult result = new CommonResult();
@@ -297,6 +384,9 @@ public class ThirdAccountMgr {
         try {
             body.put("username", accountName);
             body.put("password", password);
+            if (verifyCode != null) {
+                body.put("verificationCode", verifyCode);
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();

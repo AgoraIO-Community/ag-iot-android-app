@@ -1,5 +1,6 @@
 package io.agora.iotlinkdemo.models.message.adapter;
 
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -45,12 +46,8 @@ public class MessageNotifyAdapter extends BaseAdapter<IotDevMessage> {
         } else {
             holder.setVisible(R.id.cbSelect, View.GONE);
         }
-//        ((AppCompatCheckBox) holder.getView(R.id.cbSelect)).setOnCheckedChangeListener((compoundButton, b) -> {
-//            if (b) {
-//                msgNotification.mMarkFlag = 1;
-//            } else {
-//                msgNotification.mMarkFlag = 0;
-//            }
-//        });
+        holder.setOnItemClickListener(view -> {
+            getMRVItemClickListener().onItemClick(view, position, iotDevMessage);
+        });
     }
 }

@@ -3,6 +3,7 @@ package io.agora.iotlinkdemo.models.device.setting.mydevice;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -97,7 +98,8 @@ public class DeviceSettingActivity extends BaseViewBindingActivity<ActivityDevic
                 Log.e(TAG, "<initListener> NOT get mcu version");
                 return;
             }
-            if (mcuVersion.mIsupgradable && (mcuVersion.mUpgradeId > 0)) {
+            if ((mcuVersion != null) && (mcuVersion.mIsupgradable) &&
+                 (mcuVersion.mUpgradeId > 0) && (!TextUtils.isEmpty(mcuVersion.mUpgradeVersion))) {
                 PagePilotManager.pageDeviceFirmwareUpgrade();
             } else {
                 popupLastVersionDlg(mcuVersion.mCurrVersion);
@@ -162,7 +164,8 @@ public class DeviceSettingActivity extends BaseViewBindingActivity<ActivityDevic
      */
     void updateMcuVersionInfo() {
         IDeviceMgr.McuVersionInfo mcuVersionInfo = AgoraApplication.getInstance().getLivingMcuVersion();
-        if ((mcuVersionInfo != null) && (mcuVersionInfo.mIsupgradable) && (mcuVersionInfo.mUpgradeId > 0)) {
+        if ((mcuVersionInfo != null) && (mcuVersionInfo.mIsupgradable) &&
+                (mcuVersionInfo.mUpgradeId > 0) && (!TextUtils.isEmpty(mcuVersionInfo.mUpgradeVersion)) ) {
             getBinding().tvIsLastVersion.setText("有最新版本: " + mcuVersionInfo.mUpgradeVersion);
             getBinding().ivNeedUpgrade.setVisibility(View.VISIBLE);
         } else {

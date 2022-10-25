@@ -66,8 +66,8 @@ public class MessageActivity extends BaseViewBindingActivity<ActivityMessageBind
         getBinding().tvAlbumCount.post(() -> {
             if (count > 0) {
                 getBinding().tvAlbumCount.setVisibility(View.VISIBLE);
-                if (count > 99) {
-                    getBinding().tvAlbumCount.setText(String.valueOf(99));
+                if (count > 999) {
+                    getBinding().tvAlbumCount.setText(String.valueOf(999));
                 } else {
                     getBinding().tvAlbumCount.setText(String.valueOf(count));
                 }
@@ -83,11 +83,12 @@ public class MessageActivity extends BaseViewBindingActivity<ActivityMessageBind
         getBinding().tvNotificationCount.post(() -> {
             if (count > 0) {
                 getBinding().tvNotificationCount.setVisibility(View.VISIBLE);
-                if (count > 99) {
-                    getBinding().tvNotificationCount.setText(String.valueOf(99));
+                if (count > 999) {
+                    getBinding().tvNotificationCount.setText(String.valueOf(999));
                 } else {
                     getBinding().tvNotificationCount.setText(String.valueOf(count));
                 }
+                getBinding().tvNotificationCount.setText(String.valueOf(count));
             } else {
                 getBinding().tvNotificationCount.setVisibility(View.GONE);
             }

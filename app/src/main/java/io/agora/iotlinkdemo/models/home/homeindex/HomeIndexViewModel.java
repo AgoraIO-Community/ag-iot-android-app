@@ -7,6 +7,7 @@ import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 import io.agora.iotlinkdemo.BuildConfig;
 import io.agora.iotlinkdemo.base.AgoraApplication;
+import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.event.UserLogoutEvent;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.utils.ErrorToastUtils;
@@ -80,7 +81,7 @@ public class HomeIndexViewModel extends BaseViewModel implements IDeviceMgr.ICal
     @Override
     public void onAllDevicesQueryDone(int errCode, List<IotDevice> deviceList) {
         Log.d("cwtsw", "deviceList = " + deviceList);
-        getISingleCallback().onSingleCallback(2, deviceList);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_QUERY_SUCCESS, deviceList);
 //        DevicesListManager.Companion.getINSTANCE().addAllDevice(deviceList);
     }
 
@@ -95,6 +96,11 @@ public class HomeIndexViewModel extends BaseViewModel implements IDeviceMgr.ICal
     public void onDeviceOnOffLine(IotDevice iotDevice, boolean online,
                                   List<IotDevice> bindedDevList) {
         requestDeviceList();
+    }
+
+    public int getCallkitState() {
+        int callkitState = AIotAppSdkFactory.getInstance().getCallkitMgr().getStateMachine();
+        return callkitState;
     }
 
     /**

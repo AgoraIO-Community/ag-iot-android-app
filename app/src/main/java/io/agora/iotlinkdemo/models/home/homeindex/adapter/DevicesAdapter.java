@@ -1,14 +1,18 @@
 package io.agora.iotlinkdemo.models.home.homeindex.adapter;
 
+import android.text.TextUtils;
 import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.content.ContextCompat;
 
 import com.agora.baselibrary.base.BaseAdapter;
 import com.agora.baselibrary.utils.StringUtils;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlink.IotDevice;
+import io.agora.iotlinkdemo.common.GlideApp;
+import io.agora.iotlinkdemo.manager.DevicesListManager;
 
 import java.util.ArrayList;
 
@@ -41,6 +45,13 @@ public class DevicesAdapter extends BaseAdapter<IotDevice> {
         IotDevice device = getDatas().get(position);
         if (!getDatas().get(position).mDeviceID.equals("199")) {
             if (device != null) {
+                // 查询产品图片并显示
+                String smallImgUrl = DevicesListManager.getInstance().getProductSmallImg(device.mProductID);
+                if (!TextUtils.isEmpty(smallImgUrl)) {
+                    GlideApp.with(getMContext()).load(smallImgUrl).placeholder(R.mipmap.img1).
+                            into((AppCompatImageView) holder.getView(R.id.ivDeviceIcon));
+                }
+
                 holder.setText(R.id.tvDeviceName, StringUtils.INSTANCE.getBase64String(device.mDeviceName));
                 holder.itemView.setOnClickListener(view -> getMRVItemClickListener().onItemClick(view, position, device));
                 if (device.mConnected) {

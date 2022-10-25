@@ -66,12 +66,6 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
                 getBinding().btnEdit.performClick();
             } else {
                  messageViewModel.requestAlarmMgrDetailById(data.mAlarmId);
-
-//                // TODO: test query alarm image
-//                messageViewModel.queryAlarmImage(data.mImageId);
-
-//                // TODO: test query alarm video
-//                messageViewModel.queryAlarmVideo(data.mDeviceID, data.mTriggerTime);
             }
         });
         getBinding().calendarView.setMaxDate(System.currentTimeMillis());
@@ -100,20 +94,19 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
             messageAlarmAdapter.notifyDataSetChanged();
         });
         messageViewModel.setISingleCallback((type, data) -> {
-            if (type == Constant.CALLBACK_TYPE_MESSAGE_NOTIFY_COUNT_RESULT) {
-                if (getActivity() instanceof MessageActivity) {
-                    ((MessageActivity) getActivity()).setNotificationCount(((long) data));
-                }
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_COUNT_RESULT) {
-                if (getActivity() instanceof MessageActivity) {
-                    ((MessageActivity) getActivity()).setAlarmCount(((long) data));
-                    messageViewModel.requestNotifyMgrCount();
-                }
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_RESULT) {
-                messageViewModel.requestAlarmMgrCount();
+            if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL) {  // 查询告警消息失败
+                getBinding().rlMsgList.post(() -> {
+                    int errCode = (Integer)data;
+                    hideLoadingView();
+                    popupMessage("查询告警消息失败, 错误码=" + errCode);
+                });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_RESULT) {  // 查询告警消息成功
                 if (data instanceof IotAlarmPage) {
+                    // 刷新当前告警消息列表
                     mMessages.clear();
                     mMessages.addAll(((IotAlarmPage) data).mAlarmList);
+
                     getBinding().rlMsgList.post(() -> {
                         hideLoadingView();
                         messageAlarmAdapter.notifyDataSetChanged();
@@ -128,52 +121,67 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
                         }
                     });
                 }
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT) {
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_UNREAD_NOTIFIY_COUNT) {  // 查询到未读通知数量
+                if (getActivity() instanceof MessageActivity) {
+                    long count = (Long)data;
+                    if (count >= 0) {  // 查询成功时才更新
+                        ((MessageActivity) getActivity()).setNotificationCount(count);
+                    }
+                }
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_UNREAD_ALARM_COUNT) {  // 查询到未读告警消息数量
+                if (getActivity() instanceof MessageActivity) {
+                    long count = (Long)data;
+                    if (count >= 0) { // 查询成功时才更新
+                        ((MessageActivity) getActivity()).setAlarmCount(count);
+                    }
+                }
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT) {  // 单个告警消息查询成功
                 if (data instanceof IotAlarm) {
                     PagePilotManager.pagePlayMessage((IotAlarm) data);
                     if (((IotAlarm) data).mStatus == 0) {
                         List<Long> list = new ArrayList<>();
                         list.add(((IotAlarm) data).mAlarmId);
-                        messageViewModel.markAlarmMessage(list);
+                        messageViewModel.markAlarmMessage(list);  // 标记告警消息已读
                     }
                 }
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int errCode = (Integer)data;
-                        popupMessage("查询告警消息失败, 错误码: " + errCode);
-                    }
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL) {  // 单个告警消息查询失败
+                getBinding().rlMsgList.post(() -> {
+                    hideLoadingView();
+                    int errCode = (Integer) data;
+                    popupMessage("查询告警详情失败, 错误码: " + errCode);
                 });
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_FAIL) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int errCode = (Integer) data;
-                        popupMessage("查询告警详情失败, 错误码: " + errCode);
-                    }
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {  // 告警消息删除成功
+                getBinding().rlMsgList.post(() -> {
+                    hideLoadingView();
+                    popupMessage("删除告警消息成功!");
                 });
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        popupMessage("删除告警消息成功!");
-                    }
-                });
+                // 重新查询当前告警信息
                 requestData();
 
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int errCode = (Integer)data;
-                        popupMessage("删除告警信息失败, 错误码: " + errCode);
-                    }
+                // 重新查询未读告警信息数量
+                messageViewModel.queryUnreadedAlarmCount();
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG_FAIL) {  // 告警消息删除失败
+                getBinding().rlMsgList.post(() -> {
+                    hideLoadingView();
+                    int errCode = (Integer)data;
+                    popupMessage("删除告警信息失败, 错误码=" + errCode);
                 });
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG) {  // 标记已读成功
+                // 重新查询未读告警信息数量
+                messageViewModel.queryUnreadedAlarmCount();
+
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_MARK_ALARM_MSG_FAIL) {  // 标记已读失败
+
             }
+
         });
         getBinding().calendarView.setOnDateChangeListener((calendarView, year, month, dayOfMonth) -> {
             customDate.year = year;
@@ -186,7 +194,19 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         getBinding().btnSelectDate.setOnClickListener(view -> {
             getBinding().selectBg.setVisibility(View.VISIBLE);
         });
+
+        messageViewModel.queryUnreadedAlarmCount();   // 查询所有未读告警消息数量
+        messageViewModel.queryUnreadedNotifyCount();  // 查询所有未读通知数量
     }
+
+    @Override
+    public void requestData() {
+        Log.d(TAG, "<requestData>");
+        showLoadingView();
+        getSelectDate();
+        messageViewModel.queryAlarmsByFilter();       // 查询当天告警消息
+    }
+
 
     /**
      * 删除对话框
@@ -247,12 +267,7 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         messageAlarmAdapter.notifyDataSetChanged();
     }
 
-    @Override
-    public void requestData() {
-        showLoadingView();
-        getSelectDate();
-        messageViewModel.requestAllAlarmMgr();
-    }
+
 
     private void getSelectDate() {
         if (getBinding().btnSelectDate.getText().equals("今天")) {
@@ -261,9 +276,8 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
             customDate.month = calendar.get(Calendar.MONTH) + 1;
             customDate.day = calendar.get(Calendar.DAY_OF_MONTH);
         }
-//        messageViewModel.queryParam.mDeviceId = "686087441870991360";
-        messageViewModel.queryParam.mBeginDate = messageViewModel.beginDateToString(customDate);
-        messageViewModel.queryParam.mEndDate = messageViewModel.endDateToString(customDate);
+        messageViewModel.setQueryBeginDate(customDate);
+        messageViewModel.setQueryEndDate(customDate);
     }
 
     private void showSelectVideoTypeDialog() {
@@ -272,19 +286,19 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
             selectVideoTypeDialog.iSingleCallback = (type, var2) -> {
                 if (type == 1) {
                     getBinding().btnSelectType.setText(getString(R.string.all_type));
-                    messageViewModel.queryParam.mMsgType = -1;
+                    messageViewModel.setQueryMsgType(-1);
                 } else if (type == 2) {
                     getBinding().btnSelectType.setText(getString(R.string.sound_detection));
-                    messageViewModel.queryParam.mMsgType = 0;
+                    messageViewModel.setQueryMsgType(0);
                 } else if (type == 3) {
                     getBinding().btnSelectType.setText(getString(R.string.motion_detection));
-                    messageViewModel.queryParam.mMsgType = 2;
+                    messageViewModel.setQueryMsgType(2);
                 } else if (type == 4) {
                     getBinding().btnSelectType.setText(getString(R.string.human_infrared_detection));
-                    messageViewModel.queryParam.mMsgType = 1;
+                    messageViewModel.setQueryMsgType(1);
                 } else if (type == 5) {
                     getBinding().btnSelectType.setText(getString(R.string.call_button));
-                    messageViewModel.queryParam.mMsgType = 3;
+                    messageViewModel.setQueryMsgType(3);
                 }
                 requestData();
             };
@@ -294,12 +308,14 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
 
     @Override
     public void onStart() {
+        Log.d(TAG, "<onStart>");
         super.onStart();
         messageViewModel.onStart();
     }
 
     @Override
     public void onStop() {
+        Log.d(TAG, "<onStop>");
         super.onStop();
         messageViewModel.onStop();
     }

@@ -31,6 +31,15 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
         public String mErrTips;
     }
 
+    /**
+     * @brief 请求手机验证码结果
+     */
+    public static class ReqVCodeResult {
+        public int mErrCode = ErrCode.XOK;
+        public String mErrTips;
+        public String mPhoneNumber;
+    }
+
 
     private volatile boolean mUnregistering = false;    ///< 是否正在注销
     private volatile boolean mIsListening = false;      ///< 是否已经注册回调监听,确保只注册一次回调监听
@@ -75,8 +84,9 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
      * @param password    : 注册密码
      * @brief 第三方账号注册
      */
-    public void accountRegister(String accountName, String password) {
-        ThirdAccountMgr.getInstance().register(accountName, password, new ThirdAccountMgr.IRegisterCallback() {
+    public void accountRegister(final String accountName, final String password,
+                                final String verifyCode) {
+        ThirdAccountMgr.getInstance().register(accountName, password, verifyCode, new ThirdAccountMgr.IRegisterCallback() {
             @Override
             public void onThirdAccountRegisterDone(int errCode, final String errMessage,
                                                    final String account, final String password) {
@@ -190,5 +200,23 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
         ErrInfo errInfo = new ErrInfo();
         errInfo.mErrCode = errCode;
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_LOGOUT_DONE, errInfo);
+    }
+
+
+    /**
+     * @brief 获取验证码
+     */
+    public void requestVCode(final String phoneNumber) {
+        ThirdAccountMgr.getInstance().requestPhoneVCode(phoneNumber, new ThirdAccountMgr.IReqVerifyCodeCallback() {
+            @Override
+            public void onThirdAccountReqVCodeDone( int errCode, final String errMessage,
+                                                    final String phoneNumber) {
+                ReqVCodeResult reqResult = new ReqVCodeResult();
+                reqResult.mErrCode = errCode;
+                reqResult.mErrTips = errMessage;
+                reqResult.mPhoneNumber = phoneNumber;
+                getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_REQVCODE_DONE, reqResult);
+            }
+        });
     }
 }

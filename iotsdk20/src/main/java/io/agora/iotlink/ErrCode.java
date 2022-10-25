@@ -43,6 +43,7 @@ public class ErrCode {
     public static final int XERR_NOT_AUTHORIZED = -10018;       ///< 未认证
     public static final int XERR_INVOKE_TOO_OFTEN = -10019;     ///< 调用太频繁
     public static final int XERR_MQTT_DISCONNECT = -10020;      ///< MQTT未联接
+    public static final int XERR_VCODE_VALID = -10021;          ///< 上一个验证码依然有效
 
     //
     // 文件操作错误码
