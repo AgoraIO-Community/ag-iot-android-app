@@ -39,11 +39,11 @@ public class ErrCode {
     public static final int XERR_TOKEN_INVALID = -10015;        ///< Token过期
     public static final int XERR_SYSTEM = -10016;               ///< 系统错误
     public static final int XERR_APPID_INVALID = -10017;        ///< AppId不支持
-    public static final int XERR_USERID_INVALID = -10017;       ///< UserId无效
-    public static final int XERR_NOT_AUTHORIZED = -10018;       ///< 未认证
-    public static final int XERR_INVOKE_TOO_OFTEN = -10019;     ///< 调用太频繁
-    public static final int XERR_MQTT_DISCONNECT = -10020;      ///< MQTT未联接
-    public static final int XERR_VCODE_VALID = -10021;          ///< 上一个验证码依然有效
+    public static final int XERR_USERID_INVALID = -10018;       ///< UserId无效
+    public static final int XERR_NOT_AUTHORIZED = -10019;       ///< 未认证
+    public static final int XERR_INVOKE_TOO_OFTEN = -10020;     ///< 调用太频繁
+    public static final int XERR_MQTT_DISCONNECT = -10021;      ///< MQTT未联接
+    public static final int XERR_VCODE_VALID = -10022;          ///< 上一个验证码依然有效
 
     //
     // 文件操作错误码

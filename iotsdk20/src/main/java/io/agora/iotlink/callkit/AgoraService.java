@@ -1,6 +1,8 @@
 package io.agora.iotlink.callkit;
 
 import android.os.Environment;
+import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import io.agora.iotlink.ErrCode;
@@ -14,6 +16,8 @@ import io.agora.iotlink.IotDevMessage;
 import io.agora.iotlink.IotDevMsgPage;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.logger.ALog;
+import io.agora.iotlink.utils.RSAUtils;
+
 import com.amazonaws.http.HttpClient;
 
 import org.json.JSONArray;
@@ -35,6 +39,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -605,8 +610,8 @@ public class AgoraService {
      * @param alarmId : 告警Id
      * @return AlarmInfoResult：包含错误码 和 详细的告警信息
      */
-    public AlarmInfoResult queryAlarmInfoById(final String token,
-                                              final String account, long alarmId)  {
+    public AlarmInfoResult queryAlarmInfoById(final String token, final String account,
+                                              final byte[] rsaPrivateKey, long alarmId)  {
         AlarmInfoResult queryResult = new AlarmInfoResult();
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
@@ -697,7 +702,32 @@ public class AgoraService {
             CloudRecordResult recordResult = queryAlarmRecordInfo(token, account,
                     queryResult.mAlarm.mDeviceID, queryResult.mAlarm.mTriggerTime);
 
-            queryResult.mAlarm.mVideoUrl = recordResult.mAlarmVideo.mVideoUrl;
+            if (!TextUtils.isEmpty(recordResult.mAlarmVideo.mVideoSecret) && (rsaPrivateKey != null)) { // 视频有加密信息
+                // 视频密钥进行Base64转换
+                byte[] videoSecret = Base64.decode(recordResult.mAlarmVideo.mVideoSecret, 0);
+
+                // 利用 RSA私钥对 视频密钥进行解码
+                byte[] videoKey = RSAUtils.privateDecrypt(videoSecret, rsaPrivateKey);
+
+                if (videoKey != null) {
+                    // 解码后的 视频密钥 再转换成 Base64字符串
+                    String agora_key = Base64.encodeToString(videoKey, Base64.NO_WRAP);
+
+                    // 视频源 拼接 视频密钥 Base64的字符串
+                    queryResult.mAlarm.mVideoUrl = recordResult.mAlarmVideo.mVideoUrl + "&agora-key=" + agora_key;
+
+//                ALog.getInstance().d(TAG, "<getAlarmInfoById> mVideoSecret=" + recordResult.mAlarmVideo.mVideoSecret);
+//                ALog.getInstance().d(TAG, "<getAlarmInfoById> videoKey=" + RSAUtils.bytesToString(videoKey));
+//                ALog.getInstance().d(TAG, "<getAlarmInfoById> agora_key=" + agora_key);
+
+                } else {
+                    ALog.getInstance().e(TAG, "<getAlarmInfoById> fail to decode video secret");
+                }
+
+            } else { // 无视频加密，直接使用视频路径进行播放
+                queryResult.mAlarm.mVideoUrl = recordResult.mAlarmVideo.mVideoUrl;
+            }
+
             queryResult.mAlarm.mVideoBeginTime = recordResult.mAlarmVideo.mBeginTime;
             queryResult.mAlarm.mVideoEndTime = recordResult.mAlarmVideo.mEndTime;
         }
@@ -1164,6 +1194,7 @@ public class AgoraService {
             result.mAlarmVideo.mBucket = parseJsonStringValue(dataObj, "bucket", null);
             result.mAlarmVideo.mRemark = parseJsonStringValue(dataObj, "remark", null);
             result.mAlarmVideo.mVideoUrl = parseJsonStringValue(dataObj, "vodUrl", null);
+            result.mAlarmVideo.mVideoSecret = parseJsonStringValue(dataObj, "videoSecretKey", null);
 
             result.mAlarmVideo.mProductID = parseJsonStringValue(dataObj, "productId", null);
             result.mAlarmVideo.mDeviceID = parseJsonStringValue(dataObj, "deviceId", null);

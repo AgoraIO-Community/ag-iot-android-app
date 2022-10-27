@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +18,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.agora.baselibrary.utils.CountDownTimerUtils;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlink.ErrCode;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
 import io.agora.iotlinkdemo.common.Constant;
@@ -35,6 +38,7 @@ import kotlin.jvm.JvmField;
  */
 @Route(path = PagePathConstant.pageInputVCode)
 public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCodeBinding> {
+    private final String TAG = "IOTLINK/InputVCodeAct";
 
     /**
      * 输入的账号
@@ -73,6 +77,26 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
         phoneLoginViewModel.setISingleCallback((var1, var2) -> {
             if (var1 == Constant.CALLBACK_TYPE_EXIT_STEP) {
                 mHealthActivityManager.finishActivityByClass("InputVCodeActivity");
+
+            } else if (var1 == Constant.CALLBACK_TYPE_THIRD_REQVCODE_DONE) {  // 完成验证码请求
+                LoginViewModel.ReqVCodeResult result = (LoginViewModel.ReqVCodeResult)var2;
+                Log.d(TAG, "<initView.ISingleCallback> errCode=" + result.mErrCode
+                        + ", mErrTips=" + result.mErrTips + ", phoneNumber=" + result.mPhoneNumber);
+                hideLoadingView();
+
+                getBinding().tvTitle.post(() -> {
+                    if (result.mErrCode == ErrCode.XOK) {
+                        ToastUtils.INSTANCE.showToast(R.string.vcode_has_send);
+                    } else if (result.mErrCode == ErrCode.XERR_VCODE_VALID) {
+                        ToastUtils.INSTANCE.showToast(result.mErrTips);
+                    } else {
+                        String errTips = getString(R.string.vcode_send_err);
+                        if (!TextUtils.isEmpty(result.mErrTips)) {
+                            errTips = errTips + " " + result.mErrTips;
+                        }
+                        ToastUtils.INSTANCE.showToast(errTips);
+                    }
+                });
             }
         });
         countDownTimerUtils = new CountDownTimerUtils(getBinding().tvTimeCount, 60000, 1000);
@@ -82,8 +106,7 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
     @Override
     public void initListener() {
         getBinding().tvTimeCount.setOnClickListener(view -> {
-            showLoadingView();
-            countDownTimerUtils.start();
+            onBtnRetrieveVCode();
         });
         getBinding().etCode1.setOnFocusChangeListener(editFocusListener);
         getBinding().etCode2.setOnFocusChangeListener(editFocusListener);
@@ -128,6 +151,16 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
         //inputMethodManager.toggleSoftInput(0, InputMethodManager.SHOW_FORCED);
         //inputMethodManager.showSoftInput(getBinding().etCode1, InputMethodManager.SHOW_FORCED);
     }
+
+    /**
+     * @brief 重新获取验证码
+     */
+    private void onBtnRetrieveVCode() {
+        showLoadingView();
+        countDownTimerUtils.start();
+        phoneLoginViewModel.requestVCode(account);
+    }
+
 
     /**
      * 检查是否已输入完毕

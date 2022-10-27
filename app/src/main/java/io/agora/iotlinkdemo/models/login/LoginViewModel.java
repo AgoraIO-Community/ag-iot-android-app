@@ -4,6 +4,7 @@ import static io.agora.iotlink.ErrCode.XOK;
 
 import android.content.Intent;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import com.agora.baselibrary.base.BaseViewModel;
@@ -131,12 +132,16 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
      * @param password    密码
      * @brief 第三方账号登录
      */
-    public void accountLogin(String accountName, String password) {
-
-        ThirdAccountMgr.getInstance().login(accountName, password, new ThirdAccountMgr.ILoginCallback() {
+    public void accountLogin(final String accountName, final String password) {
+        // 生成 RSA密钥对
+        AIotAppSdkFactory.getInstance().getAccountMgr().generateRsaKeyPair();
+        byte[] publickKeyData = AIotAppSdkFactory.getInstance().getAccountMgr().getRsaPublickKey();
+        String rsaPublicKey =  Base64.encodeToString(publickKeyData, Base64.NO_WRAP);
+        ThirdAccountMgr.getInstance().login(accountName, password, rsaPublicKey, new ThirdAccountMgr.ILoginCallback() {
             @Override
             public void onThirdAccountLoginDone(int errCode, final String errMessage,
                                                 final String account, final String password,
+                                                final String rsaPublicKey,
                                                 final IAccountMgr.LoginParam loginParam) {
                 ErrInfo errInfo = new ErrInfo();
                 errInfo.mErrCode = errCode;

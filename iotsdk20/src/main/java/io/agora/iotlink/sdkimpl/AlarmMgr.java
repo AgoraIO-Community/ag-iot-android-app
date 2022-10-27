@@ -195,8 +195,10 @@ public class AlarmMgr implements IAlarmMgr {
                     return;
                 }
 
+                AccountMgr accountMgr = (AccountMgr)mSdkInstance.getAccountMgr();
+                byte[] rsaPrivateKey = accountMgr.getRsaPrivateKey();
                 AgoraService.AlarmInfoResult infoResult = AgoraService.getInstance().queryAlarmInfoById(
-                        account.mAgoraAccessToken, account.mInventDeviceName, alarmId);
+                        account.mAgoraAccessToken, account.mInventDeviceName, rsaPrivateKey, alarmId);
                 ALog.getInstance().d(TAG, "<queryById> done, errCode=" + infoResult.mErrCode
                         + ", iotAlarm=" + infoResult.mAlarm.toString());
                 CallbackQueryInfoDone(infoResult.mErrCode, infoResult.mAlarm);

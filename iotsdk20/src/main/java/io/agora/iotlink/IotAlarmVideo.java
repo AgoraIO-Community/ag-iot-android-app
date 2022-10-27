@@ -42,7 +42,8 @@ public class IotAlarmVideo {
     public long mBeginTime;     ///< 录像开始时间戳
     public long mEndTime;       ///< 录像结束时间戳
     public String mFileName;    ///< 录像文件名（包括前面的目录）
-    public String mVideoUrl;      ///< 录像文件路径URL，已经包含签名了
+    public String mVideoUrl;    ///< 录像文件路径URL，已经包含签名了
+    public String mVideoSecret; ///< 视频加密信息
     public String mBucket;      ///< 图片文件存储桶
     public String mRemark;      ///< 备注
 
@@ -56,7 +57,7 @@ public class IotAlarmVideo {
                 + ", mAccountId=" + mAccountId +  ", mProductID=" + mProductID
                 + ", mDeviceID=" + mDeviceID + ", mDeviceName=" + mDeviceName
                 + ", mBeginTime=" + mBeginTime + ", mEndTime=" + mEndTime
-                + ", mFileName=" + mFileName + ", mVideoUrl=" + mVideoUrl
+                + ", mFileName=" + mFileName + ", mVideoUrl=" + mVideoUrl + ", mVideoSecret=" + mVideoSecret
                 + ", mBucket=" + mBucket + ", mRemark=" + mRemark
                 + ", mDeleted=" + mDeleted + ", mCreatedBy=" + mCreatedBy
                 + ", mCreateTime=" + mCreateTime + " }";

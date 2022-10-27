@@ -140,7 +140,14 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
 
             } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT) {  // 单个告警消息查询成功
                 if (data instanceof IotAlarm) {
-                    PagePilotManager.pagePlayMessage((IotAlarm) data);
+                    if (((IotAlarm) data).mVideoUrl == null) {
+                        getBinding().rlMsgList.post(() -> {
+                            popupMessage("没有告警云录视频!");
+                        });
+
+                    } else {
+                        PagePilotManager.pagePlayMessage((IotAlarm) data);
+                    }
                     if (((IotAlarm) data).mStatus == 0) {
                         List<Long> list = new ArrayList<>();
                         list.add(((IotAlarm) data).mAlarmId);

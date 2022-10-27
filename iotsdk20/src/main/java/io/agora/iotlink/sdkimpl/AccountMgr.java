@@ -22,7 +22,10 @@ import io.agora.iotlink.aws.AWSUtils;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.logger.ALog;
 import io.agora.iotlink.lowservice.AgoraLowService;
+import io.agora.iotlink.utils.RSAUtils;
+
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -107,6 +110,8 @@ public class AccountMgr implements IAccountMgr {
     private volatile int mStateMachine = ACCOUNT_STATE_IDLE;    ///< 当前账号系统状态机
     private AccountInfo mLocalAccount;                          ///< 当前已经登录账号, null表示未登录
 
+    private byte[] mRsaPublicKey = null;                        ///< RSA的公钥
+    private byte[] mRsaPrivateKey = null;                       ///< RSA的私钥
 
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////// Public Methods  ////////////////////////////
@@ -206,6 +211,18 @@ public class AccountMgr implements IAccountMgr {
     }
 
     @Override
+    public void generateRsaKeyPair() {
+        Map<String, byte[]> keyPair = RSAUtils.generateKeyPair();
+        mRsaPublicKey = keyPair.get("public");
+        mRsaPrivateKey = keyPair.get("private");
+    }
+
+    @Override
+    public byte[] getRsaPublickKey() {
+        return mRsaPublicKey;
+    }
+
+    @Override
     public int login(final LoginParam loginParam) {
         if (getStateMachine() != ACCOUNT_STATE_IDLE) {
             ALog.getInstance().e(TAG, "<login> bad state, mStateMachine=" + mStateMachine);
@@ -278,6 +295,14 @@ public class AccountMgr implements IAccountMgr {
         synchronized (mDataLock) {
             return mLocalAccount;
         }
+    }
+
+    /**
+     * @brief 获取生成的私钥
+     * @return 返回私钥
+     */
+    byte[] getRsaPrivateKey() {
+        return mRsaPrivateKey;
     }
 
 

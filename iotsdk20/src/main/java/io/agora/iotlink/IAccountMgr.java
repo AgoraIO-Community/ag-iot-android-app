@@ -143,6 +143,18 @@ public interface IAccountMgr  {
      */
     int unregisterListener(IAccountMgr.ICallback callback);
 
+    /*
+     * @brief 生成密钥对
+     *
+     */
+    void generateRsaKeyPair();
+
+    /*
+     * @brief 获取生成的公钥，至少要调用一次 generateRsaKeyPair() 之后才会有
+     * @param
+     */
+    byte[] getRsaPublickKey();
+
 
     /**
      * @brief 通过第三方登录参数来进行登录，这种登录方式不需要进行注册

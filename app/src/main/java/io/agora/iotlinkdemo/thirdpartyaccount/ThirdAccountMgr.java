@@ -37,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAccountMgr;
+import io.agora.iotlink.utils.RSAUtils;
 
 
 public class ThirdAccountMgr {
@@ -57,6 +58,7 @@ public class ThirdAccountMgr {
     public interface ILoginCallback{
         void onThirdAccountLoginDone(int errCode, final String errMessage,
                                      final String account, final String password,
+                                     final String rsaPublicKey,
                                      final IAccountMgr.LoginParam loginParam);
     }
 
@@ -112,6 +114,7 @@ public class ThirdAccountMgr {
         private String mAccount;
         private String mPassword;
         private String mVerifyCode;
+        private String mRsaPublicKey;
         private int mOperation;
         private IRegisterCallback mRegCallback;
         private IUnregisterCallback mUnregCallback;
@@ -137,9 +140,10 @@ public class ThirdAccountMgr {
         }
 
         public AccountMgrCallable(final String account, final String password,
-                                  ILoginCallback callback) {
+                                  final String rsaPublicKey, ILoginCallback callback) {
             mAccount = account;
             mPassword = password;
+            mRsaPublicKey = rsaPublicKey;
             mOperation = 3;
             mLoginCallback = callback;
         }
@@ -178,10 +182,10 @@ public class ThirdAccountMgr {
                 } break;
 
                 case 3: {
-                    LoginResult result = accountLogin(mAccount, mPassword);
+                    LoginResult result = accountLogin(mAccount, mPassword, mRsaPublicKey);
                     if (mLoginCallback != null) {
                         mLoginCallback.onThirdAccountLoginDone(result.mErrCode, result.mMessage,
-                                                                mAccount, mPassword,
+                                                                mAccount, mPassword, mRsaPublicKey,
                                                                 result.mLoginParam);
                     }
                     errCode = result.mErrCode;
@@ -240,8 +244,9 @@ public class ThirdAccountMgr {
      * @param password : 要注册的账号密码
      * @return 错误码
      */
-    public int login(final String accoutName, final String password, ILoginCallback callback) {
-        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, password, callback));
+    public int login(final String accoutName, final String password,
+                     final String rsaPublicKey, ILoginCallback callback) {
+        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, password, rsaPublicKey, callback));
         return ErrCode.XOK;
     }
 
@@ -340,20 +345,20 @@ public class ThirdAccountMgr {
         if (responseObj.mRespCode != ErrCode.XOK) {
             Log.e(TAG, "<requestVerifyCode> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
-            result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
+            if ((responseObj.mRespCode == 9999) && (responseObj.mTip != null) &&
+                    responseObj.mTip.contains("上一个验证码仍然有效")) {
+                result.mErrCode = ErrCode.XERR_VCODE_VALID;
+            } else {
+                result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
+            }
+
             result.mMessage = responseObj.mTip;
             return result;
         }
         if (responseObj.mErrorCode != ErrCode.XOK) {
             Log.e(TAG, "<requestVerifyCode> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
-
-            if ((responseObj.mErrorCode == 999) && (responseObj.mTip != null) &&
-                    responseObj.mTip.contains("上一个验证码仍然有效")) {
-                result.mErrCode = ErrCode.XERR_VCODE_VALID;
-            } else {
-                result.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
-            }
+            result.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
             result.mMessage = responseObj.mTip;
             return result;
         }
@@ -480,12 +485,13 @@ public class ThirdAccountMgr {
      * @return 返回登录的信息
      */
     public LoginResult accountLogin(final String accountName,
-                                    final String password)  {
+                                    final String password,
+                                    final String rsaPublicKey   )  {
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
         LoginResult result = new LoginResult();
         Log.d(TAG, "<accountLogin> [Enter] accoutName=" + accountName
-                + ", password=" + password);
+                + ", password=" + password + ", rsaPublicKey=" + rsaPublicKey);
 
         // 请求URL
         String requestUrl = mThirdBaseUrl + "/auth/login";
@@ -494,6 +500,9 @@ public class ThirdAccountMgr {
         try {
             body.put("username", accountName);
             body.put("password", password);
+            if (!TextUtils.isEmpty(rsaPublicKey)) {
+                body.put("publicKey", rsaPublicKey);
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();
