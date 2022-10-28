@@ -143,18 +143,18 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
         });
 
         getBinding().btnRegister.setOnClickListener(view -> {
-            if (!checkAccount2Pwd()) {
-                popupMessage("注册失败，账号或密码无效!");
-                return;
-            }
-            showLoadingView();
-            String account = getBinding().etAccounts.getText().toString();
-            String password = getBinding().etPwd.getText().toString();
-            phoneLoginViewModel.accountRegister(account, password, null);
-            SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, account);
-            SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, password);
+//            if (!checkAccount2Pwd()) {
+//                popupMessage("注册失败，账号或密码无效!");
+//                return;
+//            }
+//            showLoadingView();
+//            String account = getBinding().etAccounts.getText().toString();
+//            String password = getBinding().etPwd.getText().toString();
+//            phoneLoginViewModel.accountRegister(account, password, null);
+//            SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, account);
+//            SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, password);
 
-//            PagePilotManager.pagePhoneRegister();
+            PagePilotManager.pagePhoneRegister();
         });
 
         getBinding().iBtnClear.setOnClickListener(view -> {

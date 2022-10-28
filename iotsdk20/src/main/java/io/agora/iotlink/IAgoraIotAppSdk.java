@@ -28,9 +28,6 @@ public interface IAgoraIotAppSdk  {
     public static final int SDK_STATE_READY = 0x0001;               ///< SDK初始化完成，但还未登录
     public static final int SDK_STATE_LOGINING = 0x0002;            ///< SDK正在登录用户账号
     public static final int SDK_STATE_LOGOUTING = 0x0003;           ///< SDK正在登出用户账号
-    public static final int SDK_STATE_USRINFO_QUERYING = 0x0004;    ///< SDK正常查询用户信息
-    public static final int SDK_STATE_USRINFO_UPDATING = 0x0005;    ///< SDK正在更新用户信息
-    public static final int SDK_STATE_UPLOADING_PORTRAIT = 0x0006;  ///< SDK正在上传用户头像
     public static final int SDK_STATE_RUNNING = 0x0007;             ///< SDK已经登录用户账号，可以正常操作
 
 

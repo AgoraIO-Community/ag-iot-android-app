@@ -9,6 +9,7 @@ import android.os.Message;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 
 import androidx.annotation.NonNull;
@@ -32,6 +33,7 @@ import io.agora.iotlinkdemo.models.home.MainActivity;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlinkdemo.models.login.ui.PhoneLoginActivity;
+
 
 public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBinding> {
     private static final String TAG = "LINK/WelcomeAct";
@@ -65,7 +67,7 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     private Handler mMsgHandler = null;                 ///< 主线程中的消息处理
     private int mUiState = UI_STATE_IDLE;               ///< 当前UI处理状态机
     private boolean mOverlyWndSetted = false;           ///< 是否已经显示过悬浮窗设置
-
+    private boolean mUserAgreePrivacy = true;           ///< 用户同意隐私协议
 
 
 
@@ -159,6 +161,18 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
         }
     }
 
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (!mUserAgreePrivacy) {
+                Log.d(TAG, "<onKeyDown> Exit application");
+                mHealthActivityManager.popAllActivity();
+                System.exit(0);  // 直接退出应用
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
     ////////////////////////////////////////////////////////////////////
     ////////////////// Methods for Engine Initialize ///////////////////
@@ -209,8 +223,7 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
                 @Override
                 public void onLeftButtonClick() {   // 不同意
                     userAgreementDialog.dismiss();
-                    mHealthActivityManager.popAllActivity();
-                    System.exit(0);  // 直接退出应用
+                    mUserAgreePrivacy = false;  // 用户不同意隐私协议
                 }
 
                 @Override
