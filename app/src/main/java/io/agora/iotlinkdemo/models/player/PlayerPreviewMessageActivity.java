@@ -2,6 +2,7 @@ package io.agora.iotlinkdemo.models.player;
 
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,12 +19,17 @@ import com.agora.baselibrary.utils.ScreenUtils;
 import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 import io.agora.iotlinkdemo.R;
+import io.agora.iotlinkdemo.base.PermissionHandler;
+import io.agora.iotlinkdemo.base.PermissionItem;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.databinding.ActivityPlayerMessageBinding;
 import io.agora.iotlinkdemo.dialog.DeleteMediaTipDialog;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.message.MessageViewModel;
+import io.agora.iotlinkdemo.models.player.adapter.ViewPagerAdapter;
+import io.agora.iotlinkdemo.models.player.living.PlayerFunctionListFragment;
+import io.agora.iotlinkdemo.models.player.living.PlayerMessageListFragment;
 import io.agora.iotlinkdemo.utils.FileUtils;
 import com.alibaba.android.arouter.facade.annotation.Autowired;
 import com.alibaba.android.arouter.facade.annotation.Route;
@@ -38,11 +44,15 @@ import kotlin.jvm.JvmField;
  * 消息播放页
  */
 @Route(path = PagePathConstant.pagePlayMessage)
-public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<ActivityPlayerMessageBinding> {
+public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<ActivityPlayerMessageBinding>
+        implements PermissionHandler.ICallback {
+    private final String TAG = "IOTLINK/PlayPrevMsgAct";
+
     /**
      * 消息ViewModel
      */
     private MessageViewModel messageViewModel;
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
 
     @JvmField
     @Autowired(name = Constant.FILE_URL)
@@ -133,16 +143,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
             isPlaying = !isPlaying;
         });
         getBinding().ivClip.setOnClickListener(view -> {
-            getBinding().gsyPlayer.taskShotPic(bitmap -> {
-                getBinding().ivCover.setImageBitmap(bitmap);
-                boolean ret = FileUtils.saveScreenshotToSD(bitmap,
-                        FileUtils.getFileSavePath(String.valueOf(System.currentTimeMillis()), true));
-                if (ret) {
-                    showSaveTip(false);
-                } else {
-                    ToastUtils.INSTANCE.showToast("保存截图失败");
-                }
-            });
+            onBtnScreenshot();
         });
         getBinding().cbChangeSound.setOnCheckedChangeListener((compoundButton, b) -> {
             getBinding().gsyPlayer.setMute(!b);
@@ -229,6 +230,63 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         }
         mIsOrientLandscape = !mIsOrientLandscape;
         getBinding().gsyPlayer.setLayoutParams(lp);
+    }
+
+    /**
+     * @brief 播放视频帧截图保存
+     *
+     */
+    private void onBtnScreenshot() {
+        //
+        // 截图写存储 权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+        mPermHandler = new PermissionHandler(this, this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
+            mPermHandler.requestNextPermission();
+        } else {
+            Log.d(TAG, "<onBtnScreenshot> permission ready");
+            captureFrame();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        Log.d(TAG, "<onFragRequestPermissionsResult> requestCode=" + requestCode);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (permItems[0].requestId == PermissionHandler.PERM_ID_WRITE_STORAGE) {  // 截图权限
+            if (allGranted) {
+                captureFrame();
+            } else {
+                popupMessage(getString(R.string.no_permission));
+            }
+        }
+    }
+
+    private void captureFrame() {
+        getBinding().gsyPlayer.taskShotPic(bitmap -> {
+            getBinding().ivCover.setImageBitmap(bitmap);
+            boolean ret = FileUtils.saveScreenshotToSD(bitmap,
+                    FileUtils.getFileSavePath(String.valueOf(System.currentTimeMillis()), true));
+            if (ret) {
+                showSaveTip(false);
+            } else {
+                ToastUtils.INSTANCE.showToast("保存截图失败");
+            }
+        });
     }
 
     /**

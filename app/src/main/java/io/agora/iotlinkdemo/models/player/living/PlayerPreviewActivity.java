@@ -182,11 +182,18 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
         Log.d(TAG, "<onRequestPermissionsResult> requestCode=" + requestCode);
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (getBinding().viewPager.getCurrentItem() == 0) {
+        int currentItem = getBinding().viewPager.getCurrentItem();
+        if (currentItem == 0) {
             PlayerFunctionListFragment devPlayerFrag;
             devPlayerFrag = ((PlayerFunctionListFragment)((ViewPagerAdapter) getBinding().viewPager.getAdapter()).registeredFragments.get(0));
             if (devPlayerFrag != null) {
                 devPlayerFrag.onFragRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
+        } else if (currentItem == 1) {
+            PlayerMessageListFragment devMsgFrag;
+            devMsgFrag = ((PlayerMessageListFragment)((ViewPagerAdapter) getBinding().viewPager.getAdapter()).registeredFragments.get(1));
+            if (devMsgFrag != null) {
+                devMsgFrag.onFragRequestPermissionsResult(requestCode, permissions, grantResults);
             }
         }
     }

@@ -2,6 +2,7 @@ package io.agora.iotlinkdemo.models.player.living;
 
 import android.annotation.SuppressLint;
 import android.content.pm.ActivityInfo;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,8 @@ import com.agora.baselibrary.utils.StringUtils;
 import com.agora.baselibrary.utils.ToastUtils;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.base.AgoraApplication;
+import io.agora.iotlinkdemo.base.PermissionHandler;
+import io.agora.iotlinkdemo.base.PermissionItem;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.databinding.FagmentPlayerMessageBinding;
 import io.agora.iotlinkdemo.dialog.DeleteMediaTipDialog;
@@ -42,8 +45,9 @@ import java.util.List;
  * 播放页功能列表
  */
 @Route(path = PagePathConstant.pagePlayerMessage)
-public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlayerMessageBinding> {
-
+public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlayerMessageBinding>
+        implements PermissionHandler.ICallback {
+    private final String TAG = "IOTLINK/PlayMsgFrag";
     /**
      * 消息ViewModel
      */
@@ -79,6 +83,8 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     private boolean isPlaying = false;
 
     private LinearLayoutManager linearLayoutManager;
+
+    private PermissionHandler mPermHandler;             ///< 权限申请处理
 
     @NonNull
     @Override
@@ -250,8 +256,8 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
         getBinding().saveBg.setOnClickListener(view -> PagePilotManager.pageAlbum());
 
-        getBinding().ivClip.setOnClickListener(view -> saveShot());
-        getBinding().ivClipFull.setOnClickListener(view -> saveShot());
+        getBinding().ivClip.setOnClickListener(view -> onBtnScreenshot());
+        getBinding().ivClipFull.setOnClickListener(view -> onBtnScreenshot());
 
         getBinding().ivDelete.setOnClickListener(view -> {
             isDeleteCurrent = true;
@@ -288,9 +294,6 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         });
         getBinding().btnSelectType.setOnClickListener(view -> {
             showSelectVideoTypeDialog();
-        });
-        getBinding().ivClip.setOnClickListener(view -> {
-            showSaveTip(false);
         });
         getBinding().ivChangeScreen.setOnClickListener(view -> onBtnLandscape());
         getBinding().ivBack.setOnClickListener(view -> onBtnLandscape());
@@ -439,6 +442,47 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         }
         isPlaying = !isPlaying;
     }
+
+    /**
+     * @brief 云录播放视频帧截图
+     */
+    private void onBtnScreenshot() {
+        //
+        // 截图写存储 权限判断处理
+        //
+        int[] permIdArray = new int[1];
+        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+        if (!mPermHandler.isAllPermissionGranted()) {
+            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
+            mPermHandler.requestNextPermission();
+        } else {
+            Log.d(TAG, "<onBtnScreenshot> permission ready");
+            saveShot();
+        }
+    }
+
+    public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                               @NonNull int[] grantResults) {
+        Log.d(TAG, "<onFragRequestPermissionsResult> requestCode=" + requestCode);
+        if (mPermHandler != null) {
+            mPermHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onAllPermisonReqDone(boolean allGranted, final PermissionItem[] permItems) {
+        Log.d(TAG, "<onAllPermisonReqDone> allGranted = " + allGranted);
+
+        if (permItems[0].requestId == PermissionHandler.PERM_ID_WRITE_STORAGE) {  // 截图权限
+            if (allGranted) {
+                saveShot();
+            } else {
+                popupMessage(getString(R.string.no_permission));
+            }
+        }
+    }
+
 
     private void saveShot() {
         getBinding().gsyPlayer.taskShotPic(bitmap -> {
