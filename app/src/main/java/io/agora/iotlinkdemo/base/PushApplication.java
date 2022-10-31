@@ -22,7 +22,7 @@ import android.util.Log;
 import com.agora.baselibrary.base.BaseApplication;
 //import io.agora.iotlinkdemo.huanxin.EmAgent;
 import io.agora.iotlink.IDeviceMgr;
-import io.agora.iotlinkdemo.huanxin.EmAgent;
+//import io.agora.iotlinkdemo.huanxin.EmAgent;
 import io.agora.iotlinkdemo.utils.AppStorageUtil;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.IAgoraIotAppSdk;

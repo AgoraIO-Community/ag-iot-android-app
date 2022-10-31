@@ -99,14 +99,14 @@ dependencies {
 
     // 各手机厂商离线推送SDK
     //implementation(name: 'oppo_push_v2.1.0', ext: 'aar')
-    implementation 'com.huawei.hms:push:4.0.2.300'
-    implementation files('libs/mi_push_v3.6.12.jar')
-    implementation files('libs/vivo_push_v2.3.1.jar')
-    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信
+//    implementation 'com.huawei.hms:push:4.0.2.300'
+//    implementation files('libs/mi_push_v3.6.12.jar')
+//    implementation files('libs/vivo_push_v2.3.1.jar')
+//    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信
 
-    // Google firebase 离线推送
-    implementation 'com.google.android.gms:play-services-base:18.1.0'
-    implementation 'com.google.firebase:firebase-messaging:23.0.6'
+//    // Google firebase 离线推送
+//    implementation 'com.google.android.gms:play-services-base:18.1.0'
+//    implementation 'com.google.firebase:firebase-messaging:23.0.6'
 
 
     // IJK播放器
