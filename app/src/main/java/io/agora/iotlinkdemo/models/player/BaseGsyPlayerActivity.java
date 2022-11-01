@@ -1,6 +1,7 @@
 package io.agora.iotlinkdemo.models.player;
 
 import android.content.res.Configuration;
+import android.util.Log;
 import android.view.View;
 
 import androidx.viewbinding.ViewBinding;
@@ -12,6 +13,7 @@ import com.shuyu.gsyvideoplayer.listener.GSYSampleCallBack;
 import com.shuyu.gsyvideoplayer.utils.OrientationUtils;
 
 public abstract class BaseGsyPlayerActivity<T extends ViewBinding> extends BaseViewBindingActivity<T> {
+    private final String TAG = "IOTLINK/BasePlayerAct";
 
     private CustomStandardGSYVideoPlayer gsyPlayer;
     private final GSYVideoOptionBuilder mGsyVideoOption = new GSYVideoOptionBuilder();
@@ -49,7 +51,7 @@ public abstract class BaseGsyPlayerActivity<T extends ViewBinding> extends BaseV
                 .setIsTouchWiget(true)
                 .setRotateViewAuto(false)
                 .setLockLand(false)
-                .setLooping(true)
+                .setLooping(false)
                 .setAutoFullWithSize(true)
                 .setShowFullAnimation(false)
                 .setNeedLockFull(true)
@@ -60,6 +62,7 @@ public abstract class BaseGsyPlayerActivity<T extends ViewBinding> extends BaseV
                         super.onPrepared(url, objects);
                         //开始播放了才能旋转和全屏
                         orientationUtils.setEnable(true);
+                        onPlayerPrepared(url);
                     }
 
                     @Override
@@ -69,6 +72,17 @@ public abstract class BaseGsyPlayerActivity<T extends ViewBinding> extends BaseV
                             orientationUtils.backToProtVideo();
                         }
                     }
+
+                    @Override
+                    public void onAutoComplete(String url, Object... objects) {
+                        onPlayerAutoComplete(url);
+                    }
+
+                    @Override
+                    public void onComplete(String url, Object... objects) {
+                        onPlayerComplete(url);
+                    }
+
                 }).setLockClickListener((view, lock) -> {
             if (orientationUtils != null) {
                 //配合下方的onConfigurationChanged
@@ -128,5 +142,17 @@ public abstract class BaseGsyPlayerActivity<T extends ViewBinding> extends BaseV
         gsyPlayer.getCurrentPlayer().release();
         if (orientationUtils != null)
             orientationUtils.releaseListener();
+    }
+
+    protected void onPlayerPrepared(final String url) {
+        Log.d(TAG, "<onPlayerPrepared> url=" + url);
+    }
+
+    protected void onPlayerAutoComplete(final String url) {
+        Log.d(TAG, "<onPlayerAutoComplete> url=" + url);
+    }
+
+    protected void onPlayerComplete(final String url) {
+        Log.d(TAG, "<onPlayerComplete> url=" + url);
     }
 }

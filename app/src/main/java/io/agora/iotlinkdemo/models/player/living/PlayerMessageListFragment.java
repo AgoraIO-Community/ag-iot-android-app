@@ -178,7 +178,16 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
                 if (data instanceof IotAlarm) {
                     currentIotAlarm = (IotAlarm) data;
                     setGsyPlayerInfo(((IotAlarm) data).mVideoUrl, "");
+
+                    boolean muted;
+                    if (mIsOrientLandscape) {
+                        muted = !(getBinding().cbChangeSoundFull.isChecked());
+                    } else {
+                        muted = !(getBinding().cbChangeSound.isChecked());
+                    }
+                    getBinding().gsyPlayer.setMute(muted);
                     getBinding().gsyPlayer.startPlay();
+
                     getBinding().ivPlaying.post(() -> {
                         getBinding().ivPlaying.setSelected(true);
                         if (previewMessageAdapter.oldPlayPosition == -1) {
@@ -633,5 +642,38 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     public void onStop() {
         super.onStop();
         messageViewModel.onStop();
+    }
+
+
+    @Override
+    protected void onPlayerPrepared(final String url) {
+        Log.d(TAG, "<onPlayerPrepared> url=" + url);
+    }
+
+    @Override
+    protected void onPlayerAutoComplete(final String url) {
+        Log.d(TAG, "<onPlayerAutoComplete> url=" + url);
+        getBinding().gsyPlayer.post(() -> {
+            onMsgPlayerCompleted();
+        });
+    }
+
+    @Override
+    protected void onPlayerComplete(final String url) {
+        Log.d(TAG, "<onPlayerComplete> url=" + url);
+    }
+
+    /**
+     * @brief 播放完成事件
+     */
+    private void onMsgPlayerCompleted() {
+        Log.d(TAG, "<onMsgPlayerCompleted> ");
+
+        if (mIsOrientLandscape) {
+            // 退出全屏显示
+            getBinding().gsyPlayer.onBackFullscreen();
+            onBtnLandscape();
+        }
+
     }
 }

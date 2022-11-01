@@ -3,6 +3,7 @@ package io.agora.iotlinkdemo.models.player;
 import android.content.Context;
 import android.media.AudioManager;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import com.agora.baselibrary.listener.ISingleCallback;
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
@@ -10,6 +11,8 @@ import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
 import io.agora.iotlinkdemo.common.Constant;
 
 public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
+    private static final String TAG = "LINK/CustStdGsyVP";
+
     public ISingleCallback<Integer, Object> iSingleCallback;
 
     public CustomStandardGSYVideoPlayer(Context context, Boolean fullFlag) {
@@ -30,7 +33,6 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
     private void initView() {
         hideAllWidget();
         setViewShowState(mBottomProgressBar, GONE);
-        setMute(true);
 //        mBrightnessDialogTv.setVisibility(View.GONE);
 //        mDialogSeekTime.setVisibility(View.GONE);
 //        mDialogTotalTime.setVisibility(View.GONE);
@@ -86,6 +88,9 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
 
     @Override
     protected void setProgressAndTime(long progress, long secProgress, long currentTime, long totalTime, boolean forceChange) {
+//        Log.d(TAG, "<setProgressAndTime> progress=" + progress
+//                + ", secProgress=" + secProgress + ", currentTime=" + currentTime
+//                + ", totalTime=" + totalTime + ", forceChange=" + forceChange);
         if (iSingleCallback != null) {
             iSingleCallback.onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_CURRENT_PROGRESS, progress);
             iSingleCallback.onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_SEC_PROGRESS, secProgress);
@@ -106,4 +111,5 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
     public void pausePlay() {
         getGSYVideoManager().pause();
     }
+
 }

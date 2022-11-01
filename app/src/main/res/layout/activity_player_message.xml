@@ -21,7 +21,7 @@
         android:layout_marginEnd="21dp"
         android:background="@null"
         android:button="@drawable/bg_player_function_mute"
-        android:checked="false"
+        android:checked="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title_view" />
 

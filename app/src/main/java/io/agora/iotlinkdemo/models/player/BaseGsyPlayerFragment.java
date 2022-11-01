@@ -2,6 +2,7 @@ package io.agora.iotlinkdemo.models.player;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.shuyu.gsyvideoplayer.utils.OrientationUtils;
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
 
 public abstract class BaseGsyPlayerFragment<T extends ViewBinding> extends BaseViewBindingFragment<T> {
+    private final String TAG = "IOTLINK/BasePlayerFrag";
 
     private StandardGSYVideoPlayer gsyPlayer;
     private final GSYVideoOptionBuilder mGsyVideoOption = new GSYVideoOptionBuilder();
@@ -57,7 +59,7 @@ public abstract class BaseGsyPlayerFragment<T extends ViewBinding> extends BaseV
         mGsyVideoOption.setThumbImageView(null)
                 .setIsTouchWiget(true)
                 .setRotateViewAuto(false)
-                .setLooping(true)
+                .setLooping(false)
                 .setLockLand(false)
                 .setAutoFullWithSize(true)
                 .setShowFullAnimation(false)
@@ -69,6 +71,7 @@ public abstract class BaseGsyPlayerFragment<T extends ViewBinding> extends BaseV
                         super.onPrepared(url, objects);
                         //开始播放了才能旋转和全屏
                         orientationUtils.setEnable(true);
+                        onPlayerPrepared(url);
                     }
 
                     @Override
@@ -78,6 +81,17 @@ public abstract class BaseGsyPlayerFragment<T extends ViewBinding> extends BaseV
                             orientationUtils.backToProtVideo();
                         }
                     }
+
+                    @Override
+                    public void onAutoComplete(String url, Object... objects) {
+                        onPlayerAutoComplete(url);
+                    }
+
+                    @Override
+                    public void onComplete(String url, Object... objects) {
+                        onPlayerComplete(url);
+                    }
+
                 }).setLockClickListener((view, lock) -> {
             if (orientationUtils != null) {
                 //配合下方的onConfigurationChanged
@@ -136,5 +150,18 @@ public abstract class BaseGsyPlayerFragment<T extends ViewBinding> extends BaseV
         gsyPlayer.getCurrentPlayer().release();
         if (orientationUtils != null)
             orientationUtils.releaseListener();
+    }
+
+
+    protected void onPlayerPrepared(final String url) {
+        Log.d(TAG, "<onPlayerPrepared> url=" + url);
+    }
+
+    protected void onPlayerAutoComplete(final String url) {
+        Log.d(TAG, "<onPlayerAutoComplete> url=" + url);
+    }
+
+    protected void onPlayerComplete(final String url) {
+        Log.d(TAG, "<onPlayerComplete> url=" + url);
     }
 }

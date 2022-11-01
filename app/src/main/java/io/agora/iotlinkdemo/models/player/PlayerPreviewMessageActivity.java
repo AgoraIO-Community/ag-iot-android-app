@@ -1,7 +1,9 @@
 package io.agora.iotlinkdemo.models.player;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -108,6 +110,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         getBinding().tvMsgDesc.setText(mFileDescription);
         getBinding().tvMsgTime.setText(mMessageTime);
         setGsyPlayerInfo(mFileUrl, "");
+        getBinding().gsyPlayer.setMute(false);
         getBinding().gsyPlayer.startPlay();
         isPlaying = true;
         getBinding().ivPlaying.setSelected(true);
@@ -152,12 +155,10 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         getBinding().pbPlayProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
             }
 
             @Override
@@ -172,7 +173,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     /**
      * 当前是否正在横屏显示
      */
-    public boolean mIsOrientLandscape = false;
+    public volatile boolean mIsOrientLandscape = false;
     public int uiOptionsOld = 0;
 
     public void onBtnLandscape() {
@@ -352,4 +353,40 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         super.onStop();
         messageViewModel.onStop();
     }
+
+
+    @Override
+    protected void onPlayerPrepared(final String url) {
+        Log.d(TAG, "<onPlayerPrepared> url=" + url);
+    }
+
+    @Override
+    protected void onPlayerAutoComplete(final String url) {
+        Log.d(TAG, "<onPlayerAutoComplete> url=" + url);
+        getBinding().gsyPlayer.post(() -> {
+            onMsgPlayerCompleted();
+        });
+    }
+
+    @Override
+    protected void onPlayerComplete(final String url) {
+        Log.d(TAG, "<onPlayerComplete> url=" + url);
+    }
+
+    /**
+     * @brief 播放完成事件
+     */
+    private void onMsgPlayerCompleted() {
+        Log.d(TAG, "<onMsgPlayerCompleted> ");
+
+        if (mIsOrientLandscape) {
+            // 退出全屏显示
+            getBinding().gsyPlayer.onBackFullscreen();
+            onBtnLandscape();
+        }
+
+        // 退出当前界面
+        finish();
+    }
+
 }
