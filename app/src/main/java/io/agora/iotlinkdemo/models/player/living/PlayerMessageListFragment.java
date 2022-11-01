@@ -256,8 +256,8 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             }
         };
 
-        getBinding().cbChangeSound.setOnCheckedChangeListener((compoundButton, b) -> getBinding().gsyPlayer.setMute(b));
-        getBinding().cbChangeSoundFull.setOnCheckedChangeListener((compoundButton, b) -> getBinding().gsyPlayer.setMute(b));
+        getBinding().cbChangeSound.setOnCheckedChangeListener((compoundButton, b) -> getBinding().gsyPlayer.setMute(!b));
+        getBinding().cbChangeSoundFull.setOnCheckedChangeListener((compoundButton, b) -> getBinding().gsyPlayer.setMute(!b));
 
         getBinding().ivPlaying.setOnClickListener(view -> changePlayingStatus());
         getBinding().ivPlayingFull.setOnClickListener(view -> changePlayingStatus());
