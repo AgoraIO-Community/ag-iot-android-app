@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.agora.iotlinkdemo">
 
     <!-- 从扩展存储读取权限，添加设备时访问系统图库需要 -->
@@ -45,13 +46,14 @@
 
     <application
         android:name=".base.AgoraApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/security_config"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AgoraLink">
+        android:theme="@style/Theme.AgoraLink"
+        tools:replace="android:allowBackup">
         <meta-data
             android:name="design_width_in_dp"
             android:value="375" />
@@ -223,37 +225,37 @@
                 android:name="EASEMOB_APPKEY"
                 android:value="@string/EASEMOB_APPKEY" />
 
-            <!-- Mi账号配置 -->
-            <meta-data
-                android:name="com.mi.push.api_key"
-                android:value="@string/MI_PUSH_APPKEY" />
-            <meta-data
-                android:name="com.mi.push.app_id"
-                android:value="@string/MI_PUSH_APPID" />
+<!--            &lt;!&ndash; Mi账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.mi.push.api_key"-->
+<!--                android:value="@string/MI_PUSH_APPKEY" />-->
+<!--            <meta-data-->
+<!--                android:name="com.mi.push.app_id"-->
+<!--                android:value="@string/MI_PUSH_APPID" />-->
 
-            <!--华为账号配置 -->
-            <meta-data
-                android:name="com.huawei.hms.client.appid"
-                android:value="@string/HUAWEI_PUSH_APPKID" />
-            <meta-data
-                android:name="push_kit_auto_init_enabled"
-                android:value="true"/>
+<!--            &lt;!&ndash;华为账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.huawei.hms.client.appid"-->
+<!--                android:value="@string/HUAWEI_PUSH_APPKID" />-->
+<!--            <meta-data-->
+<!--                android:name="push_kit_auto_init_enabled"-->
+<!--                android:value="true"/>-->
 
-            <!-- Oppo账号配置 -->
-            <meta-data
-                android:name="com.oppo.push.api_key"
-                android:value="@string/OPPO_PUSH_APPKEY" />
-            <meta-data
-                android:name="com.oppo.push.app_secret"
-                android:value="@string/OPPO_PUSH_APPSECRET" />
+<!--            &lt;!&ndash; Oppo账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.oppo.push.api_key"-->
+<!--                android:value="@string/OPPO_PUSH_APPKEY" />-->
+<!--            <meta-data-->
+<!--                android:name="com.oppo.push.app_secret"-->
+<!--                android:value="@string/OPPO_PUSH_APPSECRET" />-->
 
-            <!-- VIVO账号配置 -->
-            <meta-data
-                android:name="com.vivo.push.api_key"
-                android:value="@string/VIVO_PUSH_APPKEY" />
-            <meta-data
-                android:name="com.vivo.push.app_id"
-                android:value="@integer/VIVO_PUSH_APPID" />
+<!--            &lt;!&ndash; VIVO账号配置 &ndash;&gt;-->
+<!--            <meta-data-->
+<!--                android:name="com.vivo.push.api_key"-->
+<!--                android:value="@string/VIVO_PUSH_APPKEY" />-->
+<!--            <meta-data-->
+<!--                android:name="com.vivo.push.app_id"-->
+<!--                android:value="@integer/VIVO_PUSH_APPID" />-->
         <!-- ==================== 离线推送账号配置 END ==================== -->
 
 

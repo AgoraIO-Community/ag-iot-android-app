@@ -14,6 +14,7 @@ import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlinkdemo.event.ExitLoginEvent;
 import io.agora.iotlinkdemo.thirdpartyaccount.ThirdAccountMgr;
+import io.agora.iotlinkdemo.utils.AppStorageUtil;
 import io.agora.iotlinkdemo.utils.ErrorToastUtils;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
@@ -107,7 +108,7 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
     public void accountUnregister(String accountName, String password) {
 
         // 先要进行SDK的登出操作
-        SPUtil.Companion.getInstance(AgoraApplication.getInstance()).putString(Constant.ACCOUNT, null);
+        AppStorageUtil.safePutString(AgoraApplication.getInstance(), Constant.ACCOUNT, null);
 
         mUnregistering = true;
         int errCode = AIotAppSdkFactory.getInstance().getAccountMgr().logout();
@@ -185,7 +186,7 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
      * @brief 第三方账号登出
      */
     public void accountLogout() {
-        SPUtil.Companion.getInstance(AgoraApplication.getInstance()).putString(Constant.ACCOUNT, null);
+        AppStorageUtil.safePutString(AgoraApplication.getInstance(), Constant.ACCOUNT, null);
 
         mUnregistering = false;
         int errCode = AIotAppSdkFactory.getInstance().getAccountMgr().logout();

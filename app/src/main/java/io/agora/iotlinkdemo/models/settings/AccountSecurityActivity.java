@@ -26,6 +26,7 @@ import io.agora.iotlinkdemo.event.UserLogoutEvent;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
+import io.agora.iotlinkdemo.utils.AppStorageUtil;
 
 import com.agora.baselibrary.utils.SPUtil;
 import com.alibaba.android.arouter.facade.annotation.Route;
@@ -117,8 +118,8 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
 
                 @Override
                 public void onRightButtonClick() {
-                    String account = SPUtil.Companion.getInstance(mActivity).getString(Constant.ACCOUNT, null);
-                    String password = SPUtil.Companion.getInstance(mActivity).getString(Constant.PASSWORD, null);
+                    String account = AppStorageUtil.safeGetString(mActivity, Constant.ACCOUNT, null);
+                    String password = AppStorageUtil.safeGetString(mActivity, Constant.PASSWORD, null);
                     showLoadingView();
                     phoneLoginViewModel.accountUnregister(account, password);
                 }

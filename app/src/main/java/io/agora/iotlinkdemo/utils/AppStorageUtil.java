@@ -3,6 +3,12 @@ package io.agora.iotlinkdemo.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.text.TextUtils;
+import android.util.Log;
+
+import com.agora.baselibrary.utils.SPUtil;
+
+import java.nio.charset.StandardCharsets;
 
 
 public class AppStorageUtil {
@@ -120,4 +126,114 @@ public class AppStorageUtil {
     public static void deleteValue(String key) {
         sharedPreferences.edit().remove(key).commit();
     }
+
+
+    public static void safePutString(Context ctx, String key, String value) {
+        if (TextUtils.isEmpty(value)) {
+            SPUtil.Companion.getInstance(ctx).putString(key, value);
+            return;
+        }
+        String encryptValue = encryptString(value);
+        SPUtil.Companion.getInstance(ctx).putString(key, encryptValue);
+    }
+
+    public static String safeGetString(Context ctx,String key, String defValue) {
+        String encryptValue = SPUtil.Companion.getInstance(ctx).getString(key, defValue);
+        if (encryptValue == null) {
+            return null;
+        }
+        if (encryptValue.isEmpty()) {
+            return "";
+        }
+        String value = decryptString(encryptValue);
+        return value;
+    }
+
+
+    /**
+     * @biref 字符串加密
+     */
+    public static String encryptString(String value) {
+        if (TextUtils.isEmpty(value)) {
+            return "";
+        }
+
+        // 转换成 Utf-8 字节流
+        byte[] utf8 = value.getBytes(StandardCharsets.UTF_8);
+
+        // 每个字节转换成 xxx, 数字
+        String encrypted = bytesToString(utf8);
+        return encrypted;
+    }
+
+    /**
+     * @biref 字符串解密
+     */
+    public static String decryptString(String value) {
+        if (TextUtils.isEmpty(value)) {
+            return "";
+        }
+
+        // 每个字节转换成utf8字节流
+        byte[] utf8 = stringToBytes(value);
+
+        // 文本字节由utf8字节流创建
+        String text = new String(utf8, StandardCharsets.UTF_8);
+        return text;
+    }
+
+
+
+    /**
+     * @biref 将字节流数据转换成16进制
+     * @param data    字节流数据
+     * @return 返回转换后的文本
+     */
+    public static String bytesToString(byte[] data) {
+        if (data == null) {
+            return "";
+        }
+        String text = "";
+        for (int j = 0; j < data.length; j++) {
+            String dataHex = String.format("%03d,", data[j]);
+            text += dataHex;
+        }
+
+        return text;
+    }
+
+    /**
+     * @biref 将字符串转换成字节流
+     * @param text 字符串
+     * @return 返回转换后的文本
+     */
+    public static byte[] stringToBytes(final String text) {
+        if (text == null) {
+            return null;
+        }
+
+        String[] elemArray = text.split(",");
+        if (elemArray == null || elemArray.length <= 0) {
+            return null;
+        }
+
+        byte[] data = new byte[elemArray.length];
+        for (int i = 0; i < elemArray.length; i++) {
+            data[i] = Byte.valueOf(elemArray[i]);
+        }
+
+        return data;
+    }
+
+//    void UnitTest() {
+//        String orgText = "ABCDefgh012346+-*%_@!#$%^&()华叔[好人]<>";
+//        String encryptText = AppStorageUtil.encryptString(orgText);
+//        String decryptText = AppStorageUtil.decryptString(encryptText);
+//
+//        if (orgText.compareToIgnoreCase(decryptText) != 0) {
+//            Log.d(TAG, "encrypt error");
+//        } else {
+//            Log.d(TAG, "encrypt OK");
+//        }
+//    }
 }

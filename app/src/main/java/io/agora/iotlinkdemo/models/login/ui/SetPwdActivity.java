@@ -29,6 +29,7 @@ import com.alibaba.android.arouter.facade.annotation.Autowired;
 import com.alibaba.android.arouter.facade.annotation.Route;
 import com.alibaba.android.arouter.launcher.ARouter;
 
+import io.agora.iotlinkdemo.utils.AppStorageUtil;
 import kotlin.jvm.JvmField;
 
 /**
@@ -81,8 +82,8 @@ public class SetPwdActivity extends BaseViewBindingActivity<ActivitySetPwdBindin
 
                     if (result.mErrCode == ErrCode.XOK) {
                         ToastUtils.INSTANCE.showToast("注册成功");
-                        SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, "");
-                        SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, "");
+                        AppStorageUtil.safePutString(this, Constant.ACCOUNT, "");
+                        AppStorageUtil.safePutString(this, Constant.PASSWORD, "");
                         PagePilotManager.pagePhoneLogin();
                         mHealthActivityManager.popAllActivity();
 

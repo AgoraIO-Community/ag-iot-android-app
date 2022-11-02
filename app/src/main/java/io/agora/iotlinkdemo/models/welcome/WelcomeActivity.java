@@ -33,6 +33,7 @@ import io.agora.iotlinkdemo.models.home.MainActivity;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlinkdemo.models.login.ui.PhoneLoginActivity;
+import io.agora.iotlinkdemo.utils.AppStorageUtil;
 
 
 public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBinding> {
@@ -298,8 +299,8 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             return;
         }
 
-        String storedAccount = SPUtil.Companion.getInstance(this).getString(Constant.ACCOUNT, null);
-        String storedPassword = SPUtil.Companion.getInstance(this).getString(Constant.PASSWORD, null);
+        String storedAccount = AppStorageUtil.safeGetString(this, Constant.ACCOUNT, null);
+        String storedPassword = AppStorageUtil.safeGetString(this, Constant.PASSWORD, null);
         if (TextUtils.isEmpty(storedAccount) || TextUtils.isEmpty(storedPassword)) { // 没有历史登录信息
             Log.d(TAG, "<onMsgHandleLogin> No login history, goto pagePhoneLogin");
             PagePilotManager.pagePhoneLogin();

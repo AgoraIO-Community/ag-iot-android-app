@@ -27,6 +27,8 @@ import io.agora.iotlinkdemo.databinding.ActivityPhoneLoginBinding;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.login.LoginViewModel;
+import io.agora.iotlinkdemo.utils.AppStorageUtil;
+
 import com.alibaba.android.arouter.facade.annotation.Route;
 
 /**
@@ -103,7 +105,7 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
         });
 
         setAccountStatus();
-        String account = SPUtil.Companion.getInstance(this).getString(Constant.ACCOUNT, null);
+        String account = AppStorageUtil.safeGetString(this, Constant.ACCOUNT, null);
         if (!TextUtils.isEmpty(account)) {
             getBinding().etAccounts.setText(account);
             String password = SPUtil.Companion.getInstance(this).getString(Constant.PASSWORD, null);
@@ -138,22 +140,11 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
             String account = getBinding().etAccounts.getText().toString();
             String password = getBinding().etPwd.getText().toString();
             phoneLoginViewModel.accountLogin(account, password);
-            SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, account);
-            SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, password);
+            AppStorageUtil.safePutString(this, Constant.ACCOUNT, account);
+            AppStorageUtil.safePutString(this, Constant.PASSWORD, password);
         });
 
         getBinding().btnRegister.setOnClickListener(view -> {
-//            if (!checkAccount2Pwd()) {
-//                popupMessage("注册失败，账号或密码无效!");
-//                return;
-//            }
-//            showLoadingView();
-//            String account = getBinding().etAccounts.getText().toString();
-//            String password = getBinding().etPwd.getText().toString();
-//            phoneLoginViewModel.accountRegister(account, password, null);
-//            SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, account);
-//            SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, password);
-
             PagePilotManager.pagePhoneRegister();
         });
 
