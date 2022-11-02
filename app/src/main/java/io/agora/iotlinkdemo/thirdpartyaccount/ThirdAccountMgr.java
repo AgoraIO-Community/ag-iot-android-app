@@ -383,7 +383,7 @@ public class ThirdAccountMgr {
                     + ", password=" + password);
 
         // 请求URL
-        String requestUrl = mThirdBaseUrl + "/auth/register";
+        String requestUrl = mThirdBaseUrl + "/auth/register2";
 
         // body内容
         try {
