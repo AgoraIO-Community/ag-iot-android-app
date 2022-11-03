@@ -161,8 +161,10 @@ public class AppStorageUtil {
         // 转换成 Utf-8 字节流
         byte[] utf8 = value.getBytes(StandardCharsets.UTF_8);
 
+        byte[] encryptData = enDeCrypt(utf8);
+
         // 每个字节转换成 xxx, 数字
-        String encrypted = bytesToString(utf8);
+        String encrypted = bytesToString(encryptData);
         return encrypted;
     }
 
@@ -177,8 +179,10 @@ public class AppStorageUtil {
         // 每个字节转换成utf8字节流
         byte[] utf8 = stringToBytes(value);
 
+        byte[] decrypted = enDeCrypt(utf8);
+
         // 文本字节由utf8字节流创建
-        String text = new String(utf8, StandardCharsets.UTF_8);
+        String text = new String(decrypted, StandardCharsets.UTF_8);
         return text;
     }
 
@@ -225,15 +229,36 @@ public class AppStorageUtil {
         return data;
     }
 
-//    void UnitTest() {
+
+
+
+    public static byte[] enDeCrypt(byte[] inData) {
+        if (inData == null) {
+            return null;
+        }
+
+        int [] key = new int[] { 0x05, 0xEF, 0x4F, 0x28, 0x61, 0x46, 0x43, 0x6C, 0x73, 0x23, 0x22, 0x43, 0x7E, 0x7D, 0x96, 0xB4};
+        int keyLen = key.length;
+        int dataSize = inData.length;
+        byte[] outData = new byte[dataSize];
+        int i, j = 0;
+        for (i = 0; i < dataSize; i++) {
+            outData[i] = (byte)(inData[i] ^ key[j]);
+            j = (j + 1) % keyLen;
+        }
+
+        return outData;
+    }
+
+//    public static void UnitTest() {
 //        String orgText = "ABCDefgh012346+-*%_@!#$%^&()华叔[好人]<>";
 //        String encryptText = AppStorageUtil.encryptString(orgText);
 //        String decryptText = AppStorageUtil.decryptString(encryptText);
 //
 //        if (orgText.compareToIgnoreCase(decryptText) != 0) {
-//            Log.d(TAG, "encrypt error");
+//            Log.d("UT", "encrypt error");
 //        } else {
-//            Log.d(TAG, "encrypt OK");
+//            Log.d("UT", "encrypt OK");
 //        }
 //    }
 }
