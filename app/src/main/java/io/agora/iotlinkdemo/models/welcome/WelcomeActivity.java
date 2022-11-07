@@ -243,18 +243,18 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     //////////////////////////////////////////////////////////////////
     @RequiresApi(api = Build.VERSION_CODES.M)
     void onMsgCheckOverlayWnd() {
-        // TODO: 只有需要离线推送功能时，才需要申请悬浮窗权限，否则可以跳过
+        // TODO: 悬浮窗权限放到登录后的主界面中进行申请，这里不做处理
 
-        mUiState = UI_STATE_OVERLAYWND;
-        mOverlyWndSetted = false;
-        if (!Settings.canDrawOverlays(this)) {
-            showRequestSuspensionDialog();
-        } else {
-            Log.d(TAG, "<onMsgCheckOverlayWnd> already have overlay permission");
-            mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
-        }
+//        mUiState = UI_STATE_OVERLAYWND;
+//        mOverlyWndSetted = false;
+//        if (!Settings.canDrawOverlays(this)) {
+//            showRequestSuspensionDialog();
+//        } else {
+//            Log.d(TAG, "<onMsgCheckOverlayWnd> already have overlay permission");
+//            mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
+//        }
 
-//        mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
+        mMsgHandler.sendEmptyMessage(MSGID_HANDLE_LOGIN);
     }
 
     /**
