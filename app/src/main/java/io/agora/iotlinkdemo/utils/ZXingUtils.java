@@ -6,18 +6,28 @@ import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PointF;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View.MeasureSpec;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatReader;
 import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.RGBLuminanceSource;
+import com.google.zxing.Result;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeWriter;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Hashtable;
 
 /**
@@ -25,6 +35,8 @@ import java.util.Hashtable;
  * 	生成条形码和二维码的工具
  */
 public class ZXingUtils {
+    private static final String TAG = "LINK/ZXingUtils";
+
     /**
      * 生成二维码 要转换的地址或字符串,可以是中文
      *
@@ -208,6 +220,48 @@ public class ZXingUtils {
 
         return newBitmap;
     }
+
+
+
+    /**
+     * @brief 根据本地二维码图片，解析二维码内容
+     * @param inBmp 要解析的二维码图片
+     * @return 返回解析出来的文本字符串
+     */
+    public static String parseQRCodeByBmp(final Bitmap inBmp) {
+        try {
+            int px[] = new int[inBmp.getWidth() * inBmp.getHeight()];
+            inBmp.getPixels(px, 0, inBmp.getWidth(), 0, 0,
+                    inBmp.getWidth(), inBmp.getHeight());
+            RGBLuminanceSource source = new RGBLuminanceSource(inBmp.getWidth(), inBmp.getHeight(), px);
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+
+            /**
+             * 如果图片不是二维码图片，则 decode 抛异常：com.google.zxing.NotFoundException
+             * MultiFormatWriter 的 encode 用于对内容进行编码成 2D 矩阵
+             * MultiFormatReader 的 decode 用于读取二进制位图数据
+             */
+            Hashtable hints = new Hashtable();
+            hints.put(DecodeHintType.CHARACTER_SET, "UTF-8");
+            Result result = new MultiFormatReader().decode(bitmap, hints);
+            String resultText = result.getText();
+
+            Log.d(TAG, "<parseQRCodeByBmp> resultText=" + resultText);
+            return resultText;
+
+        } catch (NotFoundException foundExp) {
+            //foundExp.printStackTrace();
+            //Log.e(TAG, "<parseQRCodeByBmp> [EXCEPTION] foundExp=" + foundExp.toString());
+
+        } catch (Exception exp) {
+            exp.printStackTrace();
+            //Log.e(TAG, "<parseQRCodeByBmp> [EXCEPTION] exp=" + exp.toString());
+        }
+
+        return null;
+    }
+
+
 
 }
 

@@ -31,7 +31,7 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1I420ToRg
 	AndroidBitmapInfo bmpInfo = { 0 };
 	uint8_t*	rgbaBuffer = NULL;
 
-    LOGI("<ImgCvt_1I420ToRgba> ==>Enter");
+//    LOGI("<ImgCvt_1I420ToRgba> ==>Enter");
 
     // get information from output bitmap object
 	int res = AndroidBitmap_getInfo(env, jobj_outBmp, &bmpInfo);
@@ -119,7 +119,7 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1I420ToRg
     env->ReleaseByteArrayElements(jb_uData, pUBuffer, 0);
     env->ReleaseByteArrayElements(jb_vData, pVBuffer, 0);
 
-    LOGI("<ImgCvt_1I420ToRgba> <==Exit, width=%d, height=%d", width, height);
+    //LOGI("<ImgCvt_1I420ToRgba> <==Exit, width=%d, height=%d", width, height);
     return 0;
 }
 
