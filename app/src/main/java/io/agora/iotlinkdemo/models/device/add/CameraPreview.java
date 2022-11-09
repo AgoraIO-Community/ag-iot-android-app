@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -34,11 +33,14 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import io.agora.iotlink.logger.ALog;
@@ -59,8 +61,10 @@ public class CameraPreview extends FrameLayout {
      */
     private static class CamProperty {
         public String  mCameraId;           ///< 相机Id
-        public Size    mSize;               ///< 预览大小
+        public Size[]  mCamOutSizes;        ///< Camera支持的输出SurfaceTexture大小
         public boolean mTorchAvailable;     ///< 是否支持手电筒
+        public Size    mPreviewSize;        ///< 预览大小
+
     }
 
 
@@ -115,7 +119,6 @@ public class CameraPreview extends FrameLayout {
     //////////////////////////////////////////////////////////////////////////////
     ///////////////////////////// Variable Definition /////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////
-    private Activity mActivity;
     private ICameraScanCallback mScanCallback;
     private Handler mMsgHandler = null;             ///< 主线程中的消息处理
     private volatile boolean mRunning = false;      ///< 当前控件是否运行
@@ -166,10 +169,78 @@ public class CameraPreview extends FrameLayout {
     /**
      * @brief 设置回调接口
      */
-    public void setScanCallback(Activity activity, ICameraScanCallback callback) {
-        mActivity = activity;
+    public void setScanCallback(ICameraScanCallback callback) {
         mScanCallback = callback;
     }
+
+    /**
+     * @brief 查询支持的Camera设备及其属性
+     */
+    public boolean querySupportedCamera() {
+        CameraManager cameraManager = (CameraManager)this.getContext().getSystemService(Context.CAMERA_SERVICE);
+        try {
+            String[] cameraIdList = cameraManager.getCameraIdList();
+            for (String cameraId : cameraIdList) {
+                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+                    continue;
+                }
+                mCamProperty = new CamProperty();
+
+                mCamProperty.mCameraId = cameraId;
+                mCamProperty.mTorchAvailable = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                mCamProperty.mCamOutSizes = map.getOutputSizes(SurfaceTexture.class);
+
+                Log.d(TAG, "<querySupportedCamera> done, mCameraId=" + mCamProperty.mCameraId
+                        + ", mTorchAvaiable=" + mCamProperty.mTorchAvailable
+                        + ", mCamOutSizes=" + mCamProperty.mCamOutSizes);
+                return true;
+            }
+        } catch (CameraAccessException accessExp) {
+            accessExp.printStackTrace();
+            Log.e(TAG, "<queryMatchedCamera> accessExp=" + accessExp.toString());
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief 设置支持的预览大小
+     */
+    void setPreviewSize(Size previewSize) {
+        mCamProperty.mPreviewSize = previewSize;
+
+        mTextureView = (TextureView)findViewById(R.id.tvCameraPreview);
+        FrameLayout.LayoutParams textureLayoutParam = (FrameLayout.LayoutParams)mTextureView.getLayoutParams();
+        textureLayoutParam.width = previewSize.getHeight();  // 要注意旋转
+        textureLayoutParam.height = previewSize.getWidth();
+        mTextureView.setLayoutParams(textureLayoutParam);
+    }
+
+
+    /**
+     * @brief 根据输入的显示大小，查找最匹配的Camera大小
+     */
+    public Size calculateMatchedSize(int width, int height) {
+        boolean landscape = (width > height) ? true : false;
+        int displayArea = width * height;
+        int minAreaDiff = displayArea;
+        Size minSize = mCamProperty.mCamOutSizes[0];
+
+        for (Size size : mCamProperty.mCamOutSizes) {
+            int camOutArea = size.getWidth() * size.getHeight();
+            int areaDiff = Math.abs(camOutArea-displayArea);
+            if (areaDiff < minAreaDiff) {
+                minAreaDiff = areaDiff;
+                minSize = size;
+            }
+        }
+
+        return minSize;
+    }
+
+
 
     /**
      * @brief 启动相机预览，并且开始扫描二维码
@@ -189,7 +260,7 @@ public class CameraPreview extends FrameLayout {
             mCaptureData.mVPxlStride = 0;
         }
 
-        mMsgHandler = new Handler(mActivity.getMainLooper())  {
+        mMsgHandler = new Handler(this.getContext().getMainLooper())  {
             @SuppressLint("HandlerLeak")
             public void handleMessage(Message msg)
             {
@@ -277,10 +348,9 @@ public class CameraPreview extends FrameLayout {
             interruptedExp.printStackTrace();
         }
 
-
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                CameraManager cameraManager = (CameraManager)mActivity.getSystemService(Context.CAMERA_SERVICE);
+                CameraManager cameraManager = (CameraManager)getContext().getSystemService(Context.CAMERA_SERVICE);
                 cameraManager.setTorchMode(cameraId, bOpen);
                 mTorchOpened = bOpen;
                 Log.d(TAG, "<turnTorch> mTorchOpened=" + mTorchOpened);
@@ -351,7 +421,6 @@ public class CameraPreview extends FrameLayout {
 
     void onMsgSurfaceAvailable(int width, int height) {
         Log.d(TAG, "<onMsgSurfaceAvailable> width=" + width + ", height=" + height);
-        mCamProperty = queryMatchedCamera(width, height);
 
         if ((mCamProperty != null) && (mRunning)) {
             boolean bRet = cameraDevOpen(mCamProperty.mCameraId);
@@ -394,78 +463,6 @@ public class CameraPreview extends FrameLayout {
     /////////////////////////////////////////////////////////////////////////
     ////////////////////////// Camera相应的操作 ///////////////////////////////
     /////////////////////////////////////////////////////////////////////////
-
-    /**
-     * @brief 查询匹配的相机
-     */
-    private CamProperty queryMatchedCamera(int width, int height) {
-        CameraManager cameraManager = (CameraManager)mActivity.getSystemService(Context.CAMERA_SERVICE);
-        try {
-            String[] cameraIdList = cameraManager.getCameraIdList();
-            for (String cameraId : cameraIdList) {
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
-                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
-                }
-                StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                boolean flashAvailable = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-
-                //相机支持的所有分辨率，下一步就是获取最合适的分辨率
-                Size[] outputSizes = map.getOutputSizes(SurfaceTexture.class);
-                CamProperty camProperty = new CamProperty();
-                camProperty.mSize = getOptimalSize(outputSizes, width, height);
-                camProperty.mCameraId = cameraId;
-                camProperty.mTorchAvailable = flashAvailable;
-
-                Log.d(TAG, "<queryMatchedCamera> done, width=" + width + ", height=" + height
-                            + ", mPreviewSize=" + camProperty.mSize
-                            + ", mCameraId=" + camProperty.mCameraId
-                            + ", mTorchAvaiable=" + camProperty.mTorchAvailable );
-                return camProperty;
-            }
-        } catch (CameraAccessException accessExp) {
-            accessExp.printStackTrace();
-            Log.e(TAG, "<queryMatchedCamera> accessExp=" + accessExp.toString());
-        }
-
-        return null;
-    }
-
-    /**
-     * @brief 选择sizeMap中大于并且接近width和height的size
-     */
-    private Size getOptimalSize(Size[] outputSizes, int width, int height) {
-        Size tempSize = new Size(width,height);
-        List<Size> sizes = new ArrayList<>();
-        for (Size outputSize : outputSizes) {
-            if (width > height) {
-                //横屏的时候
-                if (outputSize.getHeight() > height && outputSize.getWidth() > width) {
-                    sizes.add(outputSize);
-                }
-            } else {
-                //竖屏的时候
-                if (outputSize.getWidth() > height && outputSize.getHeight() > width) {
-                    sizes.add(outputSize);
-                }
-            }
-        }
-        if (sizes.size() > 0) {
-            //如果有多个符合条件找到一个差距最小的，最接近预览分辨率的
-            tempSize= sizes.get(0);
-            int minnum = 999999;
-            for (Size size : sizes) {
-                int num = size.getHeight() * size.getHeight() - width * height;
-                if (num < minnum) {
-                    minnum = num;
-                    tempSize = size;
-                }
-            }
-        }
-        return tempSize;
-    }
-
-
     /**
      * @brief 打开相机设备
      */
@@ -532,7 +529,7 @@ public class CameraPreview extends FrameLayout {
         };
 
         try {
-            CameraManager cameraManager = (CameraManager)mActivity.getSystemService(Context.CAMERA_SERVICE);
+            CameraManager cameraManager = (CameraManager)getContext().getSystemService(Context.CAMERA_SERVICE);
             cameraManager.openCamera(cameraId, mCamStateCallbk, null);
             Log.d(TAG, "<cameraDevOpen> success, cameraId=" + cameraId);
             return true;
@@ -570,10 +567,8 @@ public class CameraPreview extends FrameLayout {
         //
         // 设置预览图像回调渲染器，宽高限定为4像素对齐
         //
-        int imgWidth = mCamProperty.mSize.getWidth() / 2;
-        int imgHeight = mCamProperty.mSize.getHeight() / 2;
-        imgWidth = ((imgWidth + 3) / 4 * 4);
-        imgHeight = ((imgHeight + 3) / 4 * 4);
+        int imgWidth = mCamProperty.mPreviewSize.getWidth();
+        int imgHeight = mCamProperty.mPreviewSize.getHeight();
         mImageReader = ImageReader.newInstance(imgWidth, imgHeight, ImageFormat.YUV_420_888, 1);
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
@@ -640,13 +635,12 @@ public class CameraPreview extends FrameLayout {
         // 设置预览回调渲染窗口
         //
         mSurfaceTexture = mTextureView.getSurfaceTexture();
-        mSurfaceTexture.setDefaultBufferSize(mCamProperty.mSize.getWidth(), mCamProperty.mSize.getHeight());
+        mSurfaceTexture.setDefaultBufferSize(mCamProperty.mPreviewSize.getWidth(), mCamProperty.mPreviewSize.getHeight());
         mPreviewSurface = new Surface(mSurfaceTexture);
         try {
             mPreviewReqBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewReqBuilder.addTarget(mPreviewSurface);
             mPreviewReqBuilder.addTarget(mImageReader.getSurface());
-
 
 
             // 使用闪光灯，必须保证 CONTROL_MODE = AUTO

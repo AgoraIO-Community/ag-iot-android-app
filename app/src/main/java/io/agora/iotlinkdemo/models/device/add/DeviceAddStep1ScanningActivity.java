@@ -7,10 +7,15 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Size;
 import android.view.LayoutInflater;
+import android.widget.FrameLayout;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.agora.baselibrary.utils.GsonUtil;
 import com.agora.baselibrary.utils.SPUtil;
@@ -69,10 +74,77 @@ public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<Acti
     }
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "<onCreate>");
+        super.onCreate(savedInstanceState);
+
+        CameraPreview camView = getBinding().camView;
+        int camDisplayWidth, camDisplayHeight;
+        DisplayMetrics metric = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metric);
+        float wndDisplayRatio = (float)(metric.heightPixels) / (float)(metric.widthPixels);
+        if (wndDisplayRatio > 1.40f) {      // 按照16:9计算
+            camDisplayWidth = metric.widthPixels;
+            camDisplayHeight = camDisplayWidth * 16 / 9;
+        } else {    // 按照 4:3 计算
+            camDisplayWidth = metric.widthPixels;
+            camDisplayHeight = camDisplayWidth * 4 / 3;
+        }
+
+        camView.querySupportedCamera();  // query supported camera
+        Size widgetSize = camView.calculateMatchedSize(camDisplayWidth, camDisplayHeight);
+
+        ConstraintLayout.LayoutParams camLayoutParam = (ConstraintLayout.LayoutParams)camView.getLayoutParams();
+        camLayoutParam.width = widgetSize.getHeight();      // 竖屏要旋转宽高
+        camLayoutParam.height = widgetSize.getWidth();
+        camView.setLayoutParams(camLayoutParam);
+        camView.setPreviewSize(widgetSize);
+        camView.setScanCallback(this);
+
+        Log.d(TAG, "<onCreate> done, camDisplay={" + camDisplayWidth + ", " + camDisplayHeight + "}"
+                + ", widgetSize={" + camLayoutParam.width + ", " + camLayoutParam.height + "}");
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "<onDestroy>");
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onStart() {
+        Log.d(TAG, "<onStart>");
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "<onStop>");
+        super.onStop();
+        getBinding().camView.scaningStop();
+        getBinding().cbLight.setChecked(false);
+    }
+
+
+    @Override
+    protected void onResume() {
+        Log.d(TAG, "<onResume>");
+        super.onResume();
+        getBinding().camView.scaningStart();
+        boolean isOpened = getBinding().camView.isTorchOpened();
+        getBinding().cbLight.setChecked(isOpened);
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d(TAG, "<onPause>");
+        super.onPause();
+    }
+
+    @Override
     public void initView(@Nullable Bundle savedInstanceState) {
         getBinding().btnNextStep.setOnClickListener(view -> PagePilotManager.pageResetDevice());
         getBinding().titleView.setRightIconClick(view -> mHealthActivityManager.popActivity());
-        getBinding().camView.setScanCallback(this, this);
     }
 
     @Override
@@ -181,41 +253,6 @@ public class DeviceAddStep1ScanningActivity extends BaseViewBindingActivity<Acti
 
 
 
-    @Override
-    protected void onStart() {
-        Log.d(TAG, "<onStart>");
-        super.onStart();
-    }
-
-    @Override
-    protected void onStop() {
-        Log.d(TAG, "<onStop>");
-        super.onStop();
-        getBinding().camView.scaningStop();
-        getBinding().cbLight.setChecked(false);
-    }
-
-
-    @Override
-    protected void onResume() {
-        Log.d(TAG, "<onResume>");
-        super.onResume();
-        getBinding().camView.scaningStart();
-        boolean isOpened = getBinding().camView.isTorchOpened();
-        getBinding().cbLight.setChecked(isOpened);
-    }
-
-    @Override
-    protected void onPause() {
-        Log.d(TAG, "<onPause>");
-        super.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        Log.d(TAG, "<onDestroy>");
-        super.onDestroy();
-    }
 
 
 }
