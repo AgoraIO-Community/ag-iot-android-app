@@ -1,6 +1,5 @@
 package io.agora.iotlinkdemo.models.player.living;
 
-//import static com.huawei.hms.hmsscankit.RemoteView.REQUEST_CODE_PHOTO;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
