@@ -29,11 +29,15 @@ public class FileUtils {
     //    public static final String STR_SD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "agora";
     //    String strSdPath = AgoraApplication.mInstance.getExternalFilesDir("media").getAbsolutePath();
     public static String getBaseStrPath() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;
-        } else {
-            return AgoraApplication.mInstance.getExternalFilesDir("media").getAbsolutePath() + File.separator;
-        }
+//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+//            return Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;
+//        } else {
+//            return AgoraApplication.mInstance.getExternalFilesDir("media").getAbsolutePath() + File.separator;
+//        }
+
+        File file = AgoraApplication.mInstance.getFilesDir();
+        String basePath = file.getAbsolutePath() + File.separator;
+        return basePath;
     }
 
     public static String getStrSDPath() {

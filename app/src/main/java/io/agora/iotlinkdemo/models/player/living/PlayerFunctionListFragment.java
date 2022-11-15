@@ -657,19 +657,20 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
      * @brief 视频帧截屏处理
      */
     void onBtnCapturePeerFrame() {
-        //
-        // 截图写存储 权限判断处理
-        //
-        int[] permIdArray = new int[1];
-        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
-        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
-        if (!mPermHandler.isAllPermissionGranted()) {
-            Log.d(TAG, "<onBtnCapturePeerFrame> requesting permission...");
-            mPermHandler.requestNextPermission();
-        } else {
-            Log.d(TAG, "<onBtnCapturePeerFrame> permission ready");
-            captureDeviceFrame();
-        }
+//        //
+//        // 截图写存储 权限判断处理
+//        //
+//        int[] permIdArray = new int[1];
+//        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+//        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+//        if (!mPermHandler.isAllPermissionGranted()) {
+//            Log.d(TAG, "<onBtnCapturePeerFrame> requesting permission...");
+//            mPermHandler.requestNextPermission();
+//        } else {
+//            Log.d(TAG, "<onBtnCapturePeerFrame> permission ready");
+//            captureDeviceFrame();
+//        }
+        captureDeviceFrame();
     }
 
     public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],

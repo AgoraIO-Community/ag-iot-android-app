@@ -456,19 +456,21 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
      * @brief 云录播放视频帧截图
      */
     private void onBtnScreenshot() {
-        //
-        // 截图写存储 权限判断处理
-        //
-        int[] permIdArray = new int[1];
-        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
-        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
-        if (!mPermHandler.isAllPermissionGranted()) {
-            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
-            mPermHandler.requestNextPermission();
-        } else {
-            Log.d(TAG, "<onBtnScreenshot> permission ready");
-            saveShot();
-        }
+//        //
+//        // 截图写存储 权限判断处理
+//        //
+//        int[] permIdArray = new int[1];
+//        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+//        mPermHandler = new PermissionHandler(getActivity(), this, permIdArray);
+//        if (!mPermHandler.isAllPermissionGranted()) {
+//            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
+//            mPermHandler.requestNextPermission();
+//        } else {
+//            Log.d(TAG, "<onBtnScreenshot> permission ready");
+//            saveShot();
+//        }
+
+        saveShot();
     }
 
     public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],

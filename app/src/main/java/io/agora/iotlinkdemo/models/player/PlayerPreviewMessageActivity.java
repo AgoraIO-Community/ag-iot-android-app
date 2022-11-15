@@ -238,19 +238,20 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
      *
      */
     private void onBtnScreenshot() {
-        //
-        // 截图写存储 权限判断处理
-        //
-        int[] permIdArray = new int[1];
-        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
-        mPermHandler = new PermissionHandler(this, this, permIdArray);
-        if (!mPermHandler.isAllPermissionGranted()) {
-            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
-            mPermHandler.requestNextPermission();
-        } else {
-            Log.d(TAG, "<onBtnScreenshot> permission ready");
-            captureFrame();
-        }
+//        //
+//        // 截图写存储 权限判断处理
+//        //
+//        int[] permIdArray = new int[1];
+//        permIdArray[0] = PermissionHandler.PERM_ID_WRITE_STORAGE;
+//        mPermHandler = new PermissionHandler(this, this, permIdArray);
+//        if (!mPermHandler.isAllPermissionGranted()) {
+//            Log.d(TAG, "<onBtnScreenshot> requesting permission...");
+//            mPermHandler.requestNextPermission();
+//        } else {
+//            Log.d(TAG, "<onBtnScreenshot> permission ready");
+//            captureFrame();
+//        }
+        captureFrame();
     }
 
     @Override
