@@ -74,7 +74,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
 
     @JvmField
     @Autowired(name = Constant.ID)
-    long id;
+    long mAlarmId;
 
     /**
      * 删除对话框
@@ -100,6 +100,8 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         messageViewModel.setISingleCallback((type, data) -> {
             if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
                 mHealthActivityManager.popActivity();
+            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
+                popupMessage("删除告警视频失败!");
             }
         });
     }
@@ -335,7 +337,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 @Override
                 public void onRightButtonClick() {
                     List<Long> list = new ArrayList<>();
-                    list.add(id);
+                    list.add(mAlarmId);
                     messageViewModel.requestDeleteAlarmMgr(list);
                 }
             });

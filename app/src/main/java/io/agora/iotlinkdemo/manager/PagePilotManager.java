@@ -242,6 +242,7 @@ public class PagePilotManager {
         }
         ARouter.getInstance()
                 .build(PagePathConstant.pagePlayMessage)
+                .withLong(Constant.ID, iotAlarm.mAlarmId)
                 .withString(Constant.FILE_URL, iotAlarm.mVideoUrl)
                 .withString(Constant.FILE_DESCRIPTION, iotAlarm.mDescription)
                 .withString(Constant.MESSAGE_TITLE, title)
