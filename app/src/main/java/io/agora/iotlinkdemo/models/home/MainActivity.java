@@ -19,7 +19,10 @@ import androidx.navigation.ui.BottomNavigationViewKt;
 
 import com.agora.baselibrary.base.BaseDialog;
 import com.agora.baselibrary.listener.ISingleCallback;
+
+import io.agora.iotlink.IotDevice;
 import io.agora.iotlinkdemo.R;
+import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.base.BaseViewBindingActivity;
 import io.agora.iotlinkdemo.base.PermissionItem;
 import io.agora.iotlinkdemo.databinding.ActivityMainBinding;
@@ -138,7 +141,13 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
      * @brief 检测当前悬浮窗权限
      */
     void checkOverlayWndPermission() {
+        if (AgoraApplication.getInstance().isChkedOverlayWnd()) {
+            Log.d(TAG, "<checkOverlayWndPermission> already checked overlay window permission!");
+            return;
+        }
+
         // TODO: 检测悬浮窗权限，这个权限是否开启不影响主界面的业务流程
+        AgoraApplication.getInstance().SetChkedOverlayWnd(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             mOverlyWndSetted = false;
             if (!Settings.canDrawOverlays(this)) {

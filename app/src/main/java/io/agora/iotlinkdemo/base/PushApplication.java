@@ -48,6 +48,8 @@ public class PushApplication extends BaseApplication {
     private IotDevice mLivingDevice;    ///< 当前正在通话的设备
     private IDeviceMgr.McuVersionInfo mLivingMcuVersion;    ///< 当前正在通话设备的固件版本信息
 
+    private boolean mIsChkedOverlayWnd = false;         ///< 是否检测过一次悬浮窗权限
+
     //////////////////////////////////////////////////////////////////
     ////////////////////// Public Methods ///////////////////////////
     //////////////////////////////////////////////////////////////////
@@ -176,6 +178,15 @@ public class PushApplication extends BaseApplication {
 
     public IDeviceMgr.McuVersionInfo getLivingMcuVersion() {
         return mLivingMcuVersion;
+    }
+
+
+    public boolean isChkedOverlayWnd() {
+        return mIsChkedOverlayWnd;
+    }
+
+    public void SetChkedOverlayWnd(boolean checked) {
+        mIsChkedOverlayWnd = checked;
     }
 
 }
