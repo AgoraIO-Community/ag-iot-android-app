@@ -309,7 +309,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mIsOrientLandscape) {
                 getBinding().gsyPlayer.onBackFullscreen();
@@ -317,7 +317,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 return true;
             }
         }
-        return super.onKeyDown(keyCode, event);
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override

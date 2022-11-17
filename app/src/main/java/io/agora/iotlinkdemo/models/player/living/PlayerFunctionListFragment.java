@@ -415,9 +415,11 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
     public boolean onBtnBack() {
         if (mIsOrientLandscape) { // 退回到 portrait竖屏显示
+            Log.d(TAG, "<onBtnBack> switch to portrait");
             onBtnLandscape();
             return true;
         } else {
+            Log.d(TAG, "<onBtnBack> back to home");
             playerViewModel.callHangup();
             return false;
         }

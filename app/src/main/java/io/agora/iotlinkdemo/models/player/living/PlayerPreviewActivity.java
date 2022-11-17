@@ -105,7 +105,7 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
 
             boolean bHookBackKey = false;
@@ -126,7 +126,7 @@ public class PlayerPreviewActivity extends BaseViewBindingActivity<ActivityPrevi
                 return true;
             }
          }
-        return super.onKeyDown(keyCode, event);
+        return super.onKeyUp(keyCode, event);
     }
 
     public void showTitle() {

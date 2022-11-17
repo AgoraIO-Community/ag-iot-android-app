@@ -96,7 +96,7 @@ public class MessageActivity extends BaseViewBindingActivity<ActivityMessageBind
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
 
             boolean bHookBackKey = false;
@@ -111,6 +111,6 @@ public class MessageActivity extends BaseViewBindingActivity<ActivityMessageBind
                 return true;
             }
         }
-        return super.onKeyDown(keyCode, event);
+        return super.onKeyUp(keyCode, event);
     }
 }
