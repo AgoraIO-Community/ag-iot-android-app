@@ -112,4 +112,9 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
         getGSYVideoManager().pause();
     }
 
+    public void releaseAll() {
+        this.release();
+        mProgressBar.setProgress(0);
+    }
+
 }

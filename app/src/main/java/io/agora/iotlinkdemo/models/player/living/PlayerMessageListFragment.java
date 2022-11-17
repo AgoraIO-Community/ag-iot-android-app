@@ -440,6 +440,10 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     }
 
     private void changePlayingStatus() {
+        if (currentIotAlarm == null) {
+            return;
+        }
+
         if (isPlaying) {
             getBinding().gsyPlayer.pausePlay();
             getBinding().ivPlaying.setSelected(false);
@@ -678,5 +682,19 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             onBtnLandscape();
         }
 
+        // 将播放按钮和进度条复位
+        isPlaying = false;
+        getBinding().ivPlaying.setSelected(false);
+        getBinding().ivPlayingFull.setSelected(false);
+        getBinding().pbPlayProgress.setProgress(0);
+        getBinding().pbPlayProgressFull.setProgress(0);
+        getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS(0));
+        getBinding().tvCurrentTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS(0));
+        getBinding().tvTotalTime.setText(StringUtils.INSTANCE.getDurationTimeSS(0));
+        getBinding().tvTotalTimeFull.setText(StringUtils.INSTANCE.getDurationTimeSS(0));
+        currentIotAlarm = null;
+        changePlayItem(-1);
+
+        getBinding().gsyPlayer.releaseAll();
     }
 }
