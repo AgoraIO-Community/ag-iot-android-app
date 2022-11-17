@@ -540,15 +540,16 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     }
 
     private void startDownload() {
-        showLoadingView();
-        ToastUtils.INSTANCE.showToast(getString(R.string.start_download));
-        getBinding().ivDownload.postDelayed(() -> stopDownload(), 2000);
+        ToastUtils.INSTANCE.showToast(getString(R.string.function_not_open));
+//        showLoadingView();
+//        ToastUtils.INSTANCE.showToast(getString(R.string.start_download));
+//        getBinding().ivDownload.postDelayed(() -> stopDownload(), 2000);
     }
 
     private void stopDownload() {
-        hideLoadingView();
-        ToastUtils.INSTANCE.showToast(getString(R.string.stop_download));
-        showSaveTip(true);
+//        hideLoadingView();
+//        ToastUtils.INSTANCE.showToast(getString(R.string.stop_download));
+//        showSaveTip(true);
     }
 
     /**
