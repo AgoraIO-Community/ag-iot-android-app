@@ -362,7 +362,9 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         String mm = new DecimalFormat("00").format(msg.arg1 % 3600 / 60);
         String ss = new DecimalFormat("00").format(msg.arg1 % 60);
         String timeFormat = mm + ":" + ss;
-        txTimeRun.setText(timeFormat);
+        if (txTimeRun != null) {
+            txTimeRun.setText(timeFormat);
+        }
         if (msg.arg1 > 30) {
             mTimer.cancel();
             //超时

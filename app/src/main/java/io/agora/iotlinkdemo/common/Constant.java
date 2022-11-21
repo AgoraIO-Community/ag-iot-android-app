@@ -54,6 +54,8 @@ public class Constant {
 
     public static final String COUNTRY_NAME = "country_name";
 
+    public static final String BT_CFG_DEVICE = "bt_cfg_device";
+
     /* 每页最大值 */
     public static final int MAX_RECORD_CNT = 4096;
 

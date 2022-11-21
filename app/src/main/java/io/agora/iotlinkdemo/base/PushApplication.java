@@ -11,6 +11,7 @@ package io.agora.iotlinkdemo.base;
 
 import android.app.ActivityManager;
 import android.app.Application;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -49,6 +50,9 @@ public class PushApplication extends BaseApplication {
     private IDeviceMgr.McuVersionInfo mLivingMcuVersion;    ///< 当前正在通话设备的固件版本信息
 
     private boolean mIsChkedOverlayWnd = false;         ///< 是否检测过一次悬浮窗权限
+
+
+    private BluetoothDevice mCfgingBtDevice = null;       ///< 当前正在进行蓝牙配网的设备
 
     //////////////////////////////////////////////////////////////////
     ////////////////////// Public Methods ///////////////////////////
@@ -188,5 +192,14 @@ public class PushApplication extends BaseApplication {
     public void SetChkedOverlayWnd(boolean checked) {
         mIsChkedOverlayWnd = checked;
     }
+
+    public BluetoothDevice getCfgingBtDevice() {
+        return mCfgingBtDevice;
+    }
+
+    public void setCfgingBtDevice(BluetoothDevice btDevice) {
+        mCfgingBtDevice = btDevice;
+    }
+
 
 }

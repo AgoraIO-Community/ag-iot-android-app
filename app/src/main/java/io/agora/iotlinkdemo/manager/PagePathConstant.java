@@ -18,6 +18,10 @@ public class PagePathConstant {
     public static final String pageSetDeviceWifi = "/page/pageSetDeviceWifi";
     public static final String pageDeviceAdding = "/page/pageDeviceAdding";
     public static final String pageDeviceQR = "/page/pageDeviceQR";
+    public static final String pageDeviceBtScan = "/page/pageDeviceBtScan";
+    public static final String pageDeviceBtScanRslt = "/page/pageDeviceBtRsltScan";
+    public static final String pageDeviceBtCfg = "/page/pageDeviceBtCfg";
+    public static final String pageDeviceBtCfgRslt = "/page/pageDeviceBtCfgRslt";
     public static final String pageWifiList = "/page/pageWifiList";
     public static final String pageWifiTimeOut = "/page/pageWifiTimeOut";
     public static final String pageAddResult = "/page/pageAddResult";

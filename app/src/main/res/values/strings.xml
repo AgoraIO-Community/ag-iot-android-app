@@ -58,7 +58,13 @@
     <string name="no_wifi_tips3">核对WiFi密码是否正确</string>
     <string name="no_wifi_tips4">扫描二维码时是否听到提示音</string>
     <string name="no_wifi_tips5">检查设备是否靠近路由器</string>
+    <string name="no_wifi_tips6">检查手机蓝牙是否打开</string>
+    <string name="no_wifi_tips7">检查手机是否靠近设备</string>
     <string name="try_again_by_step">按步骤重试</string>
+    <string name="device_connect_bt_time_out">设备连接蓝牙超时</string>
+    <string name="select_devcfg_mode">请选择配网方式</string>
+    <string name="select_devcfg_camera">摄像头</string>
+    <string name="select_devcfg_bt">蓝牙</string>
     <string name="HD">高清</string>
     <string name="SD">标清</string>
     <string name="rec">REC</string>
@@ -156,6 +162,12 @@
     <string name="scanner_tips2">保持静止几秒钟，随后会听到提示音</string>
     <string name="scanner_tips3">如果没有听到提示音，请检查摄像头</string>
     <string name="scanner_tips4">调整距离、角度，多试几次</string>
+    <string name="device_bt_scanning_title">正在发现设备</string>
+    <string name="device_bt_scanning_tips">请将设备保持通电状态\n并将手机靠近设备</string>
+    <string name="device_bt_scannedone_tips">发现设备,请选择需要配网的设备</string>
+    <string name="device_bt_not_found">未搜索到设备</string>
+    <string name="device_bt_not_found_tips2">检查设备是否在附近</string>
+
     <string name="hear_the_tone">听到提示音</string>
     <string name="device_adding">正在添加设备</string>
     <string name="please_device_has_power">请确保设备处于通电状态</string>
@@ -212,5 +224,12 @@
     <string name="voice_zhubajie">猪八戒</string>
     <string name="voice_ethereal">空 灵</string>
     <string name="voice_hulu">沉 闷</string>
+
+    <string name="btcfg_tips1">手机与设备连接成功</string>
+    <string name="btcfg_tips2">向设备发送信息成功</string>
+    <string name="btcfg_tips3">列表连接WIFI成功</string>
+    <string name="btcfg_tips4">设备连接云端成功</string>
+    <string name="btcfg_tips5">初始化成功</string>
+
 
 </resources>

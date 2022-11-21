@@ -75,6 +75,42 @@ public class PagePilotManager {
     }
 
     /**
+     * 扫描蓝牙设备
+     */
+    public static void pageDeviceBtScan() {
+        ARouter.getInstance()
+                .build(PagePathConstant.pageDeviceBtScan)
+                .navigation();
+    }
+
+    /**
+     * 扫描蓝牙设备结果
+     */
+    public static void pageDeviceBtScanResult() {
+        ARouter.getInstance()
+                .build(PagePathConstant.pageDeviceBtScanRslt)
+                .navigation();
+    }
+
+    /**
+     * 配置蓝牙设备
+     */
+    public static void pageDeviceBtConfig() {
+        ARouter.getInstance()
+                .build(PagePathConstant.pageDeviceBtCfg)
+                .navigation();
+    }
+
+    /**
+     * 蓝牙设备配置结果
+     */
+    public static void pageDeviceBtCfgResult() {
+        ARouter.getInstance()
+                .build(PagePathConstant.pageDeviceBtCfgRslt)
+                .navigation();
+    }
+
+    /**
      * 设置wifi
      */
     public static void pageSetDeviceWifi() {

@@ -3,6 +3,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="io.agora.iotlinkdemo">
 
+    <!-- 蓝牙权限，添加设备时配网使用 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
+
     <!-- 从扩展存储读取权限，添加设备时访问系统图库需要 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
@@ -103,6 +113,18 @@
             android:screenOrientation="portrait" />
         <activity
             android:name=".models.device.add.DeviceAddStep6ResultActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStepBtScanActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStepBtScanResultActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStepBtCfgActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".models.device.add.DeviceAddStepBtCfgResultActivity"
             android:screenOrientation="portrait" />
         <activity
             android:name=".models.player.living.PlayerPreviewActivity"
