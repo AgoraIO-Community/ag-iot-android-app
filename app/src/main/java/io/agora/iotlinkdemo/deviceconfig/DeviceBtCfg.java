@@ -827,7 +827,7 @@ public class DeviceBtCfg {
             mBlufiClient.close();
             mBlufiClient = null;
             deviceCfgDoneCallback(errCode);
-        }, 200L);
+        }, 2000L);
     }
 
 

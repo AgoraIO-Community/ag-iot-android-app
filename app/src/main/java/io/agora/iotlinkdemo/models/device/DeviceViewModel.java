@@ -384,4 +384,19 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
             Log.d(TAG, "<onMsgRefreshDevList> ret=" + ret);
         }
     }
+
+
+    @Override
+    public void onDeviceAddDone(int errCode, IotDevice addDevice,
+                                 List<IotDevice> bindDevList) {
+        if (errCode != ErrCode.XOK) {
+            Log.e(TAG, "<onDeviceAddDone> [ERROR] errCode=" + errCode);
+            return;
+        }
+
+        Log.d(TAG, "<onDeviceAddDone> addDevice=" + addDevice.toString()
+                + ",  bindDevList.size()=" + bindDevList.size());
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_BTADD_SUCCESS, addDevice);
+    }
+
 }

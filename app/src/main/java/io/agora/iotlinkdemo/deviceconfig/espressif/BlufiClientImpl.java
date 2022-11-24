@@ -19,6 +19,7 @@ import android.util.Log;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -936,9 +937,11 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
             case OP_MODE_STA: {
-                if (!postDeviceMode(opMode)) {
-                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
-                    return;
+                if (mDeviceType == DEV_TYPE_ESP32) {
+                    if (!postDeviceMode(opMode)) {
+                        onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
+                        return;
+                    }
                 }
                 if (!postStaWifiInfo(params)) {
                     onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_POST_STA);
@@ -1052,21 +1055,33 @@ class BlufiClientImpl implements BlufiParameter {
      */
     private boolean postSta808WifiInfo(BlufiConfigureParams params) {
         try {
+            // 发送 SSID 传输数据
             int ssidType = Type.Data.SUBTYPE_STA_WIFI_SSID;
+            int ssidFragCtrl = 0;
             byte[] ssidBytes = params.getStaSSIDBytes();
-            if (!dev808Post(mEncrypted, mChecksum, mRequireAck, ssidType, ssidBytes)) {
+            if (!dev808PostTransData(mRequireAck, ssidType, ssidFragCtrl, ssidBytes)) {
                 return false;
             }
-            sleep(10);
+            sleep(20);
 
-            int pwdType = Type.Data.SUBTYPE_STA_WIFI_PASSWORD;
-            if (!dev808Post(mEncrypted, mChecksum, mRequireAck, pwdType, params.getStaPassword().getBytes())) {
+            // 发送 Password 传输数据
+            int pswdType = Type.Data.SUBTYPE_STA_WIFI_PASSWORD;
+            int pswdFragCtrl = 0;
+            byte[] pswdBytes = params.getStaPassword().getBytes();
+            if (!dev808PostTransData(mRequireAck, pswdType, pswdFragCtrl, pswdBytes)) {
                 return false;
             }
-            sleep(10);
+            sleep(20);
 
-            int comfirmType = Type.Ctrl.SUBTYPE_CONNECT_WIFI;
-            return dev808Post(false, false, mRequireAck, comfirmType, (byte[]) null);
+            // 发送 WIFI_Connect 命令数据
+            int connectType = Type.Ctrl.SUBTYPE_CONNECT_WIFI;
+            int connectFragCtrl = (1 << 15);
+            if (!dev808PostCmdData(mRequireAck, connectType, connectFragCtrl)) {
+                return false;
+            }
+            sleep(20);
+
+            return true;
 
         } catch (InterruptedException exp) {
             Log.w(TAG, "<postSta808WifiInfo> exp=" + exp.toString());
@@ -1197,14 +1212,35 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void __postCustomData(byte[] data) {
-        int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_CUSTOM_DATA);
-        try {
-            boolean suc = post(mEncrypted, mChecksum, mRequireAck, type, data);
-            int status = suc ? BlufiCallback.STATUS_SUCCESS : BlufiCallback.CODE_WRITE_DATA_FAILED;
-            onPostCustomDataResult(status, data);
-        } catch (InterruptedException e) {
-            Log.w(TAG, "post postCustomData interrupted");
-            Thread.currentThread().interrupt();
+        if (mDeviceType == DEV_TYPE_808) {  // BL808设备
+            try {
+                int customType = Type.Data.SUBTYPE_CUSTOM_DATA;
+                int customFragCtrl = 0;
+                boolean suc = dev808PostTransData(mRequireAck, customType, customFragCtrl, data);
+                sleep(100);
+
+                int customGetType = Type.Ctrl.SUBTYPE_GET_CUSTOM_DATA;
+                int customGetFragCtrl = 1 << 15;
+                dev808PostCmdData(mRequireAck, customGetType, customGetFragCtrl);
+                sleep(20);
+
+                int status = suc ? BlufiCallback.STATUS_SUCCESS : BlufiCallback.CODE_WRITE_DATA_FAILED;
+                onPostCustomDataResult(status, data);
+            } catch (InterruptedException e) {
+                Log.w(TAG, "post postCustomData interrupted");
+                Thread.currentThread().interrupt();
+            }
+
+        } else {    // ESP32设备
+            int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_CUSTOM_DATA);
+            try {
+                boolean suc = post(mEncrypted, mChecksum, mRequireAck, type, data);
+                int status = suc ? BlufiCallback.STATUS_SUCCESS : BlufiCallback.CODE_WRITE_DATA_FAILED;
+                onPostCustomDataResult(status, data);
+            } catch (InterruptedException e) {
+                Log.w(TAG, "post postCustomData interrupted");
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -1324,6 +1360,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            Log.d(TAG, "<onCharacteristicChanged> ");
             if (characteristic.equals(mNotifyChar)) {
                 if (mNotifyData == null) {
                     mNotifyData = new BlufiNotifyData();
@@ -1354,6 +1391,8 @@ class BlufiClientImpl implements BlufiParameter {
                 }
                 mWriteResultQueue.add(status == BluetoothGatt.GATT_SUCCESS);
             }
+            Log.d(TAG, "<onCharacteristicWrite> status=" + status
+                        + ", mWriteResultQueue.size=" + mWriteResultQueue.size());
 
             if (mUserGattCallback != null) {
                 mUserGattCallback.onCharacteristicWrite(gatt, characteristic, status);
@@ -1361,6 +1400,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            Log.d(TAG, "<onCharacteristicRead> status=" + status);
             if (mUserGattCallback != null) {
                 mUserGattCallback.onCharacteristicRead(gatt, characteristic, status);
             }
@@ -1404,6 +1444,7 @@ class BlufiClientImpl implements BlufiParameter {
 
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            Log.d(TAG, "<onMtuChanged> mtu=" + mtu + ", status=" + status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 mBlufiMTU = mtu - 4; // Three bytes BLE header, one byte reserved
             }
@@ -1430,364 +1471,195 @@ class BlufiClientImpl implements BlufiParameter {
 
 
     ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////// 808 设备配网操作 //////////////////////////////////
+    ///////////////////////// BL808 设备配网操作 /////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
-    private volatile short seq = 1;
-    private volatile short fragCtrl = 0;
-    private int mType;
-    private volatile boolean hasReceiveSeq = false;  ///< 已经接收read回调
-    private boolean readError = false;  ///< 是否读取出错
-    private volatile boolean dateGetALl = false;  ///< 单次分包接受完成 就是一条完整wifi信息
-    private volatile boolean nextDate2Get = false;  ///< 是否需要进行对分包的下一片数据进行接受
-    private volatile byte receiveSeq = 0;
-    private int readOutTime = 0;
-    private int readErrorTime = 1;
-
-    //对于返回值并未做处理
-    private boolean dev808Post(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data) throws InterruptedException {
-        fragCtrl=0;
-        mType = type;
-
-        if (data == null || data.length == 0) {
-            //全局变量seq
-            return dev808PostNonData(encrypt, checksum, requireAck, type);
-        } else {
-            //上面的是传输指令 下面是数据
-            return dev808PostContainData(encrypt, checksum, requireAck, type, data);
-        }
-    }
-
-    private boolean dev808PostNonData(boolean encrypt, boolean checksum, boolean requireAck, int type) throws InterruptedException {
-//        byte[] postBytes = treatyCommandBytes(type,"1234".getBytes());
-//        Log.w(TAG, "PostNonData:"+System.currentTimeMillis());
-//        dev808WriteAndRead(postBytes);
-//        return !requireAck ;
-
+     /**
+     * @brief 发送命令数据包， 用于发送 WIFI_Connect 命令
+     * @param type : WIF_Connect--Type.Data.SUBTYPE_STA_WIFI_SSID;
+     *               Password--SUBTYPE_STA_WIFI_PASSWORD
+     *               CustomData--Type.Data.SUBTYPE_CUSTOM_DATA
+     * @param fragCtrl : 用来标记是否最后一个包
+     */
+    private boolean dev808PostCmdData(boolean requireAck, int type, int fragCtrl) throws InterruptedException {
         int sequence = generateSendSequence();
-        byte[] postBytes = treatyCommandBytes(type,"1234".getBytes());
+        byte[] cmdData = ("1234").getBytes(StandardCharsets.UTF_8);  // 命令数据固定
+        byte[] postBytes = dev808GenCmdPacket(type, fragCtrl, sequence, cmdData);
         boolean posted = gattWrite(postBytes);
+        Log.d(TAG, "<dev808PostCmdData> posted=" + posted + ", type=" + type
+                + ", fragCtrl=" + fragCtrl + ", sequence=" + sequence
+                + ", postBytes=" + bytesToString(postBytes));
         return posted && (!requireAck || receiveAck(sequence));
     }
 
-    private boolean dev808PostContainData(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data) throws InterruptedException {
-//        if (data==null){
-//            return false;
-//        }
-//        Log.d("date length", String.valueOf(data.length));
-//        int length = new Integer(data.length);
-//        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
-//        ByteArrayOutputStream postOS = new ByteArrayOutputStream();
-//        byte[] dateBuf = new byte[0];
-//        if (fragCtrl==0){
-//            dateBuf  = new byte[mBlufiMTU];
-//        }
-//        while (true) {
-//
-//            if (fragCtrl==0){
-//                dateBuf  = new byte[mBlufiMTU -19];
-//            }else {
-//                dateBuf  = new byte[mBlufiMTU -9];
-//            }
-//
-//            int read = dataIS.read(dateBuf, 0, dateBuf.length);
-//            if (read == -1) {
-//                break;
-//            }
-//            //what is this 多余
-//            postOS.write(dateBuf, 0, read);
-//            boolean frag = dataIS.available() > 0;
-//            byte[] tempData = postOS.toByteArray();
-//            postOS.reset();
-//            postOS.write(tempData, 0, tempData.length);
-//            byte[] postBytes = treatyPostDataBytes(frag,type,postOS.toByteArray(),data.length);
-//            postOS.reset();
-//
-//            dev808WriteAndRead(postBytes);
-//            length = length - dateBuf.length;
-//
-//            if (frag) {
-//                if (requireAck) {
-//                    return false;
-//                }
-//                sleep(10L);
-//            } else {
-//                return !requireAck ;
-//            }
-//        }
-//        fragCtrl=0;
-//        return true;
-
-        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
-        ByteArrayOutputStream dataContent = new ByteArrayOutputStream();
-        int pkgLengthLimit = mPackageLengthLimit > 0 ? mPackageLengthLimit :
-                (mBlufiMTU > 0 ? mBlufiMTU : DEFAULT_PACKAGE_LENGTH);
-        int postDataLengthLimit = pkgLengthLimit - PACKAGE_HEADER_LENGTH;
-        postDataLengthLimit -= 2; // if frag, two bytes total length in data
-        if (checksum) {
-            postDataLengthLimit -= 2;
-        }
-        byte[] dataBuf = new byte[postDataLengthLimit];
-        while (true) {
-            int read = dataIS.read(dataBuf, 0, dataBuf.length);
-            if (read == -1) {
-                break;
-            }
-
-            dataContent.write(dataBuf, 0, read);
-            if (dataIS.available() > 0 && dataIS.available() <= 2) {
-                read = dataIS.read(dataBuf, 0, dataIS.available());
-                dataContent.write(dataBuf, 0, read);
-            }
-            boolean frag = dataIS.available() > 0;
-            int sequence = generateSendSequence();
-            if (frag) {
-                int totalLen = dataContent.size() + dataIS.available();
-                byte[] tempData = dataContent.toByteArray();
-                dataContent.reset();
-                dataContent.write(totalLen & 0xff);
-                dataContent.write(totalLen >> 8 & 0xff);
-                dataContent.write(tempData, 0, tempData.length);
-            }
-            byte[] postBytes = treatyPostDataBytes(frag,type, dataContent.toByteArray(),data.length);
-            //byte[] postBytes = getPostBytes(type, encrypt, checksum, requireAck, frag, sequence, dataContent.toByteArray());
-            dataContent.reset();
-            boolean posted = gattWrite(postBytes);
-            if (!posted) {
-                return false;
-            }
-            if (frag) {
-                if (requireAck && !receiveAck(sequence)) {
-                    return false;
-                }
-                sleep(10L);
-            } else {
-                return !requireAck || receiveAck(sequence);
-            }
-        }
-
-        return true;
+    /**
+     * @brief 发送传输数据包， 用于发送 SSID 或者 Password 或者 CustomData 数据
+     * @param type : WIF_Connect--Type.Data.SUBTYPE_STA_WIFI_SSID;
+     *               Password--SUBTYPE_STA_WIFI_PASSWORD
+     *               CustomData--Type.Data.SUBTYPE_CUSTOM_DATA
+     * @param fragCtrl : 用来标记是否最后一个包
+     */
+    private boolean dev808PostTransData( boolean requireAck, int type, int fragCtrl, byte[] data) throws InterruptedException {
+        int sequence = generateSendSequence();
+        byte[] postBytes = dev808GenTransPacket(type, fragCtrl, sequence, data);
+        boolean posted = gattWrite(postBytes);
+        Log.d(TAG, "<dev808PostTransData> posted=" + posted + ", type=" + type
+                + ", fragCtrl=" + fragCtrl + ", sequence=" + sequence
+                + ", postBytes=" + bytesToString(postBytes));
+        return posted && (!requireAck || receiveAck(sequence));
     }
 
 
-    private byte[] treatyCommandBytes(int type,byte[] data) {
+
+    /**
+     * @brief 生成传输数据包， 用于组织 SSID 或者 Password 或者 CustomData 数据包
+     * @param type : SSID--Type.Data.SUBTYPE_STA_WIFI_SSID;
+     *               Password--SUBTYPE_STA_WIFI_PASSWORD
+     *               CustomData--Type.Data.SUBTYPE_CUSTOM_DATA
+     * @param fragCtrl : 用来标记是否最后一个包, 在 CustomData 包中设置
+     * @param sequence : 包索引值
+     * @param transData : 传输数据包
+     * 参考如下数据结构
+     * typedef struct _bl_bt_proto_data{    // 資料指令用
+     *     unsigned char ctrl; // 通訊的控制
+     *     unsigned char seq; // seq no. 由 0 開始，每次+1
+     *     unsigned char frag_ctrl[2]; // short (2 bytes) 目前僅有 第 15 個 bit 有用，用於表示資料結束
+     *     unsigned char total_len[2]; // 實際要傳遞資料的長度，此長度若大於 mtu 長度，則會要求分割，拆成多個 packet 傳送
+     *     unsigned char len; // 由下一個 bytes 起算，要傳遞資料的長度，為 data_len + 5 (enc) + 4 (mac) + 1 (data_len) + 1 (type)
+     *     unsigned char enc[5]; // encrypt 資料，目前無作用
+     *     unsigned char mac[4]; // 目前無作用
+     *     unsigned char data_len; // 此次傳遞的資料長度，若 total_len 大於 mtu，資料會要求切割成多塊傳送，此表示被切割後的長度
+     *     unsigned char type; // 資料指令的參數，參考 data_id_t
+     *     // 接於此之後，則為 data_len 長度 (bytes) 的資料 (payload)
+     * } bl_bt_proto_data_t;
+     */
+    private byte[] dev808GenTransPacket(int type, int fragCtrl, int sequence, byte[] transData) {
         ByteArrayOutputStream byteOS = new ByteArrayOutputStream();
-        byte dateb = 0;
-        //retry frag prot ack type version
-        dateb = bitClear(dateb,7);
-        dateb = bitClear(dateb,6);
-        dateb = bitClear(dateb,5);
-        dateb = bitClear(dateb,4);
-        dateb = bitClear(dateb,2);
-        dateb = bitClear(dateb,3);
-        dateb = bitClear(dateb,1);
-        dateb = bitClear(dateb,0);
+        int dataLength = transData.length;
 
-        if (seq>127) {
-            seq=0;
-        }
-        byteOS.write(dateb);//ctrl
-        byteOS.write(seq);//SEQ
+        // 控制指令，用于传输资料
+        byte ctrl = (byte)((1<<2) | (1<<4) | (1<<7));
+        byteOS.write(ctrl);
 
-        int frag_ctrl =0;
-        frag_ctrl = inBitSet(frag_ctrl,15);
+        // 数据包sequence, 从0开始, 每次自增1
+        byteOS.write(sequence);
 
-        byteOS.write((byte)(frag_ctrl & 0xff));//不分包 直接结束
-        byteOS.write((byte)(frag_ctrl >> 8));//Frag CTRL
+        // Frag Ctrl(2 bytes) 目前只有第 15 位有效，用于表示资料结束
+        // 如果整体长度 > mtu, 需要切割成多块传输
+        byteOS.write(fragCtrl & 0xff);
+        byteOS.write((fragCtrl >> 8) & 0xff);
 
-        byteOS.write(4&0xff);
-        byteOS.write(4>>0x08);//total length
+        // 实际数据的长度
+        byteOS.write(dataLength & 0xff);
+        byteOS.write((dataLength >> 8) & 0xff);
+
+        // 从下一个字节算起要传输数据长度, 为 data_len + 5 (enc) + 4 (mac) + 1 (data_len) + 1 (type)
+        byteOS.write(dataLength+5+4+1+1);
+
+        // 5个字节的 Enc Ctrl，目前无作用，固定都是1
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
+
+        // 4字节的 MAC，目前无作用，固定都是2
+        byteOS.write(2);//mac
+        byteOS.write(2);//mac
+        byteOS.write(2);//mac
+        byteOS.write(2);//mac
+
+        // 此次传输资料的长度, 如果整体长度 > mtu, 需要切割成多块传输
+        // 我们的代码中 MTU长度够大，每次都是一次性将所有数据都传递完成，所以不需要切割
+        byteOS.write(dataLength);
+
+        // 写入数据类型
+        byteOS.write(type);
+
+        // 写入具体数据
+        byteOS.write(transData, 0,  dataLength);
+
+        return byteOS.toByteArray();
+    }
+
+    /**
+     * @brief 生成命令数据包， 用于组织 WIFI_Connect 命令包
+     * @param type : SSID--Type.Data.SUBTYPE_STA_WIFI_SSID;
+     *               Password--SUBTYPE_STA_WIFI_PASSWORD
+     *               CustomData--Type.Data.SUBTYPE_CUSTOM_DATA
+     * @param fragCtrl : 用来标记是否最后一个包, 值为 (1<<15) 包中设置
+     * @param sequence : 包索引值
+     * @param cmdData : 命令数据包
+     * 参考如下数据结构
+     * typedef struct _bl_bt_proto_cmd{
+     *     unsigned char ctrl; // 通訊的控制
+     *     unsigned char seq; // seq no. 由 0 開始，每次+1
+     *     unsigned char frag_ctrl[2]; // short (2 bytes) 目前僅有 第 15 個 bit 有用，用於表示資料結束
+     *     unsigned char total_len[2]; // 實際要傳遞資料的長度，此長度若大於 mtu 長度，則會要求分割，拆成多個 packet 傳送
+     *     unsigned char len; // 由下一個 bytes 起算，要傳遞指令的長度，在 cmd 裡固定為 14: 5 (enc) + 4 (mac) + 1 (type) + 4 (cmd data)
+     *     unsigned char enc[5]; // encrypt 資料，目前無作用
+     *     unsigned char mac[4]; // 目前無作用
+     *     unsigned char type; // 命令指令的參數，參考 cmd_id_t
+     *     //接於此之後，為 4 bytes 的指令參數
+     *  } bl_bt_proto_cmd_t;
+     */
+    private byte[] dev808GenCmdPacket(int type, int fragCtrl, int sequence, byte[] cmdData) {
+        ByteArrayOutputStream byteOS = new ByteArrayOutputStream();
+        int dataLength = cmdData.length;
+
+        // 控制指令，用于传输资料
+        byte ctrl = 0;
+        byteOS.write(ctrl);
+
+        // 数据包sequence, 从0开始, 每次自增1
+        byteOS.write(sequence);
+
+        // Frag Ctrl(2 bytes) 目前只有第 15 位有效，用于表示资料结束
+        // 如果整体长度 > mtu, 需要切割成多块传输
+        byteOS.write(fragCtrl & 0xff);
+        byteOS.write((fragCtrl >> 8) & 0xff);
+
+        // 实际数据的长度
+        byteOS.write(dataLength & 0xff);
+        byteOS.write((dataLength >> 8) & 0xff);
+
+        // 固定为 14, 为 data_len + 5 (enc) + 4 (mac) + 1 (data_len) + 1 (cmd data)
         byteOS.write(14);
 
-        byteOS.write(1);//enc ctrl
-        byteOS.write(1);//ctr
-        byteOS.write(1);//ctr
-        byteOS.write(1);//ctr
-        byteOS.write(1);//ctr
+        // 5个字节的 Enc Ctrl，目前无作用，固定都是1
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
+        byteOS.write(1);
 
+        // 4字节的 MAC，目前无作用，固定都是2
         byteOS.write(2);//mac
         byteOS.write(2);//mac
         byteOS.write(2);//mac
         byteOS.write(2);//mac
 
-        byteOS.write(type);//cmd id
-        byteOS.write(data, 0, data.length);
+        // 写入数据类型
+        byteOS.write(type);
+
+        // 写入具体数据
+        byteOS.write(cmdData, 0,  dataLength);
 
         return byteOS.toByteArray();
     }
 
 
-    private byte[] treatyPostDataBytes(boolean frag, int type, byte[] data, int length) {
-        ByteArrayOutputStream byteOS = new ByteArrayOutputStream();
-        byte dateb = 0;
 
-        dateb = bitClear(dateb,0);
-        if (length<= mBlufiMTU){
-            dateb = bitClear(dateb,1);
-        }else {
-            dateb = bitSet(dateb,1);
+
+    public String bytesToString(byte[] data) {
+        if (data == null) {
+            return "";
         }
-        dateb = bitSet(dateb,2);
-        dateb = bitClear(dateb,3);
-        dateb = bitClear(dateb,5);
-        dateb = bitSet(dateb,4);
-
-        dateb = bitClear(dateb,6);
-        dateb = bitSet(dateb,7);
-
-        byteOS.write(dateb);//ctrl
-        if (seq>127){ seq=0; }
-        byteOS.write(seq);//SEQ
-
-        if (fragCtrl==0){
-
-            byteOS.write(fragCtrl&0xff);
-            byteOS.write(fragCtrl>>0x08);//Frag CTRL
-            byteOS.write(length&0xff);
-            byteOS.write(length>>0x08);//total length
-
-            byteOS.write(data.length+9+2);
-
-            byteOS.write(1);//enc ctrl
-
-
-            byteOS.write(1);//ctr
-            byteOS.write(1);//ctr
-            byteOS.write(1);//ctr
-            byteOS.write(1);//ctr
-
-            byteOS.write(2);//mac
-            byteOS.write(2);//mac
-            byteOS.write(2);//mac
-            byteOS.write(2);//mac
-        }else {
-            if (frag){
-                //没结束
-                byteOS.write(fragCtrl&0xff);
-                byteOS.write(fragCtrl>>0x08);//Frag CTRL
-            }else {
-                int dater = inBitSet(fragCtrl,15);
-                byteOS.write(fragCtrl&0xff);
-                byteOS.write(dater>>0x08);//Frag CTRL
-            }
-
-            byteOS.write(data.length+3);
-            byteOS.write(1);//enc ctrl
-            //byteOS.write(1);//enc ctrl
-            //byteOS.write(1);//ctr
-            //byteOS.write(1);//mac
-        }
-        //byteOS.write(data.length&0xff);
-        //byteOS.write(data.length>>0x08);
-        byteOS.write(data.length);//data length
-        byteOS.write(type);//data type
-        if (data != null) {
-            byteOS.write(data, 0, data.length);
+        String text = "";
+        for (int j = 0; j < data.length; j++) {
+            String dataHex = String.format("%02x", data[j]);
+            text += dataHex;
         }
 
-        return byteOS.toByteArray();
+        return text;
     }
-
-    private synchronized void dev808WriteAndRead(byte[] postBytes) throws InterruptedException {
-
-        gattWrite(postBytes);
-        //根据ｍｔｕ大小来决定等待时间
-        //sleep(10);
-        hasReceiveSeq = false;
-        //是否需要接受回调
-        int code = bitGet(postBytes[0],3);
-
-        if (code==0){
-            int time = 0;
-            readError = false;
-            boolean readSuc = mGatt.readCharacteristic(mNotifyChar);
-            Log.w(TAG,"readSuc:"+readSuc);
-            //等待回调关闭锁
-            if (!readSuc){
-                //mUserBleCallback.onError(mClient,BleCallback.CODE_WRITE_DATA_FAILED);
-                return;
-            }
-            while (!hasReceiveSeq||seq!=receiveSeq){
-                sleep(1);
-                //yield()
-                //暂停当前执行的线程对象，并执行其他线程。这个暂停会放弃cpu资源，放弃的时间不确定。
-                if (readError){
-                    Log.d(TAG,"readError break");
-                    break;
-                }
-
-                if (time==2500){
-                    //无回答
-                    Log.d("readErrorTime", "无回答"+readOutTime);
-                    byte b = bitSet(postBytes[0],7);
-                    postBytes[0] = b;
-                    readOutTime++;
-                    Log.d("readErrorTime", "status==4");
-                    if (readOutTime<10){
-                        sleep(30*readOutTime);
-                        dev808WriteAndRead(postBytes);
-                    }else {
-                        //回调给 用主线程
-                        readOutTime = 1;
-                        //mUserBleCallback.onError(mClient,BleCallback.CODE_WRITE_DATA_FAILED);
-                    }
-
-                    return;
-                }
-                time++;
-            }
-            if (readError){
-                //改变重发标志位
-                byte b = bitSet(postBytes[0],7);
-                postBytes[0] = b;
-
-                dev808WriteAndRead(postBytes);
-                return;
-            }
-            if (seq==receiveSeq){
-                seq++;
-                fragCtrl++;
-            }else {
-                byte b = bitSet(postBytes[0],7);
-                postBytes[0] = b;
-
-                dev808WriteAndRead(postBytes);
-            }
-            // 读取下一个frag
-            if (nextDate2Get){
-                nextDate2Get = false;
-                try {
-                    dev808WriteAndRead(treatyCommandBytes(mType,"1234".getBytes()));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    byte bitClear(byte inData, int bits) {
-        byte mask = (byte)(1 << bits);
-        mask = (byte)(~mask);
-        byte outData = (byte)(inData & mask);
-        return outData;
-    }
-
-    int inBitSet(int inData, int bits) {
-        int mask = (1 << bits);
-        int outData = (inData | mask);
-        return outData;
-    }
-
-    byte bitSet(byte inData, int bits) {
-        int mask = (1 << bits);
-        byte outData = (byte)(inData | mask);
-        return outData;
-    }
-
-    int bitGet(byte inData, int bits) {
-        int mask = (1 << bits);
-        int bitData = (inData & mask);
-        return (bitData == 0x00) ? 0 : 1;
-    }
-
-
 }

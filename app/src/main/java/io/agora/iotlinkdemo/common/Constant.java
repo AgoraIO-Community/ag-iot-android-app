@@ -95,6 +95,10 @@ public class Constant {
     public static final int CALLBACK_TYPE_DEVICE_QUERY_SUCCESS = 24;
     /* 设备查询失败 */
     public static final int CALLBACK_TYPE_DEVICE_QUERY_FAIL = 25;
+    /* 蓝牙添加设备成功 */
+    public static final int CALLBACK_TYPE_DEVICE_BTADD_SUCCESS = 26;
+    /* 蓝牙添加设备失败 */
+    public static final int CALLBACK_TYPE_DEVICE_BTADD_FAIL = 27;
 
     /* 设备接收速率 */
     public static final int CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED = 30;

@@ -44,6 +44,7 @@ import java.util.List;
 public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<ActivityDeviceBtConfigBinding>
         implements DeviceBtCfg.IBtCfgCallback   {
     private final String TAG = "IOTLINK/DevBtCfgAct";
+    private final int MAX_CNT_CHECK_DEVBIND = 12;   ///< 最多检测设备绑定12次(2分钟)
 
     //
     // UI state machine
@@ -64,7 +65,7 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
     //
     public static final int MSGID_CFG_PROGRESS = 0x1001;    ///< 配置进度
     public static final int MSGID_CFG_DONE = 0x1002;        ///< 配置完成
-
+    public static final int MSGID_CHECK_DEVBIND = 0x1003;   ///< 定时10秒检测一次设备绑定是否成功
 
 
     private volatile boolean mForeground = false;       ///< 当前界面是否前景
@@ -72,6 +73,7 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
     private DeviceViewModel mDeviceViewModel;
     private int mUiState = UISATE_CFG_IDLE;
+    private volatile int mCheckBindCount = 0;
 
 
     @Override
@@ -91,6 +93,10 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
                     case MSGID_CFG_DONE: {
                         onMsgConfigDone(msg.arg1);
+                    } break;
+
+                    case MSGID_CHECK_DEVBIND: {
+                        onMsgCheckDevBind(msg);
                     } break;
                 }
             }
@@ -122,7 +128,9 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
         mForeground = false;
         if (mMsgHandler != null) {
+            mMsgHandler.removeMessages(MSGID_CFG_PROGRESS);
             mMsgHandler.removeMessages(MSGID_CFG_DONE);
+            mMsgHandler.removeMessages(MSGID_CHECK_DEVBIND);
             mMsgHandler = null;
         }
         DeviceBtCfg.getInstance().unregisterListener(this);  // 注销当前界面回调
@@ -134,14 +142,12 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
         Log.d(TAG, "<onStart>");
         super.onStart();
         mDeviceViewModel.onStart();
-        //mDeviceViewModel.startTimer(getBinding().txTimeRun);
     }
 
     @Override
     protected void onStop() {
         Log.d(TAG, "<onStop>");
         super.onStop();
-        mDeviceViewModel.stopTimer();
         mDeviceViewModel.onStop();
     }
 
@@ -169,10 +175,7 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
     public void initView(@Nullable Bundle savedInstanceState) {
         mDeviceViewModel = new ViewModelProvider(this).get(DeviceViewModel.class);
         mDeviceViewModel.setLifecycleOwner(this);
-        mDeviceViewModel.initHandler();
-
         updateCfgStatusUI();
-
     }
 
     @Override
@@ -181,15 +184,15 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
             if (var1 == Constant.CALLBACK_TYPE_EXIT_STEP) {
                 mHealthActivityManager.finishActivityByClass("DeviceAddStepBtCfgActivity");
 
-            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_SUCCESS) {
-                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_SUCCESS");
+            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_BTADD_SUCCESS) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_BTADD_SUCCESS");
                 //成功添加
                 PagePilotManager.pageAddResult(true);
                 exitActivity();
                 EventBus.getDefault().post(new ResetAddDeviceEvent());
 
-            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_FAIL) {
-                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_FAIL");
+            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_BTADD_FAIL) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_BTADD_FAIL");
                 //超时
                 PagePilotManager.pageDeviceBtCfgResult();
                 exitActivity();
@@ -238,12 +241,35 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
         if (errCode == 0) {
             //popupMessage("蓝牙设备配置成功!");
-            mDeviceViewModel.startTimer(null);
+            mCheckBindCount = 0;
+            if (mMsgHandler != null) {
+                mMsgHandler.removeMessages(MSGID_CHECK_DEVBIND);
+                mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_DEVBIND, 10000L);
+            }
+
         } else {
             //popupMessage("蓝牙设备配置失败, 错误码=" + errCode);
             PagePilotManager.pageDeviceBtCfgResult();
             exitActivity();
             EventBus.getDefault().post(new ResetAddDeviceEvent());
+        }
+    }
+
+    void onMsgCheckDevBind(Message msg) {
+        mCheckBindCount++;
+
+        if (mCheckBindCount > MAX_CNT_CHECK_DEVBIND) {     // 等待设备绑定成功最多2分钟
+            Log.d(TAG, "<onMsgCheckDevBind> Timeout");
+            mDeviceViewModel.getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_BTADD_FAIL, null);
+            if (mMsgHandler != null) {
+                mMsgHandler.removeMessages(MSGID_CHECK_DEVBIND);
+            }
+            return;
+        }
+
+        if (mMsgHandler != null) {
+            mMsgHandler.removeMessages(MSGID_CHECK_DEVBIND);
+            mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_DEVBIND, 10000L);
         }
     }
 

@@ -36,6 +36,7 @@ public interface BlufiParameter {
             public static final int SUBTYPE_GET_VERSION = 0x07;
             public static final int SUBTYPE_CLOSE_CONNECTION = 0x08;
             public static final int SUBTYPE_GET_WIFI_LIST = 0x09;
+            public static final int SUBTYPE_GET_CUSTOM_DATA = 0x0e;
         }
 
         public final static class Data {
