@@ -13,11 +13,8 @@
 package io.agora.iotlink.rtcsdk;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Environment;
-import android.preference.PreferenceManager;
-
 import android.util.Log;
 import android.view.SurfaceView;
 
@@ -27,17 +24,16 @@ import io.agora.iotlink.utils.ImageConvert;
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.Random;
 
 import io.agora.base.VideoFrame;
 import io.agora.base.internal.CalledByNative;
+import io.agora.rtc2.ChannelMediaOptions;
 import io.agora.rtc2.Constants;
 import io.agora.rtc2.IRtcEngineEventHandler;
 import io.agora.rtc2.RtcConnection;
 import io.agora.rtc2.RtcEngine;
 import io.agora.rtc2.RtcEngineEx;
 import io.agora.rtc2.video.EncodedVideoFrameInfo;
-//import io.agora.rtc2.video.IVideoEncodedImageReceiver;
 import io.agora.rtc2.video.IVideoFrameObserver;
 import io.agora.rtc2.video.VideoCanvas;
 import io.agora.rtc2.video.VideoEncoderConfiguration;
@@ -124,6 +120,8 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
     private RtcEngineEx mRtcEngine;         ///< RtcEngine实例对象
     private int mLocalUid = 0;              ///< 本地端加入频道时的Uid
     private int mPeerUid = 0;               ///< 对端通话的Uid
+    private boolean mMuteLocalVideo = true;
+    private boolean mMuteLocalAudio = true;
 
     private ICallkitMgr.RtcNetworkStatus mRtcStatus = new ICallkitMgr.RtcNetworkStatus();
     private volatile boolean mDumpVideoFrame = false;
@@ -166,8 +164,6 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         mRtcEngine.setChannelProfile(Constants.CHANNEL_PROFILE_LIVE_BROADCASTING);
         mRtcEngine.enableVideo();  // 启动音视频采集和推流处理
         mRtcEngine.enableAudio();
-        mRtcEngine.muteLocalVideoStream(!mInitParam.mPublishVideo);
-        mRtcEngine.muteLocalAudioStream(!mInitParam.mPublishAudio);
 
         String log_file_path = Environment.getExternalStorageDirectory()
                 + File.separator + mInitParam.mContext.getPackageName() + "/log/agora-rtc.log";
@@ -185,13 +181,13 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
         // 设置广播模式
         mRtcEngine.setClientRole(mRtcEngCfg.mClientRole);
 
-        // 设置私参：  音频G722编码--9;  音频G711U--0;  音频G711A--8
-        String codecParam = "{\"che.audio.custom_payload_type\":9}";
+        // 设置私参： 默认G711U格式。 音频G722编码--9;  音频G711U--0;  音频G711A--8
+        String codecParam = "{\"che.audio.custom_payload_type\":0}";
         int ret = mRtcEngine.setParameters(codecParam);
 
-//        // 设置私参：采样率
-//        String smplRate = "{\"che.audio.input_sample_rate\":8000}";
-//        ret = mRtcEngine.setParameters(smplRate);
+        // 设置私参：采样率，G711U是 8kHz
+        String smplRate = "{\"che.audio.input_sample_rate\":8000}";
+        ret = mRtcEngine.setParameters(smplRate);
 
         mRtcEngine.registerVideoFrameObserver(this);
 
@@ -285,14 +281,24 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
                 + ", token=" + token + ", localUid=" + localUid);
         mLocalUid = localUid;
 
+        mMuteLocalVideo = (!mInitParam.mPublishVideo);
+        mMuteLocalAudio = (!mInitParam.mPublishAudio);
+
         // 加入频道
-        int ret = mRtcEngine.joinChannel(token, channel, "AgoraCallKit", mLocalUid);
+        ChannelMediaOptions options = new ChannelMediaOptions();
+        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
+        options.clientRoleType = mRtcEngCfg.mClientRole;
+        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
+        options.publishCameraTrack = mInitParam.mPublishVideo;
+        options.publishMicrophoneTrack = mInitParam.mPublishAudio;
+        int ret = mRtcEngine.joinChannel(token, channel, mLocalUid, options);
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<joinChannel> Exit with error, ret=" + ret);
             return false;
         }
 
-        ret = mRtcEngine.muteLocalVideoStream(!mInitParam.mPublishVideo);
+        ret = mRtcEngine.muteLocalVideoStream(mMuteLocalAudio);
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<joinChannel> muteLocalVideoStream() error, ret=" + ret);
         }
@@ -384,8 +390,21 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
             ALog.getInstance().e(TAG, "<muteLocalVideoStream> bad state");
             return false;
         }
+
+        mMuteLocalVideo = mute;
+
+        ChannelMediaOptions options = new ChannelMediaOptions();
+        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
+        options.clientRoleType = mRtcEngCfg.mClientRole;
+        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
+        options.publishCameraTrack = (!mMuteLocalVideo);
+        options.publishMicrophoneTrack = (!mMuteLocalAudio);
+        int ret1 = mRtcEngine.updateChannelMediaOptions(options);
+
         int ret = mRtcEngine.muteLocalVideoStream(mute);
-        ALog.getInstance().d(TAG, "<muteLocalVideoStream> mute=" + mute + ", ret=" + ret);
+        ALog.getInstance().d(TAG, "<muteLocalVideoStream> mute=" + mute
+                    + ", ret1=" + ret1 + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
@@ -395,8 +414,20 @@ public class TalkingEngine implements AGEventHandler, IVideoFrameObserver {
             return false;
         }
 
+        mMuteLocalAudio = mute;
+
+        ChannelMediaOptions options = new ChannelMediaOptions();
+        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
+        options.clientRoleType = mRtcEngCfg.mClientRole;
+        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
+        options.publishCameraTrack = (!mMuteLocalVideo);
+        options.publishMicrophoneTrack = (!mMuteLocalAudio);
+        int ret1 = mRtcEngine.updateChannelMediaOptions(options);
+
         int ret = mRtcEngine.muteLocalAudioStream(mute);
-        ALog.getInstance().d(TAG, "<muteLocalAudioStream> mute=" + mute + ", ret=" + ret);
+        ALog.getInstance().d(TAG, "<muteLocalAudioStream> mute=" + mute
+                + ", ret1=" + ret1 + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 

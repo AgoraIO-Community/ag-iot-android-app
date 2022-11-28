@@ -100,38 +100,6 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         }
     }
 
-    /**
-     * 源自sdk 处理逻辑
-     * 先保存原设备列表 然后再通过对新的设备列表进行对比来得到新添加的设备信息
-     */
-    @Override
-    public void onAllDevicesQueryDone(int errCode, List<IotDevice> deviceList) {
-        Log.d(TAG, "<onAllDevicesQueryDone> errCode=" + errCode
-                + "deviceList = " + deviceList);
-        DevicesListManager.devicesList.clear();
-        DevicesListManager.devicesList.addAll(deviceList);
-        Log.d(TAG, "mBeforeBindDevList " + mBeforeBindDevList);
-        if (deviceList.size() > mBeforeBindDevList.size()) {
-            //停止计时
-            stopTimer();
-            // find new device
-            for (int i = 0; i < deviceList.size(); i++) {
-                int j = 0;
-                for (j = 0; j < mBeforeBindDevList.size(); j++) {
-                    if (deviceList.get(i).mDeviceID.equals(mBeforeBindDevList.get(j).mDeviceID)) {
-                        break;
-                    }
-                }
-                // not found device in mBeforBindDevList, it's new device
-                if (j == mBeforeBindDevList.size()) {
-                    mNewDevice = deviceList.get(i);
-                }
-            }
-            //跳转成功
-            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ADD_SUCCESS, null);
-        }
-    }
-
     public String getUserId() {
         return AIotAppSdkFactory.getInstance().getAccountMgr().getQRCodeUserId();
     }
@@ -298,29 +266,34 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
 
 
-    /**
-     * 以下源自sdk ======== ========
-     */
+    //////////////////////////////////////////////////////////////////////////////
+    ///////////////////////// 定时查询绑定设备列表，确认添加新设备 ///////////////////////
+    //////////////////////////////////////////////////////////////////////////////
+    public static final int CHK_NEW_DEV_TIMEOUT = 120;          ///< 检测新设备超时 120秒
+    public static final int MSGID_REFRESH_LIST = 0x1001;
+    public static final int MSGID_TIMER_1S = 0x1002;
+
+
     private static IotDevice mNewDevice = null;
+    private long mBaseTimer = 0;
+    private Timer mTimer = null;
+    private Handler mMsgHandler = null;
+    private ArrayList<IotDevice> mBeforeBindDevList = new ArrayList<>();
+
 
     public static IotDevice getNewDevice() {
         return mNewDevice;
     }
 
-    private long mBaseTimer = 0;
-    private Timer mTimer = null;
-    public static final int MSGID_REFRESH_LIST = 0x1001;
-    public static final int MSGID_TIMER_1S = 0x1002;
-    private Handler mMsgHandler = null;
-    private ArrayList<IotDevice> mBeforeBindDevList = new ArrayList<>();
-
     public void initHandler() {
+        // 缓存之前的绑定设备列表
         mBeforeBindDevList.clear();
         for (IotDevice device : DevicesListManager.devicesList) {
             if (!TextUtils.isEmpty(device.mDeviceID)) {
                 mBeforeBindDevList.add(device);
             }
         }
+
         mMsgHandler = new Handler(Looper.myLooper()) {
             public void handleMessage(android.os.Message msg) {
                 switch (msg.what) {
@@ -335,6 +308,9 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         };
     }
 
+    /**
+     * @brief 启动定时器查询新设备
+     */
     public void startTimer(AppCompatTextView txTimeRun) {
         mBaseTimer = SystemClock.elapsedRealtime();
         mTimer = new Timer();
@@ -351,28 +327,40 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         }, 0, 1000L);
     }
 
+    /**
+     * @brief 停止查询新设备的定时器
+     */
     public void stopTimer() {
         if (mTimer != null) {
             mTimer.cancel();
+            mTimer = null;
+            mMsgHandler.removeMessages(MSGID_TIMER_1S);
+            mMsgHandler.removeMessages(MSGID_REFRESH_LIST);
         }
     }
 
+    /**
+     * @brief 定时器回调函数, 这里定时1秒
+     */
     private void onMsgTimer1s(Message msg) {
+        // 如果有时间显示控件，刷新时间显示
         TextView txTimeRun = (TextView) msg.obj;
-        String mm = new DecimalFormat("00").format(msg.arg1 % 3600 / 60);
-        String ss = new DecimalFormat("00").format(msg.arg1 % 60);
-        String timeFormat = mm + ":" + ss;
         if (txTimeRun != null) {
+            String mm = new DecimalFormat("00").format(msg.arg1 % 3600 / 60);
+            String ss = new DecimalFormat("00").format(msg.arg1 % 60);
+            String timeFormat = mm + ":" + ss;
             txTimeRun.setText(timeFormat);
         }
-        if (msg.arg1 > 30) {
-            mTimer.cancel();
-            //超时
+
+        if (msg.arg1 > CHK_NEW_DEV_TIMEOUT) {   // 检测新设备超时
+            stopTimer();
             getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ADD_FAIL, null);
+
         } else {
-            if (msg.arg1 % 4 == 0) {
+            if (msg.arg1 % 6 == 0) {    // 每隔6秒查询一次设备列表
                 Message newMsg = mMsgHandler.obtainMessage();
                 newMsg.what = MSGID_REFRESH_LIST;
+                mMsgHandler.removeMessages(MSGID_REFRESH_LIST);
                 mMsgHandler.sendMessageDelayed(newMsg, 0);
             }
         }
@@ -385,6 +373,38 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         }
     }
 
+    @Override
+    public void onAllDevicesQueryDone(int errCode, List<IotDevice> deviceList) {
+        Log.d(TAG, "<onAllDevicesQueryDone> errCode=" + errCode
+                + ", deviceList = " + deviceList);
+        if (deviceList == null) {
+            return;
+        }
+        DevicesListManager.devicesList.clear();
+        DevicesListManager.devicesList.addAll(deviceList);
+        Log.d(TAG, "mBeforeBindDevList " + mBeforeBindDevList);
+        if (deviceList.size() > mBeforeBindDevList.size()) {
+            //停止计时
+            stopTimer();
+
+            // find new device
+            for (int i = 0; i < deviceList.size(); i++) {
+                int j = 0;
+                for (j = 0; j < mBeforeBindDevList.size(); j++) {
+                    if (deviceList.get(i).mDeviceID.equals(mBeforeBindDevList.get(j).mDeviceID)) {
+                        break;
+                    }
+                }
+                // not found device in mBeforBindDevList, it's new device
+                if (j == mBeforeBindDevList.size()) {
+                    mNewDevice = deviceList.get(i);
+                }
+            }
+
+            //跳转成功
+            getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ADD_SUCCESS, null);
+        }
+    }
 
     @Override
     public void onDeviceAddDone(int errCode, IotDevice addDevice,
@@ -396,7 +416,6 @@ public class DeviceViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
         Log.d(TAG, "<onDeviceAddDone> addDevice=" + addDevice.toString()
                 + ",  bindDevList.size()=" + bindDevList.size());
-        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_BTADD_SUCCESS, addDevice);
-    }
+     }
 
 }

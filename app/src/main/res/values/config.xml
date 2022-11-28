@@ -11,6 +11,9 @@
     <!-- 配置灵隼服务Slave Server -->
     <string name="SALVE_SERVER_URL">https://api.agora.io/agoralink/cn/api</string>
 
+    <!-- 配置第三方账号服务器地址 Account Server -->
+    <string name="ACCOUNT_SERVER_URL">https://third-user.sh3.agoralab.co/third-party</string>
+
     <!-- 配置环信SDK的AppId -->
     <string name="EASEMOB_APPKEY">your_easemob_appkey</string>
 

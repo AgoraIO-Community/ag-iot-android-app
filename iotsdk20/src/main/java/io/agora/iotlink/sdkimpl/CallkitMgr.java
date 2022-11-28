@@ -1001,6 +1001,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             talkInitParam.mSubscribeVideo = sdkInitParam.mSubscribeVideo;
             mTalkEngine.initialize(talkInitParam);
 
+            mMuteLocalVideo = (!sdkInitParam.mPublishVideo);
+            mMuteLocalAudio = (!sdkInitParam.mPublishAudio);
+
             // 设置RTC初始参数
             mTalkEngine.setPeerUid(peerUid);
             mTalkEngine.joinChannel(channelName, rtcToken, localUid);
@@ -1026,7 +1029,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         if (mTalkEngine.isInChannel()) {   // 已经在频道内进行处理
-            mTalkEngine.muteLocalAudioStream(false);    // 本地推送音频流
+            mTalkEngine.muteLocalAudioStream(mMuteLocalAudio);    // 本地推送音频流
         } else {
             ALog.getInstance().e(TAG, "<talkingStart> NOT in a channel");
         }

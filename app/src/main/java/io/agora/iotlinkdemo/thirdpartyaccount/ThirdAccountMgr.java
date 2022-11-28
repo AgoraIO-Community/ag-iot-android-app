@@ -110,6 +110,10 @@ public class ThirdAccountMgr {
     }
 
 
+    public void setAccountServerUrl(final String serverUrl) {
+        mThirdBaseUrl = serverUrl;
+    }
+
     class AccountMgrCallable implements Callable<Integer> {
         private String mAccount;
         private String mPassword;

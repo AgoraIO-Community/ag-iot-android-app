@@ -240,6 +240,10 @@
             android:name="SALVE_SERVER_URL"
             android:value="@string/SALVE_SERVER_URL" />
 
+        <!-- 设置配第三方账号服务器地址 Account Server -->
+        <meta-data
+            android:name="ACCOUNT_SERVER_URL"
+            android:value="@string/ACCOUNT_SERVER_URL" />
 
         <!-- ==================== 离线推送账号配置 BEGIN ==================== -->
             <!-- 环信账号配置 -->

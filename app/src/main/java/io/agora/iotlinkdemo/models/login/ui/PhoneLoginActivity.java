@@ -108,7 +108,8 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
         String account = AppStorageUtil.safeGetString(this, Constant.ACCOUNT, null);
         if (!TextUtils.isEmpty(account)) {
             getBinding().etAccounts.setText(account);
-            String password = SPUtil.Companion.getInstance(this).getString(Constant.PASSWORD, null);
+
+            String password = AppStorageUtil.safeGetString(this, Constant.PASSWORD, null);
             if (!TextUtils.isEmpty(password)) {
                 getBinding().etPwd.setText(password);
             }

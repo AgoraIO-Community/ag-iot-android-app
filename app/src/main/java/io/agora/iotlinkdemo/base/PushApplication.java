@@ -18,12 +18,14 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.agora.baselibrary.base.BaseApplication;
 //import io.agora.iotlinkdemo.huanxin.EmAgent;
 import io.agora.iotlink.IDeviceMgr;
 //import io.agora.iotlinkdemo.huanxin.EmAgent;
+import io.agora.iotlinkdemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.iotlinkdemo.utils.AppStorageUtil;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.IAgoraIotAppSdk;
@@ -98,6 +100,15 @@ public class PushApplication extends BaseApplication {
                 return;
             }
         }
+
+        //
+        // 设置第三方账号服务器地址
+        //
+        String accountServerUrl = mMetaData.getString("ACCOUNT_SERVER_URL", "");
+        if (!TextUtils.isEmpty(accountServerUrl)) {
+            ThirdAccountMgr.getInstance().setAccountServerUrl(accountServerUrl);
+        }
+
         Log.d(TAG, "<onCreate> <==Exit");
     }
 
