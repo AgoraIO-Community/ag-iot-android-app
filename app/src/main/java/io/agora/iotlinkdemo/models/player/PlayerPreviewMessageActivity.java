@@ -1,12 +1,16 @@
 package io.agora.iotlinkdemo.models.player;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
@@ -32,6 +36,7 @@ import io.agora.iotlinkdemo.models.message.MessageViewModel;
 import io.agora.iotlinkdemo.models.player.adapter.ViewPagerAdapter;
 import io.agora.iotlinkdemo.models.player.living.PlayerFunctionListFragment;
 import io.agora.iotlinkdemo.models.player.living.PlayerMessageListFragment;
+import io.agora.iotlinkdemo.models.player.living.PlayerPreviewActivity;
 import io.agora.iotlinkdemo.utils.FileUtils;
 import com.alibaba.android.arouter.facade.annotation.Autowired;
 import com.alibaba.android.arouter.facade.annotation.Route;
@@ -50,11 +55,21 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         implements PermissionHandler.ICallback {
     private final String TAG = "IOTLINK/PlayPrevMsgAct";
 
-    /**
-     * 消息ViewModel
-     */
-    private MessageViewModel messageViewModel;
-    private PermissionHandler mPermHandler;             ///< 权限申请处理
+    private final int UI_STATE_PORTRAIT = 0x0000;           ///< 竖屏显示
+    private final int UI_STATE_FULL = 0x0001;               ///< 全屏显示，横屏无控件显示
+    private final int UI_STATE_LANDSCAPE = 0x0002;          ///< 横屏带控件显示
+
+
+    private MessageViewModel messageViewModel;              ///< 消息ViewModel
+    private PermissionHandler mPermHandler;                 ///< 权限申请处理
+
+    private DeleteMediaTipDialog deleteMediaTipDialog;      ///< 删除对话框
+
+    private volatile boolean mIsOrientLandscape = false;    ///< 是否横屏状态
+    private volatile int mUiState = UI_STATE_PORTRAIT;      ///< 当前UI状态机
+    private int mUiOptionsOld = 0;
+
+    private boolean isPlaying = false;
 
     @JvmField
     @Autowired(name = Constant.FILE_URL)
@@ -76,11 +91,14 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     @Autowired(name = Constant.ID)
     long mAlarmId;
 
-    /**
-     * 删除对话框
-     */
-    private DeleteMediaTipDialog deleteMediaTipDialog;
 
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////// Methods for BaseGsyPlayerActivity Override /////////////////
+    ////////////////////////////////////////////////////////////////////////////////////
     @Override
     protected ActivityPlayerMessageBinding getViewBinding(@NonNull LayoutInflater inflater) {
         return ActivityPlayerMessageBinding.inflate(inflater);
@@ -90,6 +108,21 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     public boolean isBlackDarkStatus() {
         return false;
     }
+
+    @Override
+    protected void onStart() {
+        Log.d(TAG, "<onStart>");
+        super.onStart();
+        messageViewModel.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "<onStop>");
+        super.onStop();
+        messageViewModel.onStop();
+    }
+
 
     @Override
     public void initView(@Nullable Bundle savedInstanceState) {
@@ -104,6 +137,8 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 popupMessage("删除告警视频失败!");
             }
         });
+
+
     }
 
     @Override
@@ -116,10 +151,8 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         getBinding().gsyPlayer.startPlay();
         isPlaying = true;
         getBinding().ivPlaying.setSelected(true);
-        getBinding().btnSelectLegibility.setOnClickListener(view -> PagePilotManager.pageAlbum());
     }
 
-    private boolean isPlaying = false;
 
     @Override
     public void initListener() {
@@ -128,6 +161,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_PROGRESS) {
                     long progress = (Long)data;
                     getBinding().pbPlayProgress.setProgress((int) progress);
+                    getBinding().pbPlayProgressFull.setProgress((int) progress);
                 } else if (type == Constant.CALLBACK_TYPE_PLAYER_CURRENT_TIME) {
                     getBinding().tvCurrentTime.setText(StringUtils.INSTANCE.getDurationTimeSS((long)data / 1000));
                 } else if (type == Constant.CALLBACK_TYPE_PLAYER_TOTAL_TIME) {
@@ -135,8 +169,22 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 }
             });
         };
+
         getBinding().saveBg.setOnClickListener(view -> PagePilotManager.pageAlbum());
+
+        getBinding().btnAlbum.setOnClickListener(view -> PagePilotManager.pageAlbum());
+        getBinding().btnSelectLegibilityFull.setOnClickListener(view -> PagePilotManager.pageAlbum());
+
+        getBinding().cbChangeSound.setOnCheckedChangeListener((compoundButton, b) -> {
+            getBinding().gsyPlayer.setMute(!b);
+        });
+        getBinding().cbChangeSoundFull.setOnCheckedChangeListener((compoundButton, b) -> {
+            getBinding().gsyPlayer.setMute(!b);
+        });
+
         getBinding().ivDownload.setOnClickListener(view -> ToastUtils.INSTANCE.showToast(getString(R.string.function_not_open)));
+        getBinding().ivDownloadFull.setOnClickListener(view -> ToastUtils.INSTANCE.showToast(getString(R.string.function_not_open)));
+
         getBinding().ivPlaying.setOnClickListener(view -> {
             if (isPlaying) {
                 getBinding().ivPlaying.setSelected(false);
@@ -147,13 +195,27 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
             }
             isPlaying = !isPlaying;
         });
+        getBinding().ivPlayingFull.setOnClickListener(view -> {
+            if (isPlaying) {
+                getBinding().ivPlayingFull.setSelected(false);
+                getBinding().gsyPlayer.pausePlay();
+            } else {
+                getBinding().gsyPlayer.resumePlay();
+                getBinding().ivPlayingFull.setSelected(true);
+            }
+            isPlaying = !isPlaying;
+        });
+
         getBinding().ivClip.setOnClickListener(view -> {
             onBtnScreenshot();
         });
-        getBinding().cbChangeSound.setOnCheckedChangeListener((compoundButton, b) -> {
-            getBinding().gsyPlayer.setMute(!b);
+        getBinding().ivClipFull.setOnClickListener(view -> {
+            onBtnScreenshot();
         });
+
         getBinding().ivDelete.setOnClickListener(view -> showDeleteMediaTipDialog());
+        getBinding().ivDeleteFull.setOnClickListener(view -> showDeleteMediaTipDialog());
+
         getBinding().pbPlayProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
@@ -169,70 +231,185 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
                 getBinding().gsyPlayer.getGSYVideoManager().seekTo(time);
             }
         });
+        getBinding().pbPlayProgressFull.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                long time = seekBar.getProgress() * getBinding().gsyPlayer.getDuration() / 100;
+                getBinding().gsyPlayer.getGSYVideoManager().seekTo(time);
+            }
+        });
+
         getBinding().ivChangeScreen.setOnClickListener(view -> onBtnLandscape());
+        getBinding().ivBackFull.setOnClickListener(view -> onBtnLandscape());
+
+        getBinding().landscapeLayout.setOnClickListener(view -> onTapLandscapeLayout());
     }
 
     /**
-     * 当前是否正在横屏显示
+     * @brief 旋转按钮，切换横竖屏显示
      */
-    public volatile boolean mIsOrientLandscape = false;
-    public int uiOptionsOld = 0;
-
     public void onBtnLandscape() {
-        ConstraintLayout.LayoutParams lp = (ConstraintLayout.LayoutParams) getBinding().gsyPlayer.getLayoutParams();
+        ConstraintLayout.LayoutParams lpPlayer = (ConstraintLayout.LayoutParams) getBinding().gsyPlayer.getLayoutParams();
         if (mIsOrientLandscape) {
-            if (lp == null) {
-                lp = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ScreenUtils.dp2px(200));
-            } else {
-                lp.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[1];
-                lp.height = ScreenUtils.dp2px(200);
-            }
-            lp.topMargin = ScreenUtils.dp2px(16);
-            getWindow().getDecorView().setSystemUiVisibility(uiOptionsOld);
-            getBinding().titleView.setVisibility(View.VISIBLE);
-            getBinding().btnSelectLegibility.setVisibility(View.VISIBLE);
-            getBinding().tvCurrentTime.setVisibility(View.VISIBLE);
-            getBinding().pbPlayProgress.setVisibility(View.VISIBLE);
-            getBinding().tvTotalTime.setVisibility(View.VISIBLE);
-            getBinding().cbChangeSound.setVisibility(View.VISIBLE);
+            // 设置为竖屏显示,恢复原先显示标记
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(mUiOptionsOld);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-            getBinding().ivButtonBg.setVisibility(View.VISIBLE);
-            getBinding().ivChangeScreen.setVisibility(View.VISIBLE);
-            getBinding().ivDownload.setVisibility(View.VISIBLE);
-            getBinding().ivPlaying.setVisibility(View.VISIBLE);
-            getBinding().ivClip.setVisibility(View.VISIBLE);
-            getBinding().ivDelete.setVisibility(View.VISIBLE);
-            ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(15);
+            // 显示相应的控件
+            mUiState = UI_STATE_PORTRAIT;
+            showUiWidgets();
+
+            // 调整播放器控件显示大小
+            if (lpPlayer == null) {
+                lpPlayer = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ScreenUtils.dp2px(200));
+            } else {
+                lpPlayer.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[1];
+                lpPlayer.height = ScreenUtils.dp2px(200);
+            }
+            lpPlayer.topMargin = ScreenUtils.dp2px(260);
+            getBinding().gsyPlayer.setLayoutParams(lpPlayer);
+
         } else {
-            if (lp == null) {
-                lp = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
-            } else {
-                lp.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[1];
-                lp.height = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[0];
-            }
-            lp.topMargin = ScreenUtils.dp2px(0);
-//            View decorView = getWindow().getDecorView();
-//            uiOptionsOld = decorView.getSystemUiVisibility();
-//            int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
-//            decorView.setSystemUiVisibility(uiOptions);
-            getBinding().titleView.setVisibility(View.GONE);
+            // 调整为横屏显示
+            View decorView = getWindow().getDecorView();
+            mUiOptionsOld = decorView.getSystemUiVisibility();
+            int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
+            decorView.setSystemUiVisibility(uiOptions);
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-            getBinding().btnSelectLegibility.setVisibility(View.GONE);
-            getBinding().tvCurrentTime.setVisibility(View.GONE);
-            getBinding().pbPlayProgress.setVisibility(View.GONE);
-            getBinding().tvTotalTime.setVisibility(View.GONE);
-            getBinding().cbChangeSound.setVisibility(View.GONE);
 
-            getBinding().ivButtonBg.setVisibility(View.GONE);
-            getBinding().ivChangeScreen.setVisibility(View.GONE);
-            getBinding().ivDownload.setVisibility(View.GONE);
-            getBinding().ivPlaying.setVisibility(View.GONE);
-            getBinding().ivClip.setVisibility(View.GONE);
-            getBinding().ivDelete.setVisibility(View.GONE);
-            ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(90);
+            // 显示相应的控件
+            mUiState = UI_STATE_LANDSCAPE;
+            showUiWidgets();
+
+            // 调整播放器控件显示大小
+            if (lpPlayer == null) {
+                lpPlayer = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
+            } else {
+                lpPlayer.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[1];
+                lpPlayer.height = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(this)[0];
+            }
+            lpPlayer.topMargin = ScreenUtils.dp2px(0);
+            getBinding().gsyPlayer.setLayoutParams(lpPlayer);
         }
+
         mIsOrientLandscape = !mIsOrientLandscape;
-        getBinding().gsyPlayer.setLayoutParams(lp);
+    }
+
+    /**
+     * @brief 横屏状态下，Touch事件触发相应控件显示或者隐藏
+     */
+    void onTapLandscapeLayout() {
+        if (!mIsOrientLandscape) {
+            return;
+        }
+        if (mUiState == UI_STATE_PORTRAIT) {
+            return;
+        }
+
+        if (mUiState == UI_STATE_FULL) {
+            Log.d(TAG, "<onPlaygerWgtTap> UI_STATE_FULL ==> UI_STATE_LANDSCAPE");
+            mUiState = UI_STATE_LANDSCAPE;
+            showUiWidgets();
+
+        } else {
+            Log.d(TAG, "<onPlaygerWgtTap> UI_STATE_LANDSCAPE ==> UI_STATE_FULL");
+            mUiState = UI_STATE_FULL;
+            showUiWidgets();
+        }
+    }
+
+    /**
+     * @brief 全根据当前不同的UI状态，显示相应的控件
+     */
+    void showUiWidgets() {
+        switch (mUiState) {
+            case UI_STATE_FULL: {      // 全屏显示
+                // 隐藏所有竖屏控件
+                showPortraitWgts(View.GONE);
+
+                // 显示横屏布局
+                getBinding().landscapeLayout.setVisibility(View.VISIBLE);
+                showLandScapeWgts(View.GONE);
+            } break;
+
+            case UI_STATE_LANDSCAPE: {  // 横屏显示
+                // 隐藏所有竖屏控件
+                showPortraitWgts(View.GONE);
+
+                // 显示横屏布局
+                getBinding().landscapeLayout.setVisibility(View.VISIBLE);
+                showLandScapeWgts(View.VISIBLE);
+            } break;
+
+            default: {
+                // 隐藏横屏布局
+                getBinding().landscapeLayout.setVisibility(View.GONE);
+
+                // 显示所有竖屏控件
+                showPortraitWgts(View.VISIBLE);
+            } break;
+        }
+    }
+
+    /**
+     * @brief 横屏控件的显示控制
+     */
+    private void showLandScapeWgts(int visibility) {
+        getBinding().ivPowerBgFull.setVisibility(visibility);
+        getBinding().pbPowerValueFull.setVisibility(visibility);
+        getBinding().cbChangeSoundFull.setVisibility(visibility);
+        getBinding().ivDownloadFull.setVisibility(visibility);
+        getBinding().ivPlayingFull.setVisibility(visibility);
+        getBinding().ivDeleteFull.setVisibility(visibility);
+        getBinding().ivDeleteFull.setVisibility(visibility);
+        getBinding().ivClipFull.setVisibility(visibility);
+        getBinding().tvCurrentTimeFull.setVisibility(visibility);
+        getBinding().pbPlayProgressFull.setVisibility(visibility);
+        getBinding().tvTotalTimeFull.setVisibility(visibility);
+        getBinding().ivBackFull.setVisibility(visibility);
+
+        getBinding().ivPlayingFull.setSelected(isPlaying);
+        boolean bSound = (!getBinding().gsyPlayer.isMute());
+        getBinding().cbChangeSoundFull.setChecked(bSound);
+    }
+
+    /**
+     * @brief 竖屏控件的显示控制
+     */
+    private void showPortraitWgts(int visibility) {
+        getBinding().titleView.setVisibility(visibility);
+
+        getBinding().btnAlbum.setVisibility(visibility);
+        getBinding().cbChangeSound.setVisibility(visibility);
+
+        getBinding().tvCurrentTime.setVisibility(visibility);
+        getBinding().pbPlayProgress.setVisibility(visibility);
+        getBinding().tvTotalTime.setVisibility(visibility);
+
+        getBinding().bgMessage.setVisibility(visibility);
+        getBinding().tvMsgTitle.setVisibility(visibility);
+        getBinding().tvMsgDesc.setVisibility(visibility);
+        getBinding().tvMsgTime.setVisibility(visibility);
+
+        getBinding().ivButtonBg.setVisibility(visibility);
+        getBinding().ivChangeScreen.setVisibility(visibility);
+        getBinding().ivDownload.setVisibility(visibility);
+        getBinding().ivPlaying.setVisibility(visibility);
+        getBinding().ivClip.setVisibility(visibility);
+        getBinding().ivDelete.setVisibility(visibility);
+
+        getBinding().ivPlaying.setSelected(isPlaying);
+        boolean bSound = (!getBinding().gsyPlayer.isMute());
+        getBinding().cbChangeSound.setChecked(bSound);
     }
 
     /**
@@ -312,7 +489,6 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mIsOrientLandscape) {
-                getBinding().gsyPlayer.onBackFullscreen();
                 onBtnLandscape();
                 return true;
             }
@@ -345,17 +521,6 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         deleteMediaTipDialog.show();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        messageViewModel.onStart();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        messageViewModel.onStop();
-    }
 
 
     @Override
@@ -384,7 +549,6 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
 
         if (mIsOrientLandscape) {
             // 退出全屏显示
-            getBinding().gsyPlayer.onBackFullscreen();
             onBtnLandscape();
         }
 

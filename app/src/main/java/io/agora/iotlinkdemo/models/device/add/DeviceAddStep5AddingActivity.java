@@ -1,6 +1,7 @@
 package io.agora.iotlinkdemo.models.device.add;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 
 import androidx.annotation.NonNull;
@@ -28,10 +29,12 @@ import org.greenrobot.eventbus.EventBus;
  */
 @Route(path = PagePathConstant.pageDeviceAdding)
 public class DeviceAddStep5AddingActivity extends BaseViewBindingActivity<ActivityDeviceAddingBinding> {
+    private final String TAG = "IOTLINK/DevAddStep5Act";
     /**
      * 设备模块统一ViewModel
      */
     private DeviceViewModel deviceViewModel;
+    private boolean mDestroyed = false;
 
     @Override
     protected ActivityDeviceAddingBinding getViewBinding(@NonNull LayoutInflater inflater) {
@@ -52,11 +55,27 @@ public class DeviceAddStep5AddingActivity extends BaseViewBindingActivity<Activi
             if (var1 == Constant.CALLBACK_TYPE_EXIT_STEP) {
                 mHealthActivityManager.finishActivityByClass("DeviceAddStep5AddingActivity");
             } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_SUCCESS) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_SUCCESS");
                 //成功添加
                 PagePilotManager.pageAddResult(true);
                 exitActivity();
                 EventBus.getDefault().post(new ResetAddDeviceEvent());
+
+            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_NOTIFY) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_NOTIFY");
+                if (mDestroyed) {
+                    return;
+                }
+                //成功添加
+                PagePilotManager.pageAddResult(true);
+                exitActivity();
+                EventBus.getDefault().post(new ResetAddDeviceEvent());
+
             } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_FAIL) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_FAIL");
+                if (mDestroyed) {
+                    return;
+                }
                 //超时
                 PagePilotManager.pageWifiTimeOut();
                 exitActivity();
@@ -82,6 +101,7 @@ public class DeviceAddStep5AddingActivity extends BaseViewBindingActivity<Activi
     }
 
     private void exitActivity() {
+        mDestroyed = true;
         getBinding().btnFail.postDelayed(() -> mHealthActivityManager.finishActivityByClass("DeviceAddStep5AddingActivity"), 500);
     }
 

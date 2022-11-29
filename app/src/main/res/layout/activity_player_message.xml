@@ -26,7 +26,7 @@
         app:layout_constraintTop_toBottomOf="@id/title_view" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnSelectLegibility"
+        android:id="@+id/btnAlbum"
         android:layout_width="40dp"
         android:layout_height="21dp"
         android:layout_marginEnd="20dp"
@@ -34,7 +34,7 @@
         android:text="@string/album"
         android:textColor="@color/grey_f3"
         android:textSize="10sp"
-        android:visibility="gone"
+        android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="@id/cbChangeSound"
         app:layout_constraintEnd_toStartOf="@id/cbChangeSound"
         app:layout_constraintTop_toTopOf="@id/cbChangeSound"
@@ -44,96 +44,9 @@
         android:id="@+id/gsy_player"
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="250dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/cbChangeSound" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/loadingBG"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@color/black_57"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/gsy_player"
-        app:layout_constraintEnd_toEndOf="@id/gsy_player"
-        app:layout_constraintStart_toStartOf="@id/gsy_player"
-        app:layout_constraintTop_toTopOf="@id/gsy_player"
-        tools:visibility="visible">
-
-        <ProgressBar
-            android:id="@+id/progress_loading"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="70dp"
-            android:indeterminateDrawable="@drawable/progressbar_loading"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvTips1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="116dp"
-            android:text="@string/video_loading"
-            android:textColor="@color/grey_e5"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvTips2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/blue_1d"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTips1"
-            tools:text="@string/click_retry" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvTips"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/default_margin"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_full_black_r50"
-        android:gravity="center"
-        android:minHeight="24dp"
-        android:paddingHorizontal="29dp"
-        android:textColor="@color/white"
-        android:textSize="11sp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/gsy_player"
-        tools:text="录像时间太短"
-        tools:visibility="visible" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/iv_play_save_time"
-        style="@style/play_tip_style"
-        android:layout_marginEnd="18dp"
-        android:layout_marginBottom="5dp"
-        app:layout_constraintBottom_toBottomOf="@id/gsy_player"
-        app:layout_constraintEnd_toEndOf="@id/gsy_player"
-        tools:ignore="SmallSp"
-        tools:text="2022-05-12 01:10:19" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/iv_net_speed"
-        style="@style/play_tip_style"
-        android:layout_marginEnd="20dp"
-        app:layout_constraintBottom_toBottomOf="@id/iv_play_save_time"
-        app:layout_constraintEnd_toStartOf="@id/iv_play_save_time"
-        app:layout_constraintTop_toTopOf="@id/iv_play_save_time"
-        tools:ignore="SmallSp"
-        tools:text="168KB/s" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/saveBg"
@@ -191,11 +104,11 @@
         android:layout_width="0dp"
         android:layout_height="101dp"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="17dp"
+        android:layout_marginTop="470dp"
         android:background="@drawable/bg_frame_black_42_r5"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/gsy_player" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvMsgTitle"
@@ -338,4 +251,166 @@
         app:layout_constraintStart_toEndOf="@id/ivClip"
         app:layout_constraintTop_toTopOf="@id/ivButtonBg" />
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/landscapeLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:descendantFocusability="afterDescendants"
+        android:elevation="10dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="gone">
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivBackFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="28dp"
+            android:layout_marginTop="12dp"
+            android:src="@mipmap/back_empty"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivPowerBgFull"
+            android:layout_width="30dp"
+            android:layout_height="13dp"
+            android:layout_marginStart="38dp"
+            android:src="@mipmap/buttery"
+            app:layout_constraintBottom_toBottomOf="@id/ivBackFull"
+            app:layout_constraintStart_toEndOf="@id/ivBackFull"
+            app:layout_constraintTop_toTopOf="@id/ivBackFull" />
+
+        <ProgressBar
+            android:id="@+id/pbPowerValueFull"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="23.5dp"
+            android:layout_height="9dp"
+            android:layout_marginStart="2.3dp"
+            android:max="100"
+            android:progress="30"
+            android:progressDrawable="@drawable/power_shape_progressbar"
+            app:layout_constraintBottom_toBottomOf="@id/ivPowerBgFull"
+            app:layout_constraintStart_toStartOf="@id/ivPowerBgFull"
+            app:layout_constraintTop_toTopOf="@id/ivPowerBgFull" />
+
+        <androidx.appcompat.widget.AppCompatCheckBox
+            android:id="@+id/cbChangeSoundFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="93dp"
+            android:background="@null"
+            android:button="@drawable/bg_player_function_mute"
+            android:checked="true"
+            app:layout_constraintBottom_toBottomOf="@id/ivBackFull"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivBackFull" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnSelectLegibilityFull"
+            android:layout_width="40dp"
+            android:layout_height="21dp"
+            android:layout_marginEnd="18dp"
+            android:background="@drawable/bg_frame_grey_97_r3"
+            android:text="@string/HD"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/ivBackFull"
+            app:layout_constraintEnd_toStartOf="@id/cbChangeSoundFull"
+            app:layout_constraintTop_toTopOf="@id/ivBackFull"
+            tools:ignore="SmallSp" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivDownloadFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="50dp"
+            android:layout_marginEnd="24dp"
+            android:src="@mipmap/download"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ivPlayingFull"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivPlayingFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/bg_player_message_play"
+            app:layout_constraintBottom_toTopOf="@id/ivClipFull"
+            app:layout_constraintEnd_toEndOf="@id/ivDownloadFull"
+            app:layout_constraintStart_toStartOf="@id/ivDownloadFull"
+            app:layout_constraintTop_toBottomOf="@id/ivDownloadFull" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivClipFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@mipmap/clip"
+            app:layout_constraintBottom_toTopOf="@id/ivDeleteFull"
+            app:layout_constraintEnd_toEndOf="@id/ivDownloadFull"
+            app:layout_constraintStart_toStartOf="@id/ivDownloadFull"
+            app:layout_constraintTop_toBottomOf="@id/ivPlayingFull" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ivDeleteFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="50dp"
+            android:src="@mipmap/delete"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/ivDownloadFull"
+            app:layout_constraintStart_toStartOf="@id/ivDownloadFull"
+            app:layout_constraintTop_toBottomOf="@id/ivClipFull" />
+
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvCurrentTimeFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginBottom="12dp"
+            android:text="00:00"
+            android:textColor="@color/grey_d3"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/pbPlayProgressFull"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="00:15" />
+
+        <androidx.appcompat.widget.AppCompatSeekBar
+            android:id="@+id/pbPlayProgressFull"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="11dp"
+            android:max="100"
+            android:maxHeight="2dp"
+            android:minHeight="2dp"
+            android:progress="0"
+            android:progressDrawable="@drawable/play_shape_progressbar"
+            android:thumb="@drawable/bg_white_round"
+            app:layout_constraintBottom_toBottomOf="@id/tvCurrentTimeFull"
+            app:layout_constraintEnd_toStartOf="@id/tvTotalTimeFull"
+            app:layout_constraintStart_toEndOf="@id/tvCurrentTimeFull"
+            app:layout_constraintTop_toTopOf="@id/tvCurrentTimeFull" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvTotalTimeFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
+            android:text="00:00"
+            android:textColor="@color/grey_d3"
+            app:layout_constraintBottom_toBottomOf="@id/tvCurrentTimeFull"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/pbPlayProgressFull"
+            app:layout_constraintTop_toTopOf="@id/tvCurrentTimeFull"
+            tools:text="00:15" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

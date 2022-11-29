@@ -328,6 +328,9 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
     }
 
     public boolean onBtnBack() {
+        if (messageAlarmAdapter == null) {
+            return false;
+        }
         if (messageAlarmAdapter.isEdit) {
             changeEditStatus(false);
             return true;

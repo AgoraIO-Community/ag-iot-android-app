@@ -71,6 +71,7 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
     private DeviceViewModel mDeviceViewModel;
     private int mUiState = UISATE_CFG_IDLE;
+    private boolean mDestroyed = false;
 
 
     @Override
@@ -180,6 +181,19 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
             } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_SUCCESS) {
                 Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_SUCCESS");
+                if (mDestroyed) {
+                    return;
+                }
+                //成功添加
+                PagePilotManager.pageAddResult(true);
+                exitActivity();
+                EventBus.getDefault().post(new ResetAddDeviceEvent());
+
+            } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_NOTIFY) {
+                Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_NOTIFY");
+                if (mDestroyed) {
+                    return;
+                }
                 //成功添加
                 PagePilotManager.pageAddResult(true);
                 exitActivity();
@@ -187,6 +201,9 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
 
             } else if (var1 == Constant.CALLBACK_TYPE_DEVICE_ADD_FAIL) {
                 Log.d(TAG, "<initListener.setISingleCallback> DEVICE_ADD_FAIL");
+                if (mDestroyed) {
+                    return;
+                }
                 //超时
                 PagePilotManager.pageDeviceBtCfgResult();
                 exitActivity();
@@ -248,6 +265,7 @@ public class DeviceAddStepBtCfgActivity extends BaseViewBindingActivity<Activity
     }
 
     private void exitActivity() {
+        mDestroyed = true;
         getBinding().titleView.postDelayed(() -> {
             mHealthActivityManager.finishActivityByClass("DeviceAddStepBtScanActivity");
             mHealthActivityManager.finishActivityByClass("DeviceAddStepBtCfgActivity");

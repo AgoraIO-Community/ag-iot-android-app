@@ -99,6 +99,8 @@ public class Constant {
     public static final int CALLBACK_TYPE_DEVICE_BTADD_SUCCESS = 26;
     /* 蓝牙添加设备失败 */
     public static final int CALLBACK_TYPE_DEVICE_BTADD_FAIL = 27;
+    /* 添加设备MQTT消息 */
+    public static final int CALLBACK_TYPE_DEVICE_ADD_NOTIFY = 28;
 
     /* 设备接收速率 */
     public static final int CALLBACK_TYPE_DEVICE_NET_RECEIVING_SPEED = 30;

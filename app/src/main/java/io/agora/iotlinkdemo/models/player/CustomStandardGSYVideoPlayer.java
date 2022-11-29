@@ -84,7 +84,18 @@ public class CustomStandardGSYVideoPlayer extends StandardGSYVideoPlayer {
      */
     public void setMute(boolean isMute) {
         mAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, isMute);
+
     }
+
+    public boolean isMute() {
+        boolean isAudioMute = false;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            isAudioMute = mAudioManager.isStreamMute(AudioManager.STREAM_MUSIC);
+        }
+        return isAudioMute;
+    }
+
+
 
     @Override
     protected void setProgressAndTime(long progress, long secProgress, long currentTime, long totalTime, boolean forceChange) {

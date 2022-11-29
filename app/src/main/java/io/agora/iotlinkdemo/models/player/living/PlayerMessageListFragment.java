@@ -307,15 +307,14 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         getBinding().ivChangeScreen.setOnClickListener(view -> onBtnLandscape());
         getBinding().ivBack.setOnClickListener(view -> onBtnLandscape());
         getBinding().ivDownload.setOnClickListener(view -> startDownload());
+        getBinding().ivDownloadFull.setOnClickListener(view -> startDownload());
         getBinding().pbPlayProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
             }
 
             @Override
@@ -327,12 +326,10 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         getBinding().pbPlayProgressFull.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
             }
 
             @Override
@@ -357,12 +354,14 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         getBinding().pbPlayProgressFull.setVisibility(getBinding().ivBack.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
         getBinding().tvTotalTimeFull.setVisibility(getBinding().ivBack.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
         getBinding().ivBack.setVisibility(getBinding().ivBack.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        getBinding().ivPlayingFull.setSelected(isPlaying);
+        boolean bSound = (!getBinding().gsyPlayer.isMute());
+        getBinding().cbChangeSoundFull.setChecked(bSound);
     }
 
     public boolean onBtnBack() {
         if (mIsOrientLandscape) { // 退回到 portrait竖屏显示
             onBtnLandscape();
-            getBinding().gsyPlayer.onBackFullscreen();
             return true;
         }
 
@@ -377,8 +376,8 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     /**
      * 当前是否正在横屏显示
      */
-    public boolean mIsOrientLandscape = false;
-    public int uiOptionsOld = 0;
+    private boolean mIsOrientLandscape = false;
+    private int uiOptionsOld = 0;
 
     /**
      * 横屏切换
@@ -386,15 +385,13 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     public void onBtnLandscape() {
         ConstraintLayout.LayoutParams lp = (ConstraintLayout.LayoutParams) getBinding().gsyPlayer.getLayoutParams();
         if (mIsOrientLandscape) {
-            if (lp == null) {
-                lp = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ScreenUtils.dp2px(200));
-            } else {
-                lp.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(getActivity())[1];
-                lp.height = ScreenUtils.dp2px(200);
-            }
-            lp.topMargin = ScreenUtils.dp2px(55);
+            // 设置为竖屏显示,恢复原先显示标记
+            View decorView = getActivity().getWindow().getDecorView();
+            decorView.setSystemUiVisibility(uiOptionsOld);
             ((PlayerPreviewActivity) getActivity()).showTitle();
             getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+            // 隐藏横屏布局，显示竖屏控件
             getBinding().landscapeLayout.setVisibility(View.GONE);
             getBinding().btnSelectLegibility.setVisibility(View.VISIBLE);
             getBinding().tvCurrentTime.setVisibility(View.VISIBLE);
@@ -405,23 +402,30 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             getBinding().ivPlaying.setVisibility(View.VISIBLE);
             getBinding().ivClip.setVisibility(View.VISIBLE);
             getBinding().ivDelete.setVisibility(View.VISIBLE);
-            getActivity().getWindow().getDecorView().setSystemUiVisibility(uiOptionsOld);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(15);
+            getBinding().ivPlaying.setSelected(isPlaying);
+            boolean bSound = (!getBinding().gsyPlayer.isMute());
+            getBinding().cbChangeSound.setChecked(bSound);
 
-        } else {
+            // 调整播放器显示控件大小
             if (lp == null) {
-                lp = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
+                lp = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ScreenUtils.dp2px(200));
             } else {
                 lp.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(getActivity())[1];
-                lp.height = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(getActivity())[0];
+                lp.height = ScreenUtils.dp2px(200);
             }
-            lp.topMargin = ScreenUtils.dp2px(0);
+            lp.topMargin = ScreenUtils.dp2px(55);
+            getBinding().gsyPlayer.setLayoutParams(lp);
 
-//            View decorView = getActivity().getWindow().getDecorView();
-//            uiOptionsOld = decorView.getSystemUiVisibility();
-//            int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
-//            decorView.setSystemUiVisibility(uiOptions);
+        } else {
+            // 调整为横屏全屏显示
+            View decorView = getActivity().getWindow().getDecorView();
+            uiOptionsOld = decorView.getSystemUiVisibility();
+            int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
+            decorView.setSystemUiVisibility(uiOptions);
             ((PlayerPreviewActivity) getActivity()).hideTitle();
+
+            // 隐藏竖屏控件，显示横屏布局
             getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
             getBinding().landscapeLayout.setVisibility(View.VISIBLE);
             getBinding().btnSelectLegibility.setVisibility(View.GONE);
@@ -434,9 +438,21 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             getBinding().ivClip.setVisibility(View.GONE);
             getBinding().ivDelete.setVisibility(View.GONE);
             ((ConstraintLayout.LayoutParams) getBinding().saveBg.getLayoutParams()).rightMargin = ScreenUtils.dp2px(90);
+            getBinding().ivPlayingFull.setSelected(isPlaying);
+            boolean bSound = (!getBinding().gsyPlayer.isMute());
+            getBinding().cbChangeSoundFull.setChecked(bSound);
+
+            // 调整播放器显示控件大小
+            if (lp == null) {
+                lp = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT);
+            } else {
+                lp.width = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(getActivity())[1];
+                lp.height = me.jessyan.autosize.utils.ScreenUtils.getScreenSize(getActivity())[0];
+            }
+            lp.topMargin = ScreenUtils.dp2px(0);
+            getBinding().gsyPlayer.setLayoutParams(lp);
         }
         mIsOrientLandscape = !mIsOrientLandscape;
-        getBinding().gsyPlayer.setLayoutParams(lp);
     }
 
     private void changePlayingStatus() {
@@ -678,7 +694,6 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
         if (mIsOrientLandscape) {
             // 退出全屏显示
-            getBinding().gsyPlayer.onBackFullscreen();
             onBtnLandscape();
         }
 
