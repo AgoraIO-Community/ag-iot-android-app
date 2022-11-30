@@ -125,15 +125,15 @@ public class AWSUtils {
         try {
             mTopicSum = 5;
             //订阅设备在线状态通知topic
-            subscribeTopic(topic, AWSIotMqttQos.QOS0);
+            subscribeTopic(topic, AWSIotMqttQos.QOS1);
             //订阅设备影子更新通知topic
-            subscribeTopic(topic2, AWSIotMqttQos.QOS0);
+            subscribeTopic(topic2, AWSIotMqttQos.QOS1);
             //订阅设备影子更新通知topic
             subscribeTopic(topic3, AWSIotMqttQos.QOS1);
             //订阅设备影子内容topic
             subscribeTopic(topic4, AWSIotMqttQos.QOS1);
             //订阅底层服务通知topic
-            subscribeTopic(topic5, AWSIotMqttQos.QOS0);
+            subscribeTopic(topic5, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Subscription Error", e);
         }
