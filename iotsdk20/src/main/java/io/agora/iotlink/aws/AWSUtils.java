@@ -117,23 +117,20 @@ public class AWSUtils {
 
     /* 订阅所需的MQTT topic */
     private void subscribe(String clientId, String inventDevciceName) {
-        final String topic = "+/+/device/connect";                  //设备上下线通知
-        final String topic2 = "$aws/things/+/shadow/get/+";         //获取设备影子内容
-        final String topic3 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/update/accepted";   //APP影子更新通知
-        final String topic4 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/get/accepted";      //APP影子当前影子内容
-        final String topic5 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
+        final String topic1 = "$aws/things/+/shadow/get/+";         //获取设备影子内容
+        final String topic2 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/update/accepted";   //APP影子更新通知
+        final String topic3 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/get/accepted";      //APP影子当前影子内容
+        final String topic4 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
         try {
-            mTopicSum = 5;
-            //订阅设备在线状态通知topic
-            subscribeTopic(topic, AWSIotMqttQos.QOS1);
+            mTopicSum = 4;
+            //订阅设备影子更新通知topic
+            subscribeTopic(topic1, AWSIotMqttQos.QOS1);
             //订阅设备影子更新通知topic
             subscribeTopic(topic2, AWSIotMqttQos.QOS1);
-            //订阅设备影子更新通知topic
-            subscribeTopic(topic3, AWSIotMqttQos.QOS1);
             //订阅设备影子内容topic
-            subscribeTopic(topic4, AWSIotMqttQos.QOS1);
+            subscribeTopic(topic3, AWSIotMqttQos.QOS1);
             //订阅底层服务通知topic
-            subscribeTopic(topic5, AWSIotMqttQos.QOS1);
+            subscribeTopic(topic4, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Subscription Error", e);
         }
@@ -176,14 +173,7 @@ public class AWSUtils {
         try {
             Log.d(TAG, "<handleMessage> " + topic + " payload=" + payload);
             JSONObject jsonMessage = new JSONObject(payload);
-            if (topic.contains("/device/connect")) {
-                //设备上下线
-                JSONObject dataObject = jsonMessage.getJSONObject("data");
-                boolean isOnline = dataObject.getBoolean("connect");
-                String deviceMac = parseDevMac(topic);
-                awsListener.onDevOnlineChanged(deviceMac, "", isOnline);
-
-            } else if (topic.contains("/shadow/get/accepted")) {
+            if (topic.contains("/shadow/get/accepted")) {
                 //只关注设备端上报的当前状态
                 if (!jsonMessage.has("state")) {
                     Log.e(TAG, "<handleMessage> no 'state' object!");
@@ -245,7 +235,7 @@ public class AWSUtils {
                             deviceMac = jsonMessage.getString("mac");
                             deviceId = jsonMessage.getLong("deviceId");
                             boolean isOnline = data.getBoolean("connect");
-                            //awsListener.onDevOnlineChanged(deviceMac, String.valueOf(deviceId), isOnline);
+                            awsListener.onDevOnlineChanged(deviceMac, String.valueOf(deviceId), isOnline);
                             break;
 
                         case 2:         //设备属性点上报（目前测试不是很稳定，不能保证变更参数都有通知到，可以不关注）
