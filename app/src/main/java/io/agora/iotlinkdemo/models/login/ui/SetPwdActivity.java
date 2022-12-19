@@ -53,6 +53,14 @@ public class SetPwdActivity extends BaseViewBindingActivity<ActivitySetPwdBindin
     String code = "";
 
     /**
+     * 流程类型 true 忘记密码流程 false 注册流程
+     */
+    @JvmField
+    @Autowired(name = Constant.IS_FORGE_PASSWORD)
+    boolean isForgePassword = false;
+
+
+    /**
      * 登录模块统一ViewModel
      */
     private LoginViewModel phoneLoginViewModel;
@@ -95,11 +103,37 @@ public class SetPwdActivity extends BaseViewBindingActivity<ActivitySetPwdBindin
                         ToastUtils.INSTANCE.showToast(errTips);
                     }
                 });
+
+            } else if (var1 == Constant.CALLBACK_TYPE_THIRD_RESETPSWD_DONE) {
+                getBinding().etPwd.post(() -> {
+                    LoginViewModel.ErrInfo result = (LoginViewModel.ErrInfo) var2;
+                    hideLoadingView();
+
+                    if (result.mErrCode == ErrCode.XOK) {
+                        SPUtil.Companion.getInstance(this).putString(Constant.ACCOUNT, "");
+                        SPUtil.Companion.getInstance(this).putString(Constant.PASSWORD, "");
+                        ToastUtils.INSTANCE.showToast("重置密码成功");
+                        PagePilotManager.pagePhoneLogin();
+                        mHealthActivityManager.popAllActivity();
+
+                    } else {
+                        String errTips = "重置密码失败";
+                        if (!TextUtils.isEmpty(result.mErrTips)) {
+                            errTips = errTips + " " + result.mErrTips;
+                        }
+                        ToastUtils.INSTANCE.showToast(errTips);
+                    }
+                });
             }
         });
         getBinding().btnFinish.setOnClickListener(view -> {
             if (!checkPwd()) {
                 getBinding().tvErrorTips.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (isForgePassword) {  // 重新设置设置密码操作
+                phoneLoginViewModel.accountResetPassword(account, getBinding().etPwd.getText().toString(), code);
                 return;
             }
 

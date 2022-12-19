@@ -32,9 +32,10 @@ public class PagePilotManager {
     /**
      * 手机号注册
      */
-    public static void pagePhoneRegister() {
+    public static void pagePhoneRegister(boolean isForgePassword) {
         ARouter.getInstance()
                 .build(PagePathConstant.pagePhoneRegister)
+                .withBoolean(Constant.IS_FORGE_PASSWORD, isForgePassword)
                 .navigation();
     }
 
@@ -304,20 +305,22 @@ public class PagePilotManager {
     /**
      * 输入验证码
      */
-    public static void pageInputVCode(String account) {
+    public static void pageInputVCode(String account, Boolean isForgePassword) {
         ARouter.getInstance()
                 .build(PagePathConstant.pageInputVCode)
                 .withString(Constant.ACCOUNT, account)
+                .withBoolean(Constant.IS_FORGE_PASSWORD, isForgePassword)
                 .navigation();
     }
 
     /**
      * 设置密码
      */
-    public static void pageSetPwd(String account, String code) {
+    public static void pageSetPwd(String account, String code, Boolean isForgePassword) {
         ARouter.getInstance()
                 .build(PagePathConstant.pageSetPwd)
                 .withString(Constant.ACCOUNT, account)
+                .withBoolean(Constant.IS_FORGE_PASSWORD, isForgePassword)
                 .withString(Constant.CODE, code)
                 .navigation();
     }

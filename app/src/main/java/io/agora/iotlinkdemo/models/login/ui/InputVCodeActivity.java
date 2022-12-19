@@ -47,6 +47,12 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
     @Autowired(name = "account")
     String account = "";
 
+    /**
+     * 流程类型 true 忘记密码流程 false 注册流程
+     */
+    @JvmField
+    @Autowired(name = Constant.IS_FORGE_PASSWORD)
+    boolean isForgePassword = false;
 
     /**
      * 登录模块统一ViewModel
@@ -141,7 +147,7 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
                                 + getBinding().etCode5.getText()
                                 + getBinding().etCode6.getText();
                 //执行验证码注册
-                PagePilotManager.pageSetPwd(account, code);
+                PagePilotManager.pageSetPwd(account, code, isForgePassword);
             }
         });
 
@@ -158,7 +164,7 @@ public class InputVCodeActivity extends BaseViewBindingActivity<ActivityInputVCo
     private void onBtnRetrieveVCode() {
         showLoadingView();
         countDownTimerUtils.start();
-        phoneLoginViewModel.requestVCode(account);
+        phoneLoginViewModel.requestVCode(account, isForgePassword);
     }
 
 

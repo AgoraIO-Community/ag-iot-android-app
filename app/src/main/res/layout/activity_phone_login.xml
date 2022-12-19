@@ -97,6 +97,18 @@
         app:layout_constraintTop_toTopOf="@id/etPwd"
         tools:visibility="visible" />
 
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvForgetPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="10dp"
+        android:text="@string/forget_password"
+        android:textColor="@color/black_50_percent"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="@id/etPwd"
+        app:layout_constraintTop_toBottomOf="@id/etPwd" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnLogin"

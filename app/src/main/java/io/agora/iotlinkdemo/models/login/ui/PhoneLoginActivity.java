@@ -146,7 +146,7 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
         });
 
         getBinding().btnRegister.setOnClickListener(view -> {
-            PagePilotManager.pagePhoneRegister();
+            PagePilotManager.pagePhoneRegister(false);
         });
 
         getBinding().iBtnClear.setOnClickListener(view -> {
@@ -156,6 +156,9 @@ public class PhoneLoginActivity extends BaseViewBindingActivity<ActivityPhoneLog
             getBinding().etAccounts.setText("");
         });
 
+        getBinding().tvForgetPassword.setOnClickListener(view -> {
+            PagePilotManager.pagePhoneRegister(true);
+        });
 
         getBinding().etPwd.addTextChangedListener(new TextWatcher() {
             @Override

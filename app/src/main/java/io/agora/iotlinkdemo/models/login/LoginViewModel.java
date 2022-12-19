@@ -40,6 +40,7 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
         public int mErrCode = ErrCode.XOK;
         public String mErrTips;
         public String mPhoneNumber;
+        public boolean mIsResetPswd;
     }
 
 
@@ -212,17 +213,39 @@ public class LoginViewModel extends BaseViewModel implements IAccountMgr.ICallba
     /**
      * @brief 获取验证码
      */
-    public void requestVCode(final String phoneNumber) {
-        ThirdAccountMgr.getInstance().requestPhoneVCode(phoneNumber, new ThirdAccountMgr.IReqVerifyCodeCallback() {
+    public void requestVCode(final String phoneNumber, boolean isForgetPswd) {
+        ThirdAccountMgr.getInstance().requestPhoneVCode(phoneNumber, isForgetPswd, new ThirdAccountMgr.IReqVerifyCodeCallback() {
             @Override
-            public void onThirdAccountReqVCodeDone( int errCode, final String errMessage,
+            public void onThirdAccountReqVCodeDone( int errCode, boolean isResetPswd, final String errMessage,
                                                     final String phoneNumber) {
                 ReqVCodeResult reqResult = new ReqVCodeResult();
                 reqResult.mErrCode = errCode;
                 reqResult.mErrTips = errMessage;
                 reqResult.mPhoneNumber = phoneNumber;
+                reqResult.mIsResetPswd = isResetPswd;
                 getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_REQVCODE_DONE, reqResult);
             }
         });
     }
+
+    /**
+     * @brief 第三方账号重置密码
+     * @param accountName 账号
+     * @param password    密码
+     * @param verifyCode  验证码
+     */
+    public void accountResetPassword(final String accountName, final String password,
+                                     final String verifyCode) {
+        ThirdAccountMgr.getInstance().resetPassword(accountName, password, verifyCode, new ThirdAccountMgr.IResetPswdCallback() {
+            @Override
+            public void onThirdAccountResetPswdDone(int errCode, final String errMessage,
+                                                   final String account, final String password) {
+                ErrInfo errInfo = new ErrInfo();
+                errInfo.mErrCode = errCode;
+                errInfo.mErrTips = errMessage;
+                getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_THIRD_RESETPSWD_DONE, errInfo);
+            }
+        });
+    }
+
 }

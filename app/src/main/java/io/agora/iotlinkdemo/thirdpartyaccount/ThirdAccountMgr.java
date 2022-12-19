@@ -68,8 +68,13 @@ public class ThirdAccountMgr {
     }
 
     public interface IReqVerifyCodeCallback{
-        void onThirdAccountReqVCodeDone( int errCode, final String errMessage,
+        void onThirdAccountReqVCodeDone( int errCode, boolean isResetPswd, final String errMessage,
                                          final String phoneNumber);
+    }
+
+    public interface IResetPswdCallback{
+        void onThirdAccountResetPswdDone(int errCode, final String errMessage,
+                                         final String account, final String password);
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -118,13 +123,15 @@ public class ThirdAccountMgr {
         private String mAccount;
         private String mPassword;
         private String mVerifyCode;
+        private boolean mIsResetPswd;
         private String mRsaPublicKey;
-        private int mOperation;
+        private int mOperation;        // 1: 注册； 2：注销； 3：登录；4：通过名字查询Id；5：发验证码； 6：密码重置
         private IRegisterCallback mRegCallback;
         private IUnregisterCallback mUnregCallback;
         private ILoginCallback mLoginCallback;
         private IQueryIdCallback mQueryIdCallback;
         private IReqVerifyCodeCallback mReqVCodeCallback;
+        private IResetPswdCallback mResetPswdCallback;
 
         public AccountMgrCallable(final String account, final String password,
                                   final String verifyCode, IRegisterCallback callback) {
@@ -158,10 +165,21 @@ public class ThirdAccountMgr {
             mQueryIdCallback = callback;
         }
 
-        public AccountMgrCallable(final String phoneNumber, IReqVerifyCodeCallback callback) {
+        public AccountMgrCallable(final String phoneNumber, boolean isResetPswd,
+                                  IReqVerifyCodeCallback callback) {
             mAccount = phoneNumber;
+            mIsResetPswd = isResetPswd;
             mOperation = 5;
             mReqVCodeCallback = callback;
+        }
+
+        public AccountMgrCallable(final String account, final String password,
+                                  final String verifyCode, IResetPswdCallback callback) {
+            mAccount = account;
+            mPassword = password;
+            mVerifyCode = verifyCode;
+            mOperation = 6;
+            mResetPswdCallback = callback;
         }
 
         @Override
@@ -175,6 +193,7 @@ public class ThirdAccountMgr {
                         mRegCallback.onThirdAccountRegisterDone(result.mErrCode, result.mMessage,
                                                                 mAccount, mPassword);
                     }
+                    errCode = result.mErrCode;
                 } break;
 
                 case 2: {
@@ -183,6 +202,7 @@ public class ThirdAccountMgr {
                         mUnregCallback.onThirdAccountUnregisterDone(result.mErrCode, result.mMessage,
                                                                     mAccount, mPassword);
                     }
+                    errCode = result.mErrCode;
                 } break;
 
                 case 3: {
@@ -205,10 +225,19 @@ public class ThirdAccountMgr {
                 } break;
 
                 case 5: {
-                    CommonResult result = requestVerifyCode(mAccount);
+                    CommonResult result = requestVerifyCode(mAccount, mIsResetPswd);
                     if (mReqVCodeCallback != null) {
-                        mReqVCodeCallback.onThirdAccountReqVCodeDone(result.mErrCode, result.mMessage,
+                        mReqVCodeCallback.onThirdAccountReqVCodeDone(result.mErrCode, mIsResetPswd, result.mMessage,
                                 mAccount);
+                    }
+                    errCode = result.mErrCode;
+                } break;
+
+                case 6: {
+                    CommonResult result = accountResetPswd(mAccount, mPassword, mVerifyCode);
+                    if (mResetPswdCallback != null) {
+                        mResetPswdCallback.onThirdAccountResetPswdDone(result.mErrCode, result.mMessage,
+                                mAccount, mPassword);
                     }
                     errCode = result.mErrCode;
                 } break;
@@ -267,10 +296,26 @@ public class ThirdAccountMgr {
     /**
      * @brief 在独立线程中执行 请求手机验证码
      * @param phoneNumber : 要请求的手机号码
+     * @param isResetPswd : 是否用于重置密码
      * @return 错误码
      */
-    public int requestPhoneVCode(final String phoneNumber, IReqVerifyCodeCallback callback) {
-        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(phoneNumber, callback));
+    public int requestPhoneVCode(final String phoneNumber, boolean isResetPswd,
+                                 IReqVerifyCodeCallback callback) {
+        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(phoneNumber, isResetPswd, callback));
+        return ErrCode.XOK;
+    }
+
+    /**
+     * @brief 在独立线程中执行第三方用户重置密码
+     * @param accoutName : 要重置的用户账号
+     * @param password : 要重置的账号新密码
+     * @param verifyCode : 手机验证码
+     * @return 错误码
+     */
+    public int resetPassword(final String accoutName, final String password,
+                             final String verifyCode, IResetPswdCallback callback) {
+        Future<Integer> future = mExecSrv.submit(new AccountMgrCallable(accoutName, password,
+                verifyCode, callback));
         return ErrCode.XOK;
     }
 
@@ -325,16 +370,23 @@ public class ThirdAccountMgr {
     /**
      * @brief 请求手机验证码
      * @param phoneNumber : 请求的手机号
+     * @param isResetPswd : 是否是重置密码的验证码
      * @return 错误码
      */
-    public CommonResult requestVerifyCode(final String phoneNumber)  {
+    public CommonResult requestVerifyCode(final String phoneNumber, boolean isResetPswd)  {
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
         CommonResult result = new CommonResult();
         Log.d(TAG, "<requestVerifyCode> [Enter] phoneNumber=" + phoneNumber);
 
         // 请求URL
-        String requestUrl = mThirdBaseUrl + "/sys-verification-code/v1/sendRegisterCode";
+        String requestUrl;
+        if (isResetPswd) {  // 重置密码的验证码
+            requestUrl = mThirdBaseUrl + "/sys-verification-code/v1/sendResetPwdCode";
+        } else {    // 账号注册的验证码
+            requestUrl = mThirdBaseUrl + "/sys-verification-code/v1/sendRegisterCode";
+        }
+
 
         // param内容
         params.put("mobile", phoneNumber);
@@ -605,6 +657,60 @@ public class ThirdAccountMgr {
         }
 
         Log.d(TAG, "<accountLogin> [EXIT] successful");
+        return result;
+    }
+
+    /**
+     * @brief 第三方用户重置密码
+     * @return 返回登录的信息
+     */
+    public CommonResult accountResetPswd(final String accountName, final String password,
+                                         final String verifyCode) {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+        CommonResult result = new CommonResult();
+        Log.d(TAG, "<accountResetPswd> [Enter] accoutName=" + accountName
+                + ", password=" + password + ", verifyCode=" + verifyCode);
+
+        // 请求URL
+        String requestUrl = mThirdBaseUrl + "/auth/resetPwd";
+
+        // body内容
+        try {
+            body.put("username", accountName);
+            body.put("password", password);
+            body.put("verificationCode", verifyCode);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            Log.e(TAG, "<accountResetPswd> [Exit] failure with JSON exp!");
+            result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            return result;
+        }
+
+        ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                null, params, body);
+        if (responseObj == null) {
+            Log.e(TAG, "<accountResetPswd> [EXIT] failure with no response!");
+            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return result;
+        }
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            Log.e(TAG, "<accountResetPswd> [EXIT] failure, mRespCode="
+                    + responseObj.mRespCode);
+            result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
+            result.mMessage = responseObj.mTip;
+            return result;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            Log.e(TAG, "<accountResetPswd> [EXIT] failure, mErrorCode="
+                    + responseObj.mErrorCode);
+            result.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
+            result.mMessage = responseObj.mTip;
+            return result;
+        }
+
+        Log.d(TAG, "<accountResetPswd> [EXIT] successful");
         return result;
     }
 

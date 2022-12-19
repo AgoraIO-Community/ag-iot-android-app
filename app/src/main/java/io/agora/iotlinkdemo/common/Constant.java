@@ -215,6 +215,8 @@ public class Constant {
     public static final int CALLBACK_TYPE_THIRD_LOGOUT_DONE = 404;
     /* 第三方账号请求验证码完成 */
     public static final int CALLBACK_TYPE_THIRD_REQVCODE_DONE = 405;
+    /* 第三方账号重置密码完成 */
+    public static final int CALLBACK_TYPE_THIRD_RESETPSWD_DONE = 406;
 
     /* RTM联接完成 */
     public static final int CALLBACK_TYPE_RTM_CONNECT_DONE = 501;

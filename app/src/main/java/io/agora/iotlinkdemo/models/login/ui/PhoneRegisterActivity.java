@@ -43,6 +43,12 @@ public class PhoneRegisterActivity extends BaseViewBindingActivity<ActivityPhone
     private CountryBean countryBean;                ///< 当前选择的国家
     private LoginViewModel phoneLoginViewModel;
 
+    /**
+     * 流程类型 true 忘记密码流程 false 注册流程
+     */
+    @JvmField
+    @Autowired(name = Constant.IS_FORGE_PASSWORD)
+    boolean isForgePassword = false;
 
 
     @Override
@@ -72,11 +78,11 @@ public class PhoneRegisterActivity extends BaseViewBindingActivity<ActivityPhone
                 getBinding().etAccounts.post(() -> {
                     if (result.mErrCode == ErrCode.XOK) {
                         ToastUtils.INSTANCE.showToast(R.string.vcode_has_send);
-                        PagePilotManager.pageInputVCode((String)result.mPhoneNumber);
+                         PagePilotManager.pageInputVCode((String)result.mPhoneNumber, isForgePassword);
 
                     } else if (result.mErrCode == ErrCode.XERR_VCODE_VALID) {
                         ToastUtils.INSTANCE.showToast(result.mErrTips);
-                        PagePilotManager.pageInputVCode((String)result.mPhoneNumber);
+                        PagePilotManager.pageInputVCode((String)result.mPhoneNumber, isForgePassword);
 
                     } else {
                         String errTips = getString(R.string.vcode_send_err);
@@ -88,7 +94,10 @@ public class PhoneRegisterActivity extends BaseViewBindingActivity<ActivityPhone
                 });
             }
         });
-
+        if (isForgePassword) {
+            getBinding().tvRegister.setText(getString(R.string.forget_password));
+            getBinding().tvInputTips.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
@@ -100,7 +109,7 @@ public class PhoneRegisterActivity extends BaseViewBindingActivity<ActivityPhone
         getBinding().btnGetVCode.setOnClickListener(view -> {
             showLoadingView();
             //获取验证码
-            phoneLoginViewModel.requestVCode(getBinding().etAccounts.getText().toString());
+            phoneLoginViewModel.requestVCode(getBinding().etAccounts.getText().toString(), isForgePassword);
         });
 
         getBinding().etAccounts.addTextChangedListener(new TextWatcher() {
