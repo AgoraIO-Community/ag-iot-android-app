@@ -14,6 +14,7 @@ import com.agora.baselibrary.utils.StringUtils;
 import io.agora.iotlinkdemo.R;
 import io.agora.iotlinkdemo.common.GlideApp;
 import io.agora.iotlink.IotAlarm;
+import io.agora.iotlinkdemo.manager.PagePilotManager;
 
 import java.util.ArrayList;
 
@@ -49,15 +50,8 @@ public class MessageAlarmAdapter extends BaseAdapter<IotAlarm> {
                 GlideApp.with(getMContext()).load(iotAlarm.mVideoUrl).placeholder(R.mipmap.icon_deft).
                         into((AppCompatImageView) holder.getView(R.id.ivMessageCover));
             }
-            if (iotAlarm.mMessageType == 0) {
-                holder.setText(R.id.tvMsgTitle, "声音检测");
-            } else if (iotAlarm.mMessageType == 1) {
-                holder.setText(R.id.tvMsgTitle, "有人通过");
-            } else if (iotAlarm.mMessageType == 2) {
-                holder.setText(R.id.tvMsgTitle, "移动侦测");
-            } else if (iotAlarm.mMessageType == 3) {
-                holder.setText(R.id.tvMsgTitle, "语音告警");
-            }
+            String msgTitle = PagePilotManager.getAlarmMessageTitle(iotAlarm.mMessageType);
+            holder.setText(R.id.tvMsgTitle, msgTitle);
             holder.setText(R.id.tvMsgDesc, iotAlarm.mDescription);
             holder.setText(R.id.tvMsgTime, StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd HH:mm:ss", iotAlarm.mTriggerTime / 1000));
             holder.setText(R.id.tvMsgFrom, "来自设备 " + StringUtils.INSTANCE.getBase64String(iotAlarm.mDeviceName));

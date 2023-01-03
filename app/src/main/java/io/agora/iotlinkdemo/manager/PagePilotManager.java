@@ -250,33 +250,43 @@ public class PagePilotManager {
                 .navigation();
     }
 
-    /**
-     * 消息播放页
-     */
-    public static void pagePlayMessage(IotAlarm iotAlarm) {
-        String title;
-        switch (iotAlarm.mMessageType) {
+    public static String getAlarmMessageTitle(int alarmMessageType) {
+        String title = "";
+        switch (alarmMessageType) {
             case 0: {
-                title = "声音检测";
+                title = "声音侦测";
                 break;
             }
             case 1: {
-                title = "有人通过";
+                title = "移动侦测";
                 break;
             }
             case 2: {
-                title = "移动侦测";
+                title = "PIR红外检测";
                 break;
             }
             case 3: {
                 title = "语音告警";
                 break;
             }
+            case 4: {
+                title = "按钮报警";
+                break;
+            }
             default: {
-                title = "未知类型";
+                title = "其他告警";
                 break;
             }
         }
+
+        return title;
+    }
+
+    /**
+     * 消息播放页
+     */
+    public static void pagePlayMessage(IotAlarm iotAlarm) {
+        String title = getAlarmMessageTitle(iotAlarm.mMessageType);
         ARouter.getInstance()
                 .build(PagePathConstant.pagePlayMessage)
                 .withLong(Constant.ID, iotAlarm.mAlarmId)
