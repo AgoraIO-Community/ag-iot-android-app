@@ -74,4 +74,10 @@ public class CalledInComingViewModel extends BaseViewModel implements ICallkitMg
     public void onPeerHangup(IotDevice iotDevice) {
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_CALL_HANG_UP, iotDevice);
     }
+
+
+    public int mutePeerAudio(boolean mute) {
+        int ret = AIotAppSdkFactory.getInstance().getCallkitMgr().mutePeerAudio(mute);
+        return ret;
+    }
 }

@@ -52,6 +52,7 @@ public class CalledInComingActivity extends BaseViewBindingActivity<ActivityCall
         calledInComingViewModel = new ViewModelProvider(this).get(CalledInComingViewModel.class);
         calledInComingViewModel.setLifecycleOwner(this);
         calledInComingViewModel.setPeerVideoView(getBinding().svDeviceView);
+        calledInComingViewModel.mutePeerAudio(false);   // 总是接听设备端声音
         getBinding().titleView.setTitle(StringUtils.INSTANCE.getBase64String(AgoraApplication.getInstance().getLivingDevice().mDeviceName));
         getBinding().tvDeviceNameValue.setText(AgoraApplication.getInstance().getLivingDevice().mDeviceName);
     }
