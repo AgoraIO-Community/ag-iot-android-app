@@ -133,6 +133,8 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
                     } else if (type == Constant.CALLBACK_TYPE_DEVICE_DIAL_DONE) {  // 呼叫设备完成
                         updateCallWgtStatus();
+                        mMsgHandler.removeMessages(MSGID_CHECK_STATE);
+                        mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_STATE, 10000);
 
                     } else if (type == Constant.CALLBACK_TYPE_DEVICE_DIAL_TIMEOUT) {  // 呼叫设备超时
                         updateCallWgtStatus();
