@@ -380,6 +380,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         super.onResume();
         playerViewModel.initPeerVideo(getBinding().peerView);
         if (getBinding().cbChangeSound.isChecked()) {
+            Log.d(TAG, "<onResume> unmute peer audio");
             playerViewModel.setMutePeer(false);
         }
 
@@ -399,7 +400,11 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         super.onPause();
         playerViewModel.pausePlayer();
         if (getBinding().cbChangeSound.isChecked()) {
-            playerViewModel.setMutePeer(true);
+            if (playerViewModel.getCallStatus() == PlayerViewModel.CALL_STATE_CONNECTED) {
+                // 正在通话中才做静音处理
+                Log.d(TAG, "<onPause> mute peer audio");
+                playerViewModel.setMutePeer(true);
+            }
         }
     }
 
