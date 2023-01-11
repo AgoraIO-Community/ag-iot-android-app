@@ -110,6 +110,19 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
     }
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.d(TAG, "<onCreate>");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "<onDestroy>");
+    }
+
+
+    @Override
     protected void onStart() {
         Log.d(TAG, "<onStart>");
         super.onStart();
@@ -131,14 +144,18 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         messageViewModel = new ViewModelProvider(this).get(MessageViewModel.class);
         messageViewModel.setLifecycleOwner(this);
         messageViewModel.setISingleCallback((type, data) -> {
-            if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
-                mHealthActivityManager.popActivity();
-            } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
-                popupMessage("删除告警视频失败!");
-            }
+            getBinding().gsyPlayer.post(() -> {
+                if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_RESULT) {
+                    mHealthActivityManager.popActivity();
+                } else if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_DELETE_FAIL) {
+                    popupMessage("删除告警视频失败!");
+                } else if (type == Constant.CALLBACK_TYPE_DEVICE_INCOMING) {
+                    Log.d(TAG, "<initView.setISingleCallback> [CALLBACK_TYPE_DEVICE_INCOMING]");
+                    onMsgPlayerCompleted();
+                }
+            });
+
         });
-
-
     }
 
     @Override

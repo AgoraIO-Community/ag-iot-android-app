@@ -49,6 +49,8 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
      */
     private SelectVideoTypeDialog selectVideoTypeDialog;
 
+    private volatile boolean mIsForeGround = false;
+
     @NonNull
     @Override
     protected FagmentMessageAlarmBinding getViewBinding(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
@@ -57,6 +59,7 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
 
     @Override
     public void initView() {
+        mIsForeGround = true;
         messageViewModel = new ViewModelProvider(this).get(MessageViewModel.class);
         messageViewModel.setLifecycleOwner(this);
         messageAlarmAdapter = new MessageAlarmAdapter(mMessages);
@@ -94,6 +97,10 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
             messageAlarmAdapter.notifyDataSetChanged();
         });
         messageViewModel.setISingleCallback((type, data) -> {
+            if (!mIsForeGround) {
+                Log.d(TAG, "<initListener.setISingleCallback> in backgournd");
+                return;
+            }
             if (type == Constant.CALLBACK_TYPE_MESSAGE_ALARM_QUERY_FAIL) {  // 查询告警消息失败
                 getBinding().rlMsgList.post(() -> {
                     int errCode = (Integer)data;
@@ -146,6 +153,7 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
                         });
 
                     } else {
+                        Log.d(TAG, "<initListener.setISingleCallback> [ALARM_DETAIL_RESULT] open cloud video...");
                         PagePilotManager.pagePlayMessage((IotAlarm) data);
                     }
                     if (((IotAlarm) data).mStatus == 0) {
@@ -318,6 +326,7 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         Log.d(TAG, "<onStart>");
         super.onStart();
         messageViewModel.onStart();
+        mIsForeGround = true;
     }
 
     @Override
@@ -325,6 +334,21 @@ public class MessageAlarmFragment extends BaseViewBindingFragment<FagmentMessage
         Log.d(TAG, "<onStop>");
         super.onStop();
         messageViewModel.onStop();
+        mIsForeGround = false;
+    }
+
+    @Override
+    public void onResume() {
+        Log.d(TAG, "<onResume>");
+        super.onResume();
+        mIsForeGround = true;
+    }
+
+    @Override
+    public void onPause() {
+        Log.d(TAG, "<onPause>");
+        super.onPause();
+        mIsForeGround = false;
     }
 
     public boolean onBtnBack() {

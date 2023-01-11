@@ -103,6 +103,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
         previewMessageAdapter = new PreviewMessageAdapter(mMessages);
         getBinding().rvMsgList.setAdapter(previewMessageAdapter);
         getBinding().calendarView.setMaxDate(System.currentTimeMillis());
+        Log.d(TAG, "<initView> done");
     }
 
     @Override
@@ -118,6 +119,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
     @Override
     public void onResume() {
         super.onResume();
+        Log.d(TAG, "<onResume>");
         requestMsgData();
     }
 
@@ -178,6 +180,8 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
                 if (data instanceof IotAlarm) {
                     currentIotAlarm = (IotAlarm) data;
                     setGsyPlayerInfo(((IotAlarm) data).mVideoUrl, "");
+                    Log.d(TAG, "<initListener.setISingleCallback> [CALLBACK_TYPE_MESSAGE_ALARM_DETAIL_RESULT]"
+                                + ", url=" + ((IotAlarm) data).mVideoUrl);
 
                     boolean muted;
                     if (mIsOrientLandscape) {
@@ -339,6 +343,7 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
             }
         });
         getBinding().landscapeLayout.setOnClickListener(view -> showLandScapeLayout());
+        Log.d(TAG, "<initListener> done");
     }
 
     private void showLandScapeLayout() {
@@ -657,12 +662,14 @@ public class PlayerMessageListFragment extends BaseGsyPlayerFragment<FagmentPlay
 
     @Override
     public void onStart() {
+        Log.d(TAG, "<onStart>");
         super.onStart();
         messageViewModel.onStart();
     }
 
     @Override
     public void onStop() {
+        Log.d(TAG, "<onStop>");
         super.onStop();
         messageViewModel.onStop();
     }

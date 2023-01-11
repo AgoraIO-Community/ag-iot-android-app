@@ -6,6 +6,7 @@ import android.util.Log;
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
 
+import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IotAlarmImage;
 import io.agora.iotlink.IotAlarmVideo;
 import io.agora.iotlinkdemo.common.Constant;
@@ -22,7 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallback, IDevMessageMgr.ICallback {
+public class MessageViewModel extends BaseViewModel
+        implements IAlarmMgr.ICallback, IDevMessageMgr.ICallback, ICallkitMgr.ICallback {
     private final String TAG = "IOTLINK/MsgViewModel";
 
 
@@ -55,11 +57,13 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     public void onStart() {
         AIotAppSdkFactory.getInstance().getAlarmMgr().registerListener(this);
         AIotAppSdkFactory.getInstance().getDevMessageMgr().registerListener(this);
+        AIotAppSdkFactory.getInstance().getCallkitMgr().registerListener(this);
     }
 
     public void onStop() {
         AIotAppSdkFactory.getInstance().getAlarmMgr().unregisterListener(this);
         AIotAppSdkFactory.getInstance().getDevMessageMgr().unregisterListener(this);
+        AIotAppSdkFactory.getInstance().getCallkitMgr().unregisterListener(this);
     }
 
     /**
@@ -273,5 +277,13 @@ public class MessageViewModel extends BaseViewModel implements IAlarmMgr.ICallba
     }
 
 
+
+    @Override
+    public void onPeerIncoming(IotDevice iotDevice, String attachMsg) {
+        Log.d(TAG,"<onPeerIncoming> iotDevice=" + iotDevice.toString()
+                + ", attachMsg=" + attachMsg);
+
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_INCOMING, iotDevice);
+    }
 
 }

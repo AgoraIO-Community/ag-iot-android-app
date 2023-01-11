@@ -116,6 +116,8 @@ public class Constant {
     public static final int CALLBACK_TYPE_DEVICE_DIAL_TIMEOUT = 35;
     /* 设备挂断 */
     public static final int CALLBACK_TYPE_DEVICE_HANGUP = 36;
+    /* 设备来电 */
+    public static final int CALLBACK_TYPE_DEVICE_INCOMING = 37;
 
     /* 用户登录状态改变*/
     public static final int CALLBACK_TYPE_USER_STATUS_CHANGE = 100;
