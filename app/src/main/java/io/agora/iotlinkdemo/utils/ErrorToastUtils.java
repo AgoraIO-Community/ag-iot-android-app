@@ -91,7 +91,7 @@ public class ErrorToastUtils {
                 showErrorText("对端超时无响应");
                 break;
             case ErrCode.XERR_CALLKIT_LOCAL_BUSY:
-                showErrorText("本地端忙");
+                showErrorText("本地端或者设备端忙,不能呼叫");
                 break;
             case ErrCode.XERR_CALLKIT_ERR_OPT:
                 showErrorText("不支持的错误操作");
