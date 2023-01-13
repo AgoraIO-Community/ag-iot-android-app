@@ -350,7 +350,9 @@ public class DeviceBtCfg {
             mScanFuture.cancel(true);
             mScanFuture = null;
         }
-        mScanThreadPool.shutdownNow();
+        if (mScanThreadPool != null) {
+            mScanThreadPool.shutdownNow();
+        }
 
         Log.d(TAG, "<scanStop> done");
     }

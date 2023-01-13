@@ -272,7 +272,10 @@ public class DeviceAddStepBtScanActivity extends BaseViewBindingActivity<Activit
 
         mUIState = UISATE_SCANNING;
         if (!DeviceBtCfg.getInstance().isScanning()) {
-            DeviceBtCfg.getInstance().scanStart();
+            boolean bRet = DeviceBtCfg.getInstance().scanStart();
+            if (!bRet) {
+                popupMessage("蓝牙设备打开失败!");
+            }
         }
     }
 
