@@ -523,7 +523,11 @@ public class DeviceBtCfg {
                     case BluetoothProfile.STATE_DISCONNECTED: {
                         Log.d(TAG, "<onConnectionStateChange> DISCONNECTED");
                         gatt.close();
-                        onGattDisconnected();
+                        int cfgStatus = getDeviceCfgStatus();
+                        if (cfgStatus == CFG_STATUS_CONNECTED || cfgStatus == CFG_STATUS_NETWORK) {
+                            Log.d(TAG, "<onConnectionStateChange> BT disconnected");
+                            onGattDisconnected();
+                        }
                     } break;
                 }
 
