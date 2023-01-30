@@ -477,7 +477,7 @@ public class DeviceBtCfg {
         if (mBlufiClient != null) {
             mBlufiClient.close();
             mBlufiClient = null;
-            Log.d(TAG, "<deviceCfgStart> done");
+            Log.d(TAG, "<deviceCfgStop> done");
         }
         setDeviceCfgStatus(CFG_STATUS_IDLE);
         //deviceCfgProgressCallback(CFG_STATUS_IDLE);
@@ -721,9 +721,10 @@ public class DeviceBtCfg {
         mUIHandler.post(() -> {
             setDeviceCfgStatus(CFG_STATUS_DONE);
             deviceCfgProgressCallback(CFG_STATUS_DONE);
-
-            mBlufiClient.close();
-            mBlufiClient = null;
+            if (mBlufiClient != null) {
+                mBlufiClient.close();
+                mBlufiClient = null;
+            }
             deviceCfgDoneCallback(XERR_CFG_DISCONNECT);
         });
     }
@@ -732,9 +733,10 @@ public class DeviceBtCfg {
         mUIHandler.post(() -> {
             setDeviceCfgStatus(CFG_STATUS_DONE);
             deviceCfgProgressCallback(CFG_STATUS_DONE);
-
-            mBlufiClient.close();
-            mBlufiClient = null;
+            if (mBlufiClient != null) {
+                mBlufiClient.close();
+                mBlufiClient = null;
+            }
             deviceCfgDoneCallback(XERR_CFG_DEVOPT+errCode);
         });
     }
@@ -773,8 +775,10 @@ public class DeviceBtCfg {
             mUIHandler.post(() -> {
                 setDeviceCfgStatus(CFG_STATUS_DONE);
                 deviceCfgProgressCallback(CFG_STATUS_DONE);
-                mBlufiClient.close();
-                mBlufiClient = null;
+                if (mBlufiClient != null) {
+                    mBlufiClient.close();
+                    mBlufiClient = null;
+                }
                 deviceCfgDoneCallback(XERR_CFG_NETWORK);
             });
             return;
@@ -797,8 +801,10 @@ public class DeviceBtCfg {
                 Log.d(TAG, "<onGattPostConfigureParams> fail to generate custom data");
                 setDeviceCfgStatus(CFG_STATUS_DONE);
                 deviceCfgProgressCallback(CFG_STATUS_DONE);
-                mBlufiClient.close();
-                mBlufiClient = null;
+                if (mBlufiClient != null) {
+                    mBlufiClient.close();
+                    mBlufiClient = null;
+                }
                 deviceCfgDoneCallback(XERR_CFG_CUSTOMDATA);
                 return;
             }
@@ -826,8 +832,10 @@ public class DeviceBtCfg {
         mUIHandler.postDelayed(() -> {
             setDeviceCfgStatus(CFG_STATUS_DONE);
             deviceCfgProgressCallback(CFG_STATUS_DONE);
-            mBlufiClient.close();
-            mBlufiClient = null;
+            if (mBlufiClient != null) {
+                mBlufiClient.close();
+                mBlufiClient = null;
+            }
             deviceCfgDoneCallback(errCode);
         }, 2000L);
     }

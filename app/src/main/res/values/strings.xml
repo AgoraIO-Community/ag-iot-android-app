@@ -227,7 +227,7 @@
 
     <string name="btcfg_tips1">手机与设备连接成功</string>
     <string name="btcfg_tips2">向设备发送信息成功</string>
-    <string name="btcfg_tips3">列表连接WIFI成功</string>
+    <string name="btcfg_tips3">设备连接WIFI成功</string>
     <string name="btcfg_tips4">设备连接云端成功</string>
     <string name="btcfg_tips5">初始化成功</string>
 
