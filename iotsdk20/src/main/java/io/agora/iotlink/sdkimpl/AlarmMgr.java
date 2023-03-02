@@ -12,6 +12,8 @@ package io.agora.iotlink.sdkimpl;
 
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import io.agora.iotlink.ErrCode;
@@ -28,6 +30,7 @@ import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.callkit.CallkitContext;
 import io.agora.iotlink.logger.ALog;
+import io.agora.iotlink.utils.RSAUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -301,6 +304,33 @@ public class AlarmMgr implements IAlarmMgr {
                 String userId = (ownerUserId == null) ? account.mInventDeviceName : ownerUserId;
                 videoResult = AgoraService.getInstance().queryAlarmRecordInfo(account.mAgoraAccessToken,
                                 userId, deviceID, timestamp);
+
+                AccountMgr accountMgr = (AccountMgr)mSdkInstance.getAccountMgr();
+                byte[] rsaPrivateKey = accountMgr.getRsaPrivateKey();
+                if (!TextUtils.isEmpty(videoResult.mAlarmVideo.mVideoSecret) && (rsaPrivateKey != null)) { // 视频有加密信息
+                    // 视频密钥进行Base64转换
+                    byte[] videoSecret = Base64.decode(videoResult.mAlarmVideo.mVideoSecret, 0);
+
+                    // 利用 RSA私钥对 视频密钥进行解码
+                    byte[] videoKey = RSAUtils.privateDecrypt(videoSecret, rsaPrivateKey);
+
+                    if (videoKey != null) {
+                        // 解码后的 视频密钥 再转换成 Base64字符串
+                        String agora_key = Base64.encodeToString(videoKey, Base64.NO_WRAP);
+
+                        // 视频源 拼接 视频密钥 Base64的字符串
+                        String encryptVideoUrl = videoResult.mAlarmVideo.mVideoUrl + "&agora-key=" + agora_key;
+
+                        // 更新视频源URL
+                        videoResult.mAlarmVideo.mVideoUrl = encryptVideoUrl;
+
+                    } else {
+                        ALog.getInstance().e(TAG, "<queryVideoByTimestamp> fail to decode video secret");
+                    }
+
+                } else { // 无视频加密，直接使用视频路径进行播放
+
+                }
 
                 ALog.getInstance().d(TAG, "<queryVideoByTimestamp> done, errCode=" + videoResult.mErrCode
                         + ", mAlarmImg=" + videoResult.mAlarmVideo);

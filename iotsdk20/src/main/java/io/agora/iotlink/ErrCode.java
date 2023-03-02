@@ -57,7 +57,7 @@ public class ErrCode {
     public static final int XERR_FILE_SEEK = -20006;
     public static final int XERR_FILE_READ = -20007;
     public static final int XERR_FILE_WRITE = -20008;
-
+    public static final int XERR_FILE_NO_STREAM = -20009;
 
     //
     // 账号相关错误

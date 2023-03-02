@@ -124,4 +124,70 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1I420ToRg
 }
 
 
+/*
+ * Class:     io_agora_iotlink_utils_ImageConvert
+ * Method:    ImgCvt_I420ToRgba
+ * Signature: ([B[B[BIILjava/lang/[B;)I
+ */
+JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToNv12(
+    JNIEnv*			env,
+    jobject thiz,
+    jbyteArray 		jb_yData,
+    jbyteArray 		jb_uData,
+    jbyteArray		jb_vData,
+    jint 	        width,
+    jint			height,
+    jbyteArray		jb_nv21Buffer   )
+{
+    AndroidBitmapInfo bmpInfo = { 0 };
+    uint8_t*	rgbaBuffer = NULL;
+
+//    LOGI("<ImgCvt_1I420ToRgba> ==>Enter");
+
+
+
+    // Lock YUV buffer
+    jbyte* pYBuffer =  env->GetByteArrayElements(jb_yData, 0);
+    jbyte* pUBuffer =  env->GetByteArrayElements(jb_uData, 0);
+    jbyte* pVBuffer =  env->GetByteArrayElements(jb_vData, 0);
+    jbyte* pNv12Buffer = env->GetByteArrayElements(jb_nv21Buffer, 0);
+    if (NULL == pYBuffer || NULL == pUBuffer || NULL == pVBuffer || pNv12Buffer == NULL) {
+        LOGE("<ImgCvt_1YuvToNv12> fail to lock YUV data");
+        return -1;
+    }
+
+
+    //
+    // Converting
+    //
+    uint8_t* pNv12Data = (uint8_t*)pNv12Buffer;
+    uint8_t* pYData= (uint8_t*)pYBuffer;
+    uint8_t* pUData= (uint8_t*)pUBuffer;
+    uint8_t* pVData= (uint8_t*)pVBuffer;
+    int yDataSize = width * height;
+    int uvDataSize= (yDataSize / 4);
+
+    // Y 数据直接拷贝
+    memcpy(pNv12Buffer, pYData, yDataSize);
+
+
+    // UV数据要交叉存放
+    int pos = yDataSize;
+    int i;
+    for (i = 0; i < uvDataSize; i++) {
+        pNv12Buffer[pos] = pUData[i];
+        pNv12Buffer[pos+1] = pVData[i];
+
+        pos += 2;
+    }
+
+    // Unlock YUV buffer
+    env->ReleaseByteArrayElements(jb_yData, pYBuffer, 0);
+    env->ReleaseByteArrayElements(jb_uData, pUBuffer, 0);
+    env->ReleaseByteArrayElements(jb_vData, pVBuffer, 0);
+    env->ReleaseByteArrayElements(jb_nv21Buffer, pNv12Buffer, 0);
+
+    //LOGI("<ImgCvt_1YuvToNv12> <==Exit, width=%d, height=%d", width, height);
+    return 0;
+}
 

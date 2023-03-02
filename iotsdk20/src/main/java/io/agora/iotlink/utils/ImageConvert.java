@@ -114,6 +114,7 @@ public class ImageConvert
     public native int ImgCvt_I420ToRgba(byte[] yData, byte[] uData, byte[] vData,
                                              int width, int height, Object outBmp);
 
-
+    public native int ImgCvt_YuvToNv12(byte[] yData, byte[] uData, byte[] vData,
+                                        int width, int height, byte[] nv12Buffer);
 
 }

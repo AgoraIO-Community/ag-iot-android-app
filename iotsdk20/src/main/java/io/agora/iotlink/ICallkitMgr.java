@@ -139,6 +139,12 @@ public interface ICallkitMgr {
          * @param errCode : 错误代码
          */
         default void onCallkitError(int errCode) {}
+
+        /**
+         * @brief 录像错误事件
+         * @param errCode : 错误码
+         */
+        default void onRecordingError(int errCode) {}
     }
 
 
@@ -252,15 +258,22 @@ public interface ICallkitMgr {
 
     /**
      * @brief 开始录制当前通话（包括音视频流），仅在通话状态下才能调用
+     * @param outFilePath : 输出保存的视频文件路径
      * @return 错误码
      */
-    int talkingRecordStart();
+    int talkingRecordStart(final String outFilePath);
 
     /**
      * @brief 停止录制当前通话，仅在通话状态下才能调用
      * @return 错误码
      */
     int talkingRecordStop();
+
+    /**
+     * @brief 判断当前是否正在本地录制
+     * @return true 表示正在本地录制频道； false: 不在录制
+     */
+    boolean isTalkingRecording();
 
 
     /**

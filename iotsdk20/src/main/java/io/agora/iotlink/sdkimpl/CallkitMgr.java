@@ -77,6 +77,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3006;  ///< 对端RTC掉线
     private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3007;  ///< 对端RTC首帧出图
     private static final int MSGID_CALL_AWSEVENT_TIMEOUT = 0x3008;  ///< HTTP请求后, AWS超时无响应
+    private static final int MSGID_RECORDING_ERROR = 0x3010;        ///< 录像出现错误
     private static final int MSGID_WORK_EXIT = 0x30FF;
 
     //
@@ -240,6 +241,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 DoRtcPeerFirstVideo(msg);
                 break;
 
+            case MSGID_RECORDING_ERROR:
+                DoRecordingError(msg);
+                break;
+
             case MSGID_WORK_EXIT:  // 工作线程退出消息
                 synchronized (mWorkExitEvent) {
                     mWorkExitEvent.notify();    // 事件通知
@@ -257,6 +262,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
             mWorkHandler = null;
         }
     }
@@ -551,13 +557,45 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     }
 
     @Override
-    public int talkingRecordStart() {
-        return ErrCode.XOK;
+    public int talkingRecordStart(final String outFilePath) {
+        if (mTalkEngine == null) {
+            ALog.getInstance().e(TAG, "<talkingRecordStart> talk engine NOT running");
+            return ErrCode.XERR_BAD_STATE;
+        }
+
+        int ret = mTalkEngine.recordingStart(outFilePath);
+        return ret;
     }
 
     @Override
     public int talkingRecordStop() {
-        return ErrCode.XOK;
+        if (mTalkEngine == null) {
+            ALog.getInstance().e(TAG, "<talkingRecordStop> talk engine NOT running");
+            return ErrCode.XERR_BAD_STATE;
+        }
+
+        int ret = mTalkEngine.recordingStop();
+        return ret;
+    }
+
+    @Override
+    public void onRecordingError(int errCode) {
+        ALog.getInstance().e(TAG, "<onRecordingError> errCode=" + errCode);
+
+        // 发送录像错误回调消息
+        sendMessage(MSGID_RECORDING_ERROR, errCode, 0, null);
+    }
+
+    /**
+     * @brief 判断当前是否正在本地录制
+     * @return true 表示正在本地录制频道； false: 不在录制
+     */
+    @Override
+    public boolean isTalkingRecording() {
+        if (mTalkEngine == null) {
+            return false;
+        }
+        return mTalkEngine.isRecording();
     }
 
     @Override
@@ -1337,6 +1375,26 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             }
         }
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////// 录像的处理 //////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+
+    /*
+     * @brief 工作线程中运行，发送HTTP呼叫请求
+     */
+    void DoRecordingError(Message msg) {
+        int errCode = msg.arg1;
+        ALog.getInstance().e(TAG, "<DoRecordingError> errCode=" + errCode);
+
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onRecordingError(errCode);
+            }
+        }
+    }
+
+
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// 所有的对上层回调处理 //////////////////////////
     /////////////////////////////////////////////////////////////////////////////

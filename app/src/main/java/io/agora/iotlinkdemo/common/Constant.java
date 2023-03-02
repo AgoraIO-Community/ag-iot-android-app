@@ -227,4 +227,8 @@ public class Constant {
     /* RTM接收到消息 */
     public static final int CALLBACK_TYPE_RTM_RECVED = 503;
 
+
+    /* 录像错误 */
+    public static final int CALLBACK_TYPE_RECORDING_ERROR = 601;
+
 }

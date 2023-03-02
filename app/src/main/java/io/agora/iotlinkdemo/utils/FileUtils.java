@@ -152,12 +152,13 @@ public class FileUtils {
                     dateBean.date = tempDate;
                     albumBeans.add(dateBean);
                 }
-                bean.time = file.getName().split("_")[3].replace("&", ":");
+                String fileName = file.getName();
+                bean.time = fileName.split("_")[3].replace("&", ":");
                 if (file.getName().contains("jpg")) {
                     bean.mediaType = 0;
                 } else {
                     bean.mediaType = 1;
-                    bean.duration = Integer.parseInt(file.getName().split("_")[5].split("\\.")[0]);
+                    bean.duration = Integer.parseInt(fileName.split("_")[4].split("\\.")[0]);
                 }
                 albumBeans.add(bean);
             }

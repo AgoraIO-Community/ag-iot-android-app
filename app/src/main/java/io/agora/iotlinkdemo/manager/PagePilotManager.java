@@ -374,11 +374,12 @@ public class PagePilotManager {
     /**
      * 相册 图片预览
      */
-    public static void pageAlbumViewPhoto(String fileUrl, String time) {
+    public static void pageAlbumViewPhoto(String fileUrl, String time, int mediaType) {
         ARouter.getInstance()
                 .build(PagePathConstant.pageAlbumViewPhoto)
                 .withString(Constant.FILE_URL, fileUrl)
                 .withString(Constant.TIME, time)
+                .withInt(Constant.TYPE, mediaType)
                 .navigation();
     }
 

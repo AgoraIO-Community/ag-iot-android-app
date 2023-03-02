@@ -15,6 +15,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,6 +31,7 @@ import com.alibaba.android.arouter.facade.annotation.Route;
 
 import java.util.List;
 
+import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
@@ -49,6 +51,7 @@ import io.agora.iotlinkdemo.dialog.SelectPirDialog;
 import io.agora.iotlinkdemo.manager.PagePathConstant;
 import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.models.player.PlayerViewModel;
+import io.agora.iotlinkdemo.utils.FileUtils;
 
 /**
  * 播放页功能列表
@@ -177,6 +180,12 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
                             String str_usercnt = getString(R.string.user_count) + userCount;
                             getBinding().tvUserCount.setText(str_usercnt);
                         });
+
+                    } else if (type == Constant.CALLBACK_TYPE_RECORDING_ERROR) {  // 录像产生错误
+                        int errCode = (Integer) var2;
+                        getBinding().cbRecord.post(() -> {
+                            onMsgRecordingError(errCode);
+                        });
                     }
                 }
             });
@@ -232,16 +241,10 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         getBinding().ivClip.setOnClickListener(view -> onBtnCapturePeerFrame());
         getBinding().ivClipFull.setOnClickListener(view -> onBtnCapturePeerFrame());
         getBinding().cbRecord.setOnCheckedChangeListener((compoundButton, b) -> {
-            if (b) {
-                ToastUtils.INSTANCE.showToast(R.string.function_not_open);
-                compoundButton.setChecked(false);
-            }
+            onBtnRecording(compoundButton);
         });
         getBinding().cbRecordFull.setOnCheckedChangeListener((compoundButton, b) -> {
-            if (b) {
-                ToastUtils.INSTANCE.showToast(R.string.function_not_open);
-                compoundButton.setChecked(false);
-            }
+            onBtnRecording(compoundButton);
         });
 
         getBinding().saveBg.setOnClickListener(view -> PagePilotManager.pageAlbum());
@@ -444,20 +447,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         //playerViewModel.queryAllPropDesc();
     }
 
-    /**
-     * 开始录音
-     */
-    private void startRecord() {
-        getBinding().tvRECTip.setVisibility(View.VISIBLE);
-    }
 
-    /**
-     * 停止录音
-     */
-    private void stopRecord() {
-        showSaveTip(true);
-        getBinding().tvRECTip.setVisibility(View.GONE);
-    }
 
     /**
      * 显示保存提示
@@ -720,4 +710,46 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         super.onStop();
         playerViewModel.onStop();
     }
+
+    ///////////////////////////////////////////////////////////
+    ////////////////////////// 频道内录像处理 ////////////////////
+    ///////////////////////////////////////////////////////////
+    void onBtnRecording(CompoundButton btn) {
+        boolean bRecording = playerViewModel.isRecording();
+        if (!bRecording) {
+            // 启动频道内录像
+            int callStatus = playerViewModel.getCallStatus();
+            if (callStatus != playerViewModel.CALL_STATE_CONNECTED) {
+                popupMessage("当前设备不在通话中!");
+                return;
+            }
+
+            int errCode = playerViewModel.recordingStart();
+            if (errCode != ErrCode.XOK) {
+                popupMessage("启动频道内录像失败, 错误码=" + errCode);
+                return;
+            }
+            btn.setChecked(true);
+
+
+        } else {
+            // 停止频道内录像
+            playerViewModel.recordingStop();
+            btn.setChecked(false);
+
+            getBinding().ivCover.setImageBitmap(playerViewModel.captureRtcVideoFrame());
+            showSaveTip(true);
+        }
+    }
+
+    void onMsgRecordingError(int errCode) {
+        if (playerViewModel.isRecording()) {
+            // 停止频道内录像
+            playerViewModel.recordingStop();
+            getBinding().cbRecord.setChecked(false);
+            popupMessage("录像错误，错误码=" + errCode);
+        }
+    }
+
+
 }

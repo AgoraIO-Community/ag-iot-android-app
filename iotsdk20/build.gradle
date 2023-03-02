@@ -54,6 +54,8 @@ android {
 }
 
 dependencies {
+    implementation project(path: ':avengine')
+
     // 声网大重构 RTC SDK & RTM SDK
     implementation files('libs/agora-rtc-sdk.jar')
     implementation files('libs/agora-rtm-sdk.jar')

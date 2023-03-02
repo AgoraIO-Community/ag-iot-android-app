@@ -454,4 +454,37 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     }
 
 
+    ///////////////////////////////////////////////////////////
+    ////////////////////////// 频道内录像处理 ////////////////////
+    ///////////////////////////////////////////////////////////
+    public boolean isRecording() {
+        boolean bRecording = AIotAppSdkFactory.getInstance().getCallkitMgr().isTalkingRecording();
+        return bRecording;
+    }
+
+    public int recordingStart() {
+        String outFilePath = FileUtils.getFileSavePath(mLivingDevice.mDeviceID, false);
+        //outFilePath = "/sdcard/Android/data/io.agora.iotlinkdemo/" + System.currentTimeMillis() + ".mp4";
+        int ret = AIotAppSdkFactory.getInstance().getCallkitMgr().talkingRecordStart(outFilePath);
+        Log.d(TAG, "<recordingStart> outFilePath=" + outFilePath + ", ret=" + ret);
+        return ret;
+    }
+
+    public int recordingStop() {
+        int ret = AIotAppSdkFactory.getInstance().getCallkitMgr().talkingRecordStop();
+        Log.d(TAG, "<recordingStop> ret=" + ret);
+        return ret;
+    }
+
+    public Bitmap captureRtcVideoFrame() {
+        Bitmap videoFrameBmp = AIotAppSdkFactory.getInstance().getCallkitMgr().capturePeerVideoFrame();
+        return videoFrameBmp;
+    }
+
+    @Override
+    public void onRecordingError(int errCode) {
+        Log.d(TAG, "<onRecordingError> errCode=" + errCode);
+        getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_RECORDING_ERROR, errCode);
+    }
+
 }

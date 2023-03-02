@@ -164,6 +164,7 @@ public class PlayerPreviewMessageActivity extends BaseGsyPlayerActivity<Activity
         getBinding().tvMsgDesc.setText(mFileDescription);
         getBinding().tvMsgTime.setText(mMessageTime);
         setGsyPlayerInfo(mFileUrl, "");
+        Log.d(TAG, "<requestData> mFileUrl=" + mFileUrl);
         getBinding().gsyPlayer.setMute(false);
         getBinding().gsyPlayer.startPlay();
         isPlaying = true;

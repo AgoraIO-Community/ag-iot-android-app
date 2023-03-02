@@ -1,5 +1,7 @@
 package io.agora.iotlinkdemo.models.album;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,6 +22,7 @@ import io.agora.iotlinkdemo.manager.PagePilotManager;
 import io.agora.iotlinkdemo.utils.FileUtils;
 import com.alibaba.android.arouter.facade.annotation.Route;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,8 +74,20 @@ public class AlbumActivity extends BaseViewBindingActivity<ActivityAlbumBinding>
             albumAdapter.notifyDataSetChanged();
         });
         albumAdapter.setMRVItemClickListener((view, position, data) -> {
-            if (data.mediaType == 0) {
-                PagePilotManager.pageAlbumViewPhoto(data.mediaCover, data.date + " " + data.time);
+            if (data.mediaType == 0) {  // 图片单张浏览
+                PagePilotManager.pageAlbumViewPhoto(data.mediaCover, data.date + " " + data.time, 0);
+
+            } else if (data.mediaType == 1) {  // 视频播放
+//                try {
+//                    File file = new File(data.filePath);
+//                    Intent intent = new Intent(Intent.ACTION_VIEW);
+//                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                    intent.setDataAndType(Uri.fromFile(file), "video/*");
+//                    startActivity(intent);
+//                } catch (Exception exp) {
+//                    exp.printStackTrace();
+//                }
+                PagePilotManager.pageAlbumViewPhoto(data.mediaCover, data.date + " " + data.time, 1);
             }
         });
         getBinding().btnDoDelete.setOnClickListener(view -> {

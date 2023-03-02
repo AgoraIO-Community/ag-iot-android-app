@@ -1,7 +1,9 @@
 package io.agora.iotlinkdemo.models.album;
 
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +34,10 @@ public class AlbumViewPhotoActivity extends BaseViewBindingActivity<ActivityAlbu
     @Autowired(name = Constant.TIME)
     String time;
 
+    @JvmField
+    @Autowired(name = Constant.TYPE)
+    int mMediaType = 0;         // 0: 图片；   1：视频
+
     @Override
     protected ActivityAlbumViewPhotoBinding getViewBinding(@NonNull LayoutInflater inflater) {
         return ActivityAlbumViewPhotoBinding.inflate(inflater);
@@ -41,8 +47,50 @@ public class AlbumViewPhotoActivity extends BaseViewBindingActivity<ActivityAlbu
     public void initView(@Nullable Bundle savedInstanceState) {
         MakeUpZoomImage.attach(this);
         ARouter.getInstance().inject(this);
-        GlideApp.with(this).load(fileUrl).placeholder(R.mipmap.icon_deft).into(getBinding().ivPhoto);
-        getBinding().tvPhotoTime.setText(time);
+
+        if (mMediaType == 1) {  // 视频播放
+            getBinding().ivPhoto.setVisibility(View.GONE);
+            getBinding().tvPhotoTime.setVisibility(View.GONE);
+            getBinding().vvMedia.setVisibility(View.VISIBLE);
+
+            try {
+                getBinding().vvMedia.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mediaPlayer) {
+                        finish();
+                        popupMessage("播放完成!");
+                    }
+                });
+
+                getBinding().vvMedia.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        boolean isPlaying = getBinding().vvMedia.isPlaying();
+                        if (isPlaying) {
+                            getBinding().vvMedia.pause();
+                        } else {
+                            getBinding().vvMedia.start();
+                        }
+                    }
+                });
+
+                getBinding().vvMedia.setVideoPath(fileUrl);
+                getBinding().vvMedia.start();
+
+            } catch (Exception exp) {
+                exp.printStackTrace();
+            }
+
+
+        } else {    // 图片显示
+            getBinding().ivPhoto.setVisibility(View.VISIBLE);
+            getBinding().tvPhotoTime.setVisibility(View.VISIBLE);
+            getBinding().vvMedia.setVisibility(View.GONE);
+
+            GlideApp.with(this).load(fileUrl).placeholder(R.mipmap.icon_deft).into(getBinding().ivPhoto);
+            getBinding().tvPhotoTime.setText(time);
+        }
+
     }
 
     @Override
