@@ -124,6 +124,8 @@ public class TalkingEngine implements AGEventHandler,
     private static final int WAIT_OPT_TIMEOUT = 3000;
     private static final String RECORD_VIDEO_CODEC = MediaFormat.MIMETYPE_VIDEO_AVC;
     private static final String RECORD_AUDIO_CODEC = MediaFormat.MIMETYPE_AUDIO_AAC;
+    private static final int RECORD_TARGET_WIDTH = 1280;
+    private static final int RECORD_TARGET_HEIGHT = 720;
 
     private static final int RECORD_AUDIO_SAMPLERATE = 44100;
     private static final int RECORD_AUDIO_CHANNELS = 2;
@@ -183,12 +185,25 @@ public class TalkingEngine implements AGEventHandler,
     private int mAudioFrameIndex = 0;           ///< 当前音频帧索引
     private long mAudioTimestamp = 0;           ///< 音频时长的累计
 
+    private AvCapability.VideoCaps mVideoCaps;
+    private int mMaxEncodeWidth = RECORD_TARGET_WIDTH;
+    private int mMaxEncodeHeight = RECORD_TARGET_HEIGHT;
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////// Public Methods ///////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     public synchronized boolean initialize(InitParam initParam) {
         mInitParam = initParam;
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            mVideoCaps = AvCapability.getVideoCapability(RECORD_VIDEO_CODEC);
+            if (mMaxEncodeWidth > mVideoCaps.mWidthRange.getUpper()) {
+                mMaxEncodeWidth = mVideoCaps.mWidthRange.getUpper();
+            }
+            if (mMaxEncodeHeight > mVideoCaps.mHeightRange.getUpper()) {
+                mMaxEncodeHeight = mVideoCaps.mHeightRange.getUpper();
+            }
+        }
 
         //
         // 初始RtcEngine配置信息
@@ -250,7 +265,8 @@ public class TalkingEngine implements AGEventHandler,
         mRtcEngine.registerVideoFrameObserver(this);
         mRtcEngine.registerAudioFrameObserver(this);
 
-        ALog.getInstance().d(TAG, "<initialize> done");
+        ALog.getInstance().d(TAG, "<initialize> done, mMaxEncodeWidth=" + mMaxEncodeWidth
+                    + ", mMaxEncodeHeight=" + mMaxEncodeHeight);
         return true;
     }
 
@@ -436,7 +452,7 @@ public class TalkingEngine implements AGEventHandler,
             ALog.getInstance().e(TAG, "<setRemoteVideoView> bad state");
             return false;
         }
-        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_ADAPTIVE, mPeerUid);
+        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_FIT, mPeerUid);
         int ret = mRtcEngine.setupRemoteVideo(videoCanvas);
         ALog.getInstance().d(TAG, "<setRemoteVideoView> remoteView=" + remoteView
                 + ", mPeerUid=" + mPeerUid + ", ret=" + ret);
@@ -1126,11 +1142,33 @@ public class TalkingEngine implements AGEventHandler,
             ALog.getInstance().e(TAG, "<cacheInVideoFrame> videoBuffer is NULL");
             return false;
         }
-        VideoFrame.I420Buffer i420Buffer = videoBuffer.toI420();
+
+        VideoFrame.Buffer scaledBuffer = null;
+        VideoFrame.I420Buffer i420Buffer = null;
+
+        int frameWidth = videoBuffer.getWidth();
+        int frameHeight = videoBuffer.getHeight();
+        if ((frameWidth > mMaxEncodeWidth) || (frameHeight > mMaxEncodeHeight)) {
+            float scaleRateW = (float)frameWidth / (float)mMaxEncodeWidth;
+            float scaleRateH = (float)frameHeight / (float)mMaxEncodeHeight;
+            float scaleRate = (scaleRateW > scaleRateH) ? scaleRateW : scaleRateH;
+            int scaledWidth = (int)(frameWidth / scaleRate);
+            int scaleHeight = (int)(frameHeight / scaleRate);
+            scaledBuffer = videoBuffer.cropAndScale(0, 0, frameWidth, frameHeight, scaledWidth, scaleHeight);
+            i420Buffer = scaledBuffer.toI420();
+            ALog.getInstance().d(TAG, "<cacheInVideoFrame> scale frame, frameWidth=" + frameWidth
+                        + ", frameHeight=" + frameHeight + ", scaledWidth=" + scaledWidth + ", scaleHeight=" + scaleHeight);
+        } else {
+            i420Buffer = videoBuffer.toI420();
+        }
         if (i420Buffer == null) {
             ALog.getInstance().e(TAG, "<cacheInVideoFrame> i420Buffer is NULL");
+            if (scaledBuffer != null) {
+                scaledBuffer.release();
+            }
             return false;
         }
+
 
         ByteBuffer yBuffer = i420Buffer.getDataY();
         ByteBuffer uBuffer = i420Buffer.getDataU();
@@ -1178,6 +1216,11 @@ public class TalkingEngine implements AGEventHandler,
         }
 
         videoBuffer.release();
+        i420Buffer.release();
+        if (scaledBuffer != null) {
+            scaledBuffer.release();
+        }
+
         long t2 = System.currentTimeMillis();
         //ALog.getInstance().e(TAG, "<cacheInVideoFrame> done, costTime=" + (t2-t1) + " ms");
         return true;
