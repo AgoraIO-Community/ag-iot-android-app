@@ -1214,8 +1214,7 @@ public class TalkingEngine implements AGEventHandler,
             }
             System.arraycopy(vBytes, 0, mInVideoVData, 0, vDataSize);
         }
-
-        videoBuffer.release();
+        
         i420Buffer.release();
         if (scaledBuffer != null) {
             scaledBuffer.release();
