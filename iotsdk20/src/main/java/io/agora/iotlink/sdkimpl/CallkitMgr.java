@@ -721,9 +721,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
             // 发送挂断请求
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-            errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-                    callkitCtx.sessionId, callkitCtx.callerId, callkitCtx.calleeId,
-                    accountInfo.mInventDeviceName, false);
+//            errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
+//                    callkitCtx.sessionId, callkitCtx.callerId, callkitCtx.calleeId,
+//                    accountInfo.mInventDeviceName, false);
+            errCode = doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
+                                callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
+
         } else {
             ALog.getInstance().e(TAG, "<DoRequestAnswer> bad status, callkit is NULL");
         }
@@ -1156,8 +1159,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
         if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-            AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
-                    callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName, false);
+//            AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
+//                    callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName, false);
+            doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
+                    callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
         }
 
         if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
@@ -1503,6 +1508,29 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
     }
 
+    /**
+     * @brief 最多3次重复挂断处理
+     */
+    int doRetryHangup(final String token, final String sessionId, final String callerId,
+                      final String calleeId, final String localId)  {
+
+        int errCode = ErrCode.XOK;
+        int loopCount = 0;
+        for (;;) {
+            errCode = AgoraService.getInstance().makeAnswer(token, sessionId, callerId, calleeId, localId, false);
+            if (errCode == ErrCode.XOK) {
+                break;
+            }
+            loopCount++;
+            if (loopCount >= 3) {
+                break;
+            }
+
+            ThreadSleep(200);
+        }
+
+        return errCode;
+    }
 
     /**
      * @brief 如果当前正在执行呼叫HTTP请求，需要等这个请求完成，超时1500ms
