@@ -106,6 +106,8 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private final Object mReqDialEvent = new Object();
     private final Object mReqHangupEvent = new Object();
     private final Object mReqAnswerEvent = new Object();
+    private volatile int mReqDialErrCode = ErrCode.XOK;
+    private volatile int mReqHangupErrCode = ErrCode.XOK;
 
     private volatile int mStateMachine = CALLKIT_STATE_IDLE;    ///< 当前呼叫状态机
     private String mAppId;
@@ -339,6 +341,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         // 发送请求消息
         ALog.getInstance().d(TAG, "<callDial> ==> BEGIN");
         long t1 = System.currentTimeMillis();
+        mReqDialErrCode = ErrCode.XOK;
         setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
         Object callParams = new Object[] {iotDevice, attachMsg};
         sendMessage(MSGID_CALL_REQ_DIAL, 0, 0, callParams);
@@ -352,9 +355,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<callDial> <==End done, iotDevice=" + iotDevice.toString()
-                + ", attachMsg=" + attachMsg + ", costTime=" + (t2-t1));
-        return ErrCode.XOK;
+        ALog.getInstance().d(TAG, "<callDial> <==End done, errCode=" + mReqDialErrCode
+                + ", costTime=" + (t2-t1)
+                + ", iotDevice=" + iotDevice.toString()
+                + ", attachMsg=" + attachMsg);
+        return mReqDialErrCode;
     }
 
     @Override
@@ -379,6 +384,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         // 发送请求消息，同步等待执行完成
         ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
         long t1 = System.currentTimeMillis();
+        mReqHangupErrCode = ErrCode.XOK;
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
         sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);
         synchronized (mReqHangupEvent) {
@@ -392,8 +398,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         setStateMachine(CALLKIT_STATE_IDLE);  // 强制进入空闲状态
         long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<callHangup> <==END done, costTime=" + (t2-t1));
-        return ErrCode.XOK;
+        ALog.getInstance().d(TAG, "<callHangup> <==END done, errCode=" + mReqHangupErrCode
+                + ", costTime=" + (t2-t1));
+        return mReqHangupErrCode;
     }
 
     @Override
@@ -662,6 +669,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     void DoRequestDial(Message msg) {
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
+            mReqDialErrCode = ErrCode.XERR_BAD_STATE;
             synchronized (mReqDialEvent) {
                 mReqDialEvent.notify();    // 事件通知
             }
@@ -681,16 +689,18 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoRequestDial> failure, errCode=" + callReqResult.mErrCode);
+            exceptionProcess();
+            CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
+            mReqDialErrCode = callReqResult.mErrCode;
             synchronized (mReqDialEvent) {
                 mReqDialEvent.notify();    // 事件通知
             }
-            exceptionProcess();
-            CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
         }
 
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status 2, state=" + getStateMachine());
+            mReqDialErrCode = ErrCode.XERR_BAD_STATE;
             synchronized (mReqDialEvent) {
                 mReqDialEvent.notify();    // 事件通知
             }
@@ -715,6 +725,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
 
         ALog.getInstance().d(TAG, "<DoRequestDial> done, mCallkitCtx=" + mCallkitCtx.toString());
+        mReqDialErrCode = ErrCode.XOK;
         synchronized (mReqDialEvent) {
             mReqDialEvent.notify();    // 事件通知
         }
@@ -729,7 +740,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             callkitCtx = mCallkitCtx;
         }
 
-        int errCode;
+        int errCode = ErrCode.XOK;
         if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
             // 发送挂断请求
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
@@ -738,29 +749,30 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                     accountInfo.mInventDeviceName, false);
         } else {
             ALog.getInstance().e(TAG, "<DoRequestAnswer> bad status, callkit is NULL");
-            errCode = ErrCode.XERR_BAD_STATE;
         }
 
         //
-        // 不管前面是否异常状态，总是停止所有处理，清零到空闲状态
+        // 挂断成功的时候，才停止所有处理，清零到空闲状态
         //
-        if (mTalkEngine != null) {
-            mTalkEngine.leaveChannel();     // 离开频道，结束通话
-            mTalkEngine.release();
-            mTalkEngine = null;
-        }
-
-        synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
-            mStateMachine = CALLKIT_STATE_IDLE;
-            mCallkitCtx = null;
-            mPeerDevice = null;
-            mOnlineUserCount = 0;
+        if (errCode == ErrCode.XOK) {
+            if (mTalkEngine != null) {
+                mTalkEngine.leaveChannel();     // 离开频道，结束通话
+                mTalkEngine.release();
+                mTalkEngine = null;
+            }
+            synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
+                mStateMachine = CALLKIT_STATE_IDLE;
+                mCallkitCtx = null;
+                mPeerDevice = null;
+                mOnlineUserCount = 0;
+            }
         }
         if (mWorkHandler != null) {   // 取消AWS Event超时定时器
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
         }
 
         ALog.getInstance().d(TAG, "<DoRequestHangup> done, errCode=" + errCode);
+        mReqHangupErrCode = errCode;
         synchronized (mReqHangupEvent) {
             mReqHangupEvent.notify();    // 事件通知
         }
