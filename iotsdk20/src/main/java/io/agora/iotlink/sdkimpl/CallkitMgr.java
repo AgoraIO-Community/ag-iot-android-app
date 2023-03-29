@@ -16,6 +16,7 @@ import android.icu.util.Calendar;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.text.TextUtils;
 import android.view.SurfaceView;
 
 import io.agora.iotlink.ErrCode;
@@ -390,6 +391,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if (mReqHangupErrCode == ErrCode.XOK) { // 挂断成功后，强制进入空闲状态
             setStateMachine(CALLKIT_STATE_IDLE);
         }
+        if (mWorkHandler != null) {   // 取消AWS Event超时定时器
+            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+        }
         long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<callHangup> <==END done, errCode=" + mReqHangupErrCode
                 + ", costTime=" + (t2-t1));
@@ -678,7 +682,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoRequestDial> failure, errCode=" + callReqResult.mErrCode);
-            exceptionProcess();
+            exceptionProcess(null);
             CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
         }
@@ -775,7 +779,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if ((callkitCtx == null) || (callkitCtx.sessionId == null)) { // 异常状态，直接清除，恢复状态
             ALog.getInstance().e(TAG, "<DoRequestAnswer> bad status, callkit is NULL");
-            exceptionProcess();
+            exceptionProcess(null);
             CallbackError(ErrCode.XERR_INVALID_PARAM);
             return;
         }
@@ -787,7 +791,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (errCode != ErrCode.XOK) {  // 接听失败
             ALog.getInstance().d(TAG, "<DoRequestAnswer> failure, errCode=" + errCode);
-            exceptionProcess();         // 直接退出频道和挂断处理
+            exceptionProcess(null);         // 直接退出频道和挂断处理
             CallbackError(errCode);  // 回调错误
             return;
         }
@@ -815,12 +819,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         switch (msg.arg1) {
             case HTTP_REQID_DIAL: {  // 发送主叫HTTP请求后，超时无AWS事件响应
                 IotDevice iotDevice = mPeerDevice;
-                exceptionProcess();
+                exceptionProcess(null);
                 CallbackCallDialDone(ErrCode.XERR_TIMEOUT, iotDevice);  // 回调拨号失败
             } break;
 
             case HTTP_REQID_ANSWER: {  // 发送接听HTTP请求后，超时无AWS事件响应
-                exceptionProcess();
+                exceptionProcess(null);
                 CallbackError(ErrCode.XERR_CALLKIT_ANSWER);  // 回调错误
             } break;
         }
@@ -880,9 +884,13 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", currState=" + getStateMachineTip(stateMachine)
                 + ", reason=" + getReasonTip(reason));
 
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToDial> hangup ongoing, do nothing");
+            return;
+        }
         if (stateMachine != CALLKIT_STATE_DIAL_RSPING) {  // 不是等待呼叫响应，呼叫状态有问题
             ALog.getInstance().e(TAG, "<DoAwsEventToDial> bad state machine, auto hangup");
-            exceptionProcess();
+            exceptionProcess(jsonState);
             CallbackError(ErrCode.XERR_BAD_STATE);  // 回调状态错误
             return;
         }
@@ -920,9 +928,13 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", currState=" + getStateMachineTip(stateMachine)
                 + ", reason=" + getReasonTip(reason));
 
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> hangup ongoing, do nothing");
+            return;
+        }
         if (stateMachine != CALLKIT_STATE_IDLE) {    // 不是在空闲状态中来电，呼叫状态有问题
             ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, auto hangup");
-            exceptionProcess();
+            exceptionProcess(jsonState);
             CallbackError(ErrCode.XERR_BAD_STATE);  // 回调状态错误
             return;
         }
@@ -974,6 +986,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", currState=" + getStateMachineTip(stateMachine)
                 + ", reason=" + getReasonTip(reason));
 
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToTalking> hangup ongoing, do nothing");
+            return;
+        }
+
         if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIAL_RSPING)) {
             // TODO: 正常不应该进入这种状态，但是偶现AWS丢失: Idle-->Dialing 事件, 在该状态进行弥补
             ALog.getInstance().d(TAG, "<DoAwsEventToTalking> dial done from waiting dial response");
@@ -1020,7 +1037,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         } else {
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking>  bad state machine, auto hangup");
-            exceptionProcess();
+            exceptionProcess(jsonState);
             CallbackError(ErrCode.XERR_BAD_STATE);  // 回调状态错误
         }
     }
@@ -1151,18 +1168,32 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
      * @brief 异常情况下的处理
      *          主动挂断，停止通话，状态机切换到空闲，清除对端设备和peerUid
      */
-    void exceptionProcess() {
-        // 直接调用本地挂断请求
-        CallkitContext callkitCtx;
-        synchronized (mDataLock) {
-            callkitCtx = mCallkitCtx;
+    void exceptionProcess(final JSONObject jsonState) {
+        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
+
+        // 获取AWS状态中的 sessionId, callerId 和 calleeId
+        String sessionId = null;
+        String callerId = null;
+        String calleeId = null;
+        if (jsonState != null) {
+            sessionId = parseJsonStringValue(jsonState, "sessionId", null);
+            callerId = parseJsonStringValue(jsonState, "callerId", null);
+            calleeId = parseJsonStringValue(jsonState, "calleeId", null);
         }
-        if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
-            AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-//            AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
-//                    callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName, false);
-            doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
-                    callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
+
+        if ((!TextUtils.isEmpty(sessionId)) && (!TextUtils.isEmpty(calleeId)) && (!TextUtils.isEmpty(calleeId))) {
+            doRetryHangup(accountInfo.mAgoraAccessToken, sessionId, callerId, calleeId, accountInfo.mInventDeviceName);
+
+        } else {
+            // 直接调用本地挂断请求
+            CallkitContext callkitCtx;
+            synchronized (mDataLock) {
+                callkitCtx = mCallkitCtx;
+            }
+            if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
+                doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
+                        callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
+            }
         }
 
         if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
@@ -1295,6 +1326,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         ALog.getInstance().d(TAG, "<onTalkingPeerJoined> localUid=" + localUid
                 + ", peerUid=" + peerUid
                 + ", stateMachine=" + stateMachine);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         // 发送对端RTC上线事件
         sendMessage(MSGID_CALL_RTC_PEER_ONLINE, localUid, peerUid, null);
@@ -1306,6 +1340,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         ALog.getInstance().d(TAG, "<onTalkingPeerLeft> localUid=" + localUid
                 + ", peerUid=" + peerUid
                 + ", stateMachine=" + stateMachine);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         // 发送对端RTC掉线事件
         sendMessage(MSGID_CALL_RTC_PEER_OFFLINE, localUid, peerUid, null);
@@ -1317,6 +1354,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         ALog.getInstance().d(TAG, "<onPeerFirstVideoDecoded> peerUid=" + peerUid
                 + ", videoWidth=" + videoWidth
                 + ", videoHeight=" + videoHeight);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         // 发送对端RTC首帧出图事件
         sendMessage(MSGID_CALL_RTC_PEER_FIRSTVIDEO, videoWidth, videoHeight, null);
@@ -1336,6 +1376,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         ALog.getInstance().d(TAG, "<DoRtcPeerOnline> localUid=" + localUid
                 + ", peerUid=" + peerUid
                 + ", stateMachine=" + stateMachine);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         if ((mPeerVidew != null) && (mTalkEngine != null)) {
             mTalkEngine.setRemoteVideoView(mPeerVidew);
@@ -1357,7 +1400,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             stateMachine == CALLKIT_STATE_ANSWER_REQING ||
             stateMachine == CALLKIT_STATE_TALKING)  {
             IotDevice callbackDev = mPeerDevice;
-            exceptionProcess();
+            exceptionProcess(null);
             CallbackPeerHangup(callbackDev);   // 回调对端挂断
         }
     }
@@ -1395,6 +1438,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
         ALog.getInstance().d(TAG, "<onUserOnline> uid=" + uid
                 + ", mOnlineUserCount=" + mOnlineUserCount);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         if (eventReport) {  // 回调用户上线事件
             ALog.getInstance().d(TAG, "<onUserOnline> callback online event");
@@ -1417,6 +1463,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
         ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid
                 + ", mOnlineUserCount=" + mOnlineUserCount);
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
 
         if (eventReport) {  // 回调用户下线事件
             ALog.getInstance().d(TAG, "<onUserOffline> callback offline event");
@@ -1526,7 +1575,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 break;
             }
 
-            ThreadSleep(200);
+            ThreadSleep(100);
         }
 
         return errCode;
