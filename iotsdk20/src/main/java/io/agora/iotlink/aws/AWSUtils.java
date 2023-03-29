@@ -436,6 +436,7 @@ public class AWSUtils {
         // Set keepalive to 10 seconds.  Will recognize disconnects more quickly but will also send
         // MQTT pings every 10 seconds.
         mqttManager.setKeepAlive(10);
+        mqttManager.setCleanSession(false);
         // connect to AWS service
         connect(context, clientID, token, accountId, identityPoolId, mRegion, thingName, awsListener);
     }
