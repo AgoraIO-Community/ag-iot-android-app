@@ -396,7 +396,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             }
         }
 
-        setStateMachine(CALLKIT_STATE_IDLE);  // 强制进入空闲状态
+        if (mReqHangupErrCode == ErrCode.XOK) { // 挂断成功后，强制进入空闲状态
+            setStateMachine(CALLKIT_STATE_IDLE);
+        }
         long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<callHangup> <==END done, errCode=" + mReqHangupErrCode
                 + ", costTime=" + (t2-t1));
@@ -766,9 +768,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 mPeerDevice = null;
                 mOnlineUserCount = 0;
             }
-        }
-        if (mWorkHandler != null) {   // 取消AWS Event超时定时器
-            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+            if (mWorkHandler != null) {   // 取消AWS Event超时定时器
+                mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+            }
         }
 
         ALog.getInstance().d(TAG, "<DoRequestHangup> done, errCode=" + errCode);
