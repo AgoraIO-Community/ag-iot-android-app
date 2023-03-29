@@ -55,6 +55,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private static final String TAG = "IOTSDK/CallkitMgr";
     private static final long AWS_EVENT_TIMEOUT = 35000;        ///< HTTP请求后，AWS事件超时35秒
     private static final int EXIT_WAIT_TIMEOUT = 3000;
+    private static final int DIAL_WAIT_TIMEOUT = 3000;
     private static final int HANGUP_WAIT_TIMEOUT = 3000;
 
 
@@ -336,12 +337,23 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         // 发送请求消息
+        ALog.getInstance().d(TAG, "<callDial> ==> BEGIN");
+        long t1 = System.currentTimeMillis();
         setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
         Object callParams = new Object[] {iotDevice, attachMsg};
         sendMessage(MSGID_CALL_REQ_DIAL, 0, 0, callParams);
+        synchronized (mReqDialEvent) {
+            try {
+                mReqDialEvent.wait(DIAL_WAIT_TIMEOUT);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                ALog.getInstance().e(TAG, "<callDial> exception=" + e.getMessage());
+            }
+        }
 
-        ALog.getInstance().d(TAG, "<callDial> done, iotDevice=" + iotDevice.toString()
-                + ", attachMsg=" + attachMsg);
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<callDial> <==End done, iotDevice=" + iotDevice.toString()
+                + ", attachMsg=" + attachMsg + ", costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
@@ -366,6 +378,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 发送请求消息，同步等待执行完成
         ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
+        long t1 = System.currentTimeMillis();
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
         sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);
         synchronized (mReqHangupEvent) {
@@ -378,7 +391,8 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         setStateMachine(CALLKIT_STATE_IDLE);  // 强制进入空闲状态
-        ALog.getInstance().d(TAG, "<callHangup> <==END done");
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<callHangup> <==END done, costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
@@ -648,6 +662,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     void DoRequestDial(Message msg) {
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
+            synchronized (mReqDialEvent) {
+                mReqDialEvent.notify();    // 事件通知
+            }
             return;
         }
         Object[] callParams = (Object[]) (msg.obj);
@@ -664,6 +681,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoRequestDial> failure, errCode=" + callReqResult.mErrCode);
+            synchronized (mReqDialEvent) {
+                mReqDialEvent.notify();    // 事件通知
+            }
             exceptionProcess();
             CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
@@ -671,6 +691,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status 2, state=" + getStateMachine());
+            synchronized (mReqDialEvent) {
+                mReqDialEvent.notify();    // 事件通知
+            }
             return;
         }
 
@@ -692,6 +715,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
 
         ALog.getInstance().d(TAG, "<DoRequestDial> done, mCallkitCtx=" + mCallkitCtx.toString());
+        synchronized (mReqDialEvent) {
+            mReqDialEvent.notify();    // 事件通知
+        }
     }
 
     /*
@@ -829,8 +855,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         switch (reason)
         {
             case REASON_LOCAL_HANGUP: {  // 本地挂断，不管当前处于什么状态，立即挂断处理
-                ALog.getInstance().d(TAG, "<DoAwsEventToIdle> local hangup");
-                talkingStop();  // 停止通话，恢复状态机空闲，清除呼叫和对端信息
+                ALog.getInstance().d(TAG, "<DoAwsEventToIdle> local hangup, but ignore it");
+                // 这个事件可能会来的比较慢，实际挂断操作已经同步处理完了，所以这里直接忽略这个事件，不做任何操作
+                // 这样当此事件来的慢的话（例如：当前已经在下一次呼叫时），也不再影响下一次呼叫了
+                //talkingStop();  // 停止通话，恢复状态机空闲，清除呼叫和对端信息
 
             } break;
 
@@ -866,6 +894,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             CallbackError(ErrCode.XERR_BAD_STATE);  // 回调状态错误
             return;
         }
+
 
         ALog.getInstance().d(TAG, "<DoAwsEventToDial> local dialing success.");
         synchronized (mDataLock) {
@@ -953,7 +982,36 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", currState=" + getStateMachineTip(stateMachine)
                 + ", reason=" + getReasonTip(reason));
 
-        if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIALING)) {
+        if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIAL_RSPING)) {
+            // TODO: 正常不应该进入这种状态，但是偶现AWS丢失: Idle-->Dialing 事件, 在该状态进行弥补
+            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> dial done from waiting dial response");
+
+            synchronized (mDataLock) {
+                if (mCallkitCtx == null) {
+                    mCallkitCtx = new CallkitContext();  // 要创建新的呼叫上下文数据
+                }
+            }
+            updateCallContext(jsonState);  // 本地主叫成功，更新上呼叫上下文数据
+            String channelName, rtcToken;
+            int localUid = 0, peerUid = 0;
+            synchronized (mDataLock) {
+                mStateMachine = CALLKIT_STATE_DIALING;      // 切换当前状态机
+                channelName = mCallkitCtx.channelName;
+                rtcToken = mCallkitCtx.rtcToken;
+                localUid = mCallkitCtx.mLocalUid;
+                peerUid = mCallkitCtx.mPeerUid;
+            }
+
+            // 进入频道，准备主叫通话
+            talkingPrepare(channelName, rtcToken, localUid, peerUid);
+            CallbackCallDialDone(ErrCode.XOK, mPeerDevice); // 回调主叫拨号成功
+
+            // 主叫时对端接听
+            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during from waiting dial respose");
+            talkingStart(); // 在频道内推送音频流，开始通话
+            CallbackPeerAnswer(ErrCode.XOK, mPeerDevice); // 回调对端接听，进入通话状态
+
+        } else if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIALING)) {
             // 主叫时对端接听
             ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during from dialing");
             talkingStart(); // 在频道内推送音频流，开始通话
