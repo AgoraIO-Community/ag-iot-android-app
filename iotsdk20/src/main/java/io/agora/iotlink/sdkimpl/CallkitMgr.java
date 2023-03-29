@@ -103,10 +103,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
     private final Object mWorkExitEvent = new Object();
-    private final Object mReqDialEvent = new Object();
+    //private final Object mReqDialEvent = new Object();
     private final Object mReqHangupEvent = new Object();
     private final Object mReqAnswerEvent = new Object();
-    private volatile int mReqDialErrCode = ErrCode.XOK;
+   // private volatile int mReqDialErrCode = ErrCode.XOK;
     private volatile int mReqHangupErrCode = ErrCode.XOK;
 
     private volatile int mStateMachine = CALLKIT_STATE_IDLE;    ///< 当前呼叫状态机
@@ -340,27 +340,16 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 发送请求消息
         ALog.getInstance().d(TAG, "<callDial> ==> BEGIN");
-        long t1 = System.currentTimeMillis();
-        mReqDialErrCode = ErrCode.XOK;
         setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
         Object callParams = new Object[] {iotDevice, attachMsg};
         sendMessage(MSGID_CALL_REQ_DIAL, 0, 0, callParams);
-        synchronized (mReqDialEvent) {
-            try {
-                mReqDialEvent.wait(DIAL_WAIT_TIMEOUT);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                ALog.getInstance().e(TAG, "<callDial> exception=" + e.getMessage());
-            }
-        }
-
-        long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<callDial> <==End done, errCode=" + mReqDialErrCode
-                + ", costTime=" + (t2-t1)
+        ALog.getInstance().d(TAG, "<callDial> <==End done"
                 + ", iotDevice=" + iotDevice.toString()
                 + ", attachMsg=" + attachMsg);
-        return mReqDialErrCode;
+        return ErrCode.XOK;
     }
+
+
 
     @Override
     public int callHangup() {
@@ -370,6 +359,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             return ErrCode.XERR_ACCOUNT_LOGIN;
         }
         int currState = getStateMachine();
+
         if ((currState == CALLKIT_STATE_IDLE) || (currState == CALLKIT_STATE_HANGUP_REQING)) {
             ALog.getInstance().e(TAG, "<callHangup> already hangup, currState=" + currState);
             return ErrCode.XOK;
@@ -384,6 +374,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         // 发送请求消息，同步等待执行完成
         ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
         long t1 = System.currentTimeMillis();
+        waitingDialReqDone();  // 等待呼叫完成
         mReqHangupErrCode = ErrCode.XOK;
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
         sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);
@@ -671,10 +662,6 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     void DoRequestDial(Message msg) {
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
-            mReqDialErrCode = ErrCode.XERR_BAD_STATE;
-            synchronized (mReqDialEvent) {
-                mReqDialEvent.notify();    // 事件通知
-            }
             return;
         }
         Object[] callParams = (Object[]) (msg.obj);
@@ -693,19 +680,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().d(TAG, "<DoRequestDial> failure, errCode=" + callReqResult.mErrCode);
             exceptionProcess();
             CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
-            mReqDialErrCode = callReqResult.mErrCode;
-            synchronized (mReqDialEvent) {
-                mReqDialEvent.notify();    // 事件通知
-            }
             return;
         }
 
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status 2, state=" + getStateMachine());
-            mReqDialErrCode = ErrCode.XERR_BAD_STATE;
-            synchronized (mReqDialEvent) {
-                mReqDialEvent.notify();    // 事件通知
-            }
             return;
         }
 
@@ -727,10 +706,6 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
 
         ALog.getInstance().d(TAG, "<DoRequestDial> done, mCallkitCtx=" + mCallkitCtx.toString());
-        mReqDialErrCode = ErrCode.XOK;
-        synchronized (mReqDialEvent) {
-            mReqDialEvent.notify();    // 事件通知
-        }
     }
 
     /*
@@ -1528,6 +1503,37 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
     }
 
+
+    /**
+     * @brief 如果当前正在执行呼叫HTTP请求，需要等这个请求完成，超时1500ms
+     */
+    void waitingDialReqDone() {
+        int currState = getStateMachine();
+        if (currState != CALLKIT_STATE_DIAL_REQING) {
+            return;
+        }
+
+        int loopCounter = 0;
+        long t1 = System.currentTimeMillis();
+        for (;;) {
+            ThreadSleep(100);
+            loopCounter++;
+
+            currState = getStateMachine();
+            if (currState != CALLKIT_STATE_DIAL_REQING) {
+                break;
+            }
+
+            if (loopCounter > 15) {
+                break;
+            }
+        }
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().e(TAG, "<waitingDialReqDone> waitTime=" + (t2-t1));
+    }
+
+
+
     String getStateMachineTip(int callStatus) {
         if (callStatus == CALLKIT_STATE_IDLE) {
             return "1(Idle)";
@@ -1569,4 +1575,11 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         return (reason + "(Unknown)");
     }
 
+    void ThreadSleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException interruptExp) {
+            interruptExp.printStackTrace();
+        }
+    }
 }
