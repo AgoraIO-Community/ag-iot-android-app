@@ -1563,11 +1563,24 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     int doRetryHangup(final String token, final String sessionId, final String callerId,
                       final String calleeId, final String localId)  {
 
+        if (sessionId == null || sessionId.length() <= 0) {
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+        if (callerId == null || callerId.length() <= 0) {
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+        if (calleeId == null || calleeId.length() <= 0) {
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+        if (localId == null || localId.length() <= 0) {
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
         int errCode = ErrCode.XOK;
         int loopCount = 0;
         for (;;) {
             errCode = AgoraService.getInstance().makeAnswer(token, sessionId, callerId, calleeId, localId, false);
-            if (errCode == ErrCode.XOK) {
+            if (errCode == ErrCode.XOK || errCode == ErrCode.XERR_CALLKIT_ERR_OPT) {
                 break;
             }
             loopCount++;

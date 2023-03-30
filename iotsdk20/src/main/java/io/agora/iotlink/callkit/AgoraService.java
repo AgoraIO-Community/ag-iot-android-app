@@ -400,6 +400,12 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<makeAnswer> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_CALLKIT_ANSWER;
         }
+
+        if (responseObj.mRespCode == RESP_CODE_INVALID_ANSWER) {
+            ALog.getInstance().e(TAG, "<makeAnswer> RESP_CODE_INVALID_ANSWER");
+            return ErrCode.XERR_CALLKIT_ERR_OPT;
+        }
+
         if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<makeAnswer> failure, mRespCode="
                     + responseObj.mRespCode);
