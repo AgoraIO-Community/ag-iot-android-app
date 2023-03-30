@@ -77,7 +77,7 @@ public class AgoraService {
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraService";
-    private static final int HTTP_TIMEOUT = 8000;
+    private static final int HTTP_TIMEOUT = 2500;
 
     public static final int RESP_CODE_IN_TALKING = 100001;      ///<	对端通话中，无法接听
     public static final int RESP_CODE_ANSWER = 100002;          ///<	未通话，无法接听
@@ -86,7 +86,7 @@ public class AgoraService {
     public static final int RESP_CODE_CALL = 100005;            ///< 呼叫中，无法再次呼叫
     public static final int RESP_CODE_INVALID_ANSWER = 100006;  ///< 无效的Answer应答
     public static final int RESP_CODE_PEER_UNREG = 999999;      ///< 被叫端未注册
-
+    public static final int RESP_CODE_SHADOW_UPDATE = 999998;   ///< 影子更新错误
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
@@ -401,8 +401,8 @@ public class AgoraService {
             return ErrCode.XERR_CALLKIT_ANSWER;
         }
 
-        if (responseObj.mRespCode == RESP_CODE_INVALID_ANSWER) {
-            ALog.getInstance().e(TAG, "<makeAnswer> RESP_CODE_INVALID_ANSWER");
+        if (responseObj.mRespCode == RESP_CODE_SHADOW_UPDATE) { // 影子更新错误，可能需要重试
+            ALog.getInstance().e(TAG, "<makeAnswer> RESP_CODE_SHADOW_UPDATE");
             return ErrCode.XERR_CALLKIT_ERR_OPT;
         }
 
@@ -2015,7 +2015,7 @@ public class AgoraService {
      */
     private synchronized AgoraService.ResponseObj requestToServer(String baseUrl, String method, String token,
                                                                     Map<String, String> params, JSONObject body) {
-
+        long t1 = System.currentTimeMillis();
         AgoraService.ResponseObj responseObj = new AgoraService.ResponseObj();
 
         if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
@@ -2117,7 +2117,9 @@ public class AgoraService {
                 responseObj.mRespJsonObj = null;
             }
 
-            ALog.getInstance().d(TAG, "<requestToServer> finished, response="  + response.toString());
+            long t2 = System.currentTimeMillis();
+            ALog.getInstance().d(TAG, "<requestToServer> finished, response=" + response.toString()
+                    + ", costTime=" + (t2-t1));
             return responseObj;
 
         } catch (Exception e) {

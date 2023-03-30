@@ -57,7 +57,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
     private static final long AWS_EVENT_TIMEOUT = 35000;        ///< HTTP请求后，AWS事件超时35秒
     private static final int EXIT_WAIT_TIMEOUT = 3000;
     private static final int DIAL_WAIT_TIMEOUT = 3000;
-    private static final int HANGUP_WAIT_TIMEOUT = 3000;
+    private static final int HANGUP_WAIT_TIMEOUT = 3500;
 
 
     //
@@ -104,10 +104,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
     private final Object mWorkExitEvent = new Object();
-    //private final Object mReqDialEvent = new Object();
     private final Object mReqHangupEvent = new Object();
-    private final Object mReqAnswerEvent = new Object();
-   // private volatile int mReqDialErrCode = ErrCode.XOK;
     private volatile int mReqHangupErrCode = ErrCode.XOK;
 
     private volatile int mStateMachine = CALLKIT_STATE_IDLE;    ///< 当前呼叫状态机
@@ -697,9 +694,6 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             mCallkitCtx = callReqResult.mCallkitCtx;
         }
 
-        // 切换到 等待主叫响应状态
-        setStateMachine(CALLKIT_STATE_DIAL_RSPING);
-
         // 进入频道，准备主叫通话
         talkingPrepare(callReqResult.mCallkitCtx.channelName,
                 callReqResult.mCallkitCtx.rtcToken,
@@ -708,6 +702,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 启动AWS Event超时定时器
         sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
+
+        // 切换到 等待主叫响应状态
+        setStateMachine(CALLKIT_STATE_DIAL_RSPING);
 
         ALog.getInstance().d(TAG, "<DoRequestDial> done, mCallkitCtx=" + mCallkitCtx.toString());
     }
@@ -725,9 +722,6 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
             // 发送挂断请求
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-//            errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-//                    callkitCtx.sessionId, callkitCtx.callerId, callkitCtx.calleeId,
-//                    accountInfo.mInventDeviceName, false);
             errCode = doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
                                 callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
 
@@ -1580,11 +1574,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         int loopCount = 0;
         for (;;) {
             errCode = AgoraService.getInstance().makeAnswer(token, sessionId, callerId, calleeId, localId, false);
-            if (errCode == ErrCode.XOK || errCode == ErrCode.XERR_CALLKIT_ERR_OPT) {
+            if (errCode != ErrCode.XERR_CALLKIT_ERR_OPT) { // 不是影子更新失败，则不进行重试操作
                 break;
             }
+
             loopCount++;
-            if (loopCount >= 3) {
+            if (loopCount >= 2) {
                 break;
             }
 
