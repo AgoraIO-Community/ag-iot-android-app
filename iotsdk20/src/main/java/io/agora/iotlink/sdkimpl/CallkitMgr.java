@@ -665,6 +665,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
             return;
         }
+        ALog.getInstance().d(TAG, "<DoRequestDial> Enter");
         Object[] callParams = (Object[]) (msg.obj);
         IotDevice iotDevice = (IotDevice)(callParams[0]);
         String attachMsg = (String)(callParams[1]);
@@ -678,14 +679,14 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 accountInfo.mInventDeviceName,  iotDevice.mDeviceID, attachMsg);
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
-            ALog.getInstance().d(TAG, "<DoRequestDial> failure, errCode=" + callReqResult.mErrCode);
+            ALog.getInstance().d(TAG, "<DoRequestDial> Exit with failure, errCode=" + callReqResult.mErrCode);
             exceptionProcess(null);
             CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
         }
 
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
-            ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status 2, state=" + getStateMachine());
+            ALog.getInstance().e(TAG, "<DoRequestDial> Exit with failure, bad status 2, state=" + getStateMachine());
             return;
         }
 
@@ -706,13 +707,14 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         // 切换到 等待主叫响应状态
         setStateMachine(CALLKIT_STATE_DIAL_RSPING);
 
-        ALog.getInstance().d(TAG, "<DoRequestDial> done, mCallkitCtx=" + mCallkitCtx.toString());
+        ALog.getInstance().d(TAG, "<DoRequestDial> Exit, mCallkitCtx=" + mCallkitCtx.toString());
     }
 
     /*
      * @brief 工作线程中运行，发送HTTP挂断请求
      */
     void DoRequestHangup(Message msg) {
+        ALog.getInstance().d(TAG, "<DoRequestHangup> Enter");
         CallkitContext callkitCtx;
         synchronized (mDataLock) {
             callkitCtx = mCallkitCtx;
@@ -749,7 +751,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             }
         }
 
-        ALog.getInstance().d(TAG, "<DoRequestHangup> done, errCode=" + errCode);
+        ALog.getInstance().d(TAG, "<DoRequestHangup> Exit, errCode=" + errCode);
         mReqHangupErrCode = errCode;
         synchronized (mReqHangupEvent) {
             mReqHangupEvent.notify();    // 事件通知
