@@ -668,6 +668,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 accountInfo.mInventDeviceName,  iotDevice.mDeviceID, attachMsg);
         processTokenErrCode(callReqResult.mErrCode);  // Token过期统一处理
 
+
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoRequestDial> Exit with failure, errCode=" + callReqResult.mErrCode);
             exceptionProcess(null);
@@ -969,7 +970,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().e(TAG, "<DoAwsEventProcess> no field: callStatus");
             return;
         }
-        updateCallContext(jsonState);
+        String sessionId = parseJsonStringValue(jsonState,"sessionId", null);
         int targetState = parseJsonIntValue(jsonState, "callStatus", -1);
         int reason = parseJsonIntValue(jsonState, "reason", REASON_NONE);
         int stateMachine = getStateMachine();
@@ -978,6 +979,23 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
                 + ", currState=" + getStateMachineTip(stateMachine)
                 + ", reason=" + getReasonTip(reason)
                 + ", jsonState=" + jsonState.toString() );
+
+        //
+        // 这里不能直接更新，因为当前会话时可能有旧session的事件过来，需要进行过滤
+        //
+        synchronized (mDataLock) {
+            if ((mCallkitCtx != null) && (!TextUtils.isEmpty(mCallkitCtx.sessionId)) && (!TextUtils.isEmpty(sessionId))) {
+                // 当前有sessionId，AWS事件包中也有 sessionId，需要进行对比
+                if (mCallkitCtx.sessionId.compareToIgnoreCase(sessionId) != 0) {
+                    ALog.getInstance().e(TAG, "<DoAwsEventProcess> old MQTT event, sessionId not match"
+                            + ", old_sessionId=" + mCallkitCtx.sessionId
+                            + ", new_sessionId=" + sessionId);
+                    return;
+                }
+            }
+        }
+        updateCallContext(jsonState);
+
 
         if (mWorkHandler != null) {   // 取消 AWS 超时定时器
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
