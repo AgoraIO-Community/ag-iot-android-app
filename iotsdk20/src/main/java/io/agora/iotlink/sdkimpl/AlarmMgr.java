@@ -127,6 +127,7 @@ public class AlarmMgr implements IAlarmMgr {
 
                 int errCode = AgoraService.getInstance().alarmInsert(account.mAgoraAccessToken,
                         account.mInventDeviceName, account.mInventDeviceName, insertParam);
+                processTokenErrCode(errCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<insert> done, errCode=" + errCode
                         + ", insertParam=" + insertParam.toString());
                 CallbackInsertDone(errCode, insertParam);
@@ -152,6 +153,7 @@ public class AlarmMgr implements IAlarmMgr {
 
                 int errCode = AgoraService.getInstance().alarmDelete(account.mAgoraAccessToken,
                         account.mInventDeviceName, alarmIdList);
+                processTokenErrCode(errCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<delete> done, errCode=" + errCode
                         + ", alarmIdList=" + idListToString(alarmIdList));
                 CallbackDeleteDone(errCode, alarmIdList);
@@ -176,6 +178,7 @@ public class AlarmMgr implements IAlarmMgr {
 
                 int errCode = AgoraService.getInstance().alarmMarkRead(account.mAgoraAccessToken,
                         account.mInventDeviceName, alarmIdList);
+                processTokenErrCode(errCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<mark> done, errCode=" + errCode
                         + ", alarmIdList=" + idListToString(alarmIdList));
                 CallbackMarkDone(errCode, alarmIdList);
@@ -202,6 +205,7 @@ public class AlarmMgr implements IAlarmMgr {
                 byte[] rsaPrivateKey = accountMgr.getRsaPrivateKey();
                 AgoraService.AlarmInfoResult infoResult = AgoraService.getInstance().queryAlarmInfoById(
                         account.mAgoraAccessToken, account.mInventDeviceName, rsaPrivateKey, alarmId);
+                processTokenErrCode(infoResult.mErrCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<queryById> done, errCode=" + infoResult.mErrCode
                         + ", iotAlarm=" + infoResult.mAlarm.toString());
                 CallbackQueryInfoDone(infoResult.mErrCode, infoResult.mAlarm);
@@ -227,6 +231,7 @@ public class AlarmMgr implements IAlarmMgr {
                 AgoraService.AlarmPageResult pageResult = AgoraService.getInstance().queryAlarmByPage(
                         account.mAgoraAccessToken, account.mInventDeviceName,
                         account.mInventDeviceName, queryParam);
+                processTokenErrCode(pageResult.mErrCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<queryByPage> done, errCode=" + pageResult.mErrCode
                         + ", mAlarmPage=" + pageResult.mAlarmPage.toString());
                 CallbackQueryPageDone(pageResult.mErrCode, queryParam, pageResult.mAlarmPage);
@@ -252,6 +257,7 @@ public class AlarmMgr implements IAlarmMgr {
                 AgoraService.AlarmNumberResult numberResult = AgoraService.getInstance().queryAlarmNumber(
                         account.mAgoraAccessToken, account.mInventDeviceName,
                         account.mInventDeviceName, queryParam);
+                processTokenErrCode(numberResult.mErrCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<queryNumber> done, errCode=" + numberResult.mErrCode
                         + ", alarmNumber=" + numberResult.mAlarmNumber);
                 CallbackQueryNumberDone(numberResult.mErrCode, queryParam, numberResult.mAlarmNumber);
@@ -277,7 +283,7 @@ public class AlarmMgr implements IAlarmMgr {
                 AgoraService.AlarmImageResult imgResult;
                 imgResult = AgoraService.getInstance().queryAlarmImageInfo(account.mAgoraAccessToken,
                         account.mInventDeviceName, imageId);
-
+                processTokenErrCode(imgResult.mErrCode);  // Token过期统一处理
                 ALog.getInstance().d(TAG, "<queryImageById> done, errCode=" + imgResult.mErrCode
                         + ", mAlarmImg=" + imgResult.mAlarmImg);
                 CallbackQueryImageDone(imgResult.mErrCode, imageId, imgResult.mAlarmImg);
@@ -304,6 +310,7 @@ public class AlarmMgr implements IAlarmMgr {
                 String userId = (ownerUserId == null) ? account.mInventDeviceName : ownerUserId;
                 videoResult = AgoraService.getInstance().queryAlarmRecordInfo(account.mAgoraAccessToken,
                                 userId, deviceID, timestamp);
+                processTokenErrCode(videoResult.mErrCode);  // Token过期统一处理
 
                 AccountMgr accountMgr = (AccountMgr)mSdkInstance.getAccountMgr();
                 byte[] rsaPrivateKey = accountMgr.getRsaPrivateKey();
@@ -420,6 +427,17 @@ public class AlarmMgr implements IAlarmMgr {
         }
         text_info = text_info + " )";
         return text_info;
+    }
+
+
+    /*
+     * @brief 统一处理Token过期错误码
+     */
+    void processTokenErrCode(int errCode) {
+        if (errCode == ErrCode.XERR_TOKEN_INVALID)    {
+            AccountMgr accountMgr = (AccountMgr)(mSdkInstance.getAccountMgr());
+            accountMgr.onTokenInvalid();
+        }
     }
 
 }

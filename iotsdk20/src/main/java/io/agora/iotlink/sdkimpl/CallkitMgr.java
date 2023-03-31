@@ -666,6 +666,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         AgoraService.CallReqResult callReqResult = AgoraService.getInstance().makeCall(
                 accountInfo.mAgoraAccessToken, mAppId,
                 accountInfo.mInventDeviceName,  iotDevice.mDeviceID, attachMsg);
+        processTokenErrCode(callReqResult.mErrCode);  // Token过期统一处理
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoRequestDial> Exit with failure, errCode=" + callReqResult.mErrCode);
@@ -775,6 +776,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
                 callkitCtx.sessionId, callkitCtx.callerId, callkitCtx.calleeId,
                 accountInfo.mInventDeviceName, true);
+        processTokenErrCode(errCode);  // Token过期统一处理
 
         if (errCode != ErrCode.XOK) {  // 接听失败
             ALog.getInstance().d(TAG, "<DoRequestAnswer> failure, errCode=" + errCode);
@@ -1491,6 +1493,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         int loopCount = 0;
         for (;;) {
             errCode = AgoraService.getInstance().makeAnswer(token, sessionId, callerId, calleeId, localId, false);
+            processTokenErrCode(errCode);  // Token过期统一处理
             if (errCode != ErrCode.XERR_CALLKIT_ERR_OPT) { // 不是影子更新失败，则不进行重试操作
                 break;
             }
@@ -1582,6 +1585,16 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             Thread.sleep(millis);
         } catch (InterruptedException interruptExp) {
             interruptExp.printStackTrace();
+        }
+    }
+
+    /**
+     * @brief 统一处理Token过期错误码
+     */
+    void processTokenErrCode(int errCode) {
+        if (errCode == ErrCode.XERR_TOKEN_INVALID)    {
+            AccountMgr accountMgr = (AccountMgr)(mSdkInstance.getAccountMgr());
+            accountMgr.onTokenInvalid();
         }
     }
 }
