@@ -10,6 +10,8 @@ import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttSubscriptionStatusCallback;
 import com.amazonaws.regions.Regions;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
@@ -17,6 +19,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.StringTokenizer;
+
+import io.agora.iotlink.logger.ALog;
 
 /**
  * AWS MQTT操作能力封装，仅保留需要使用的设备影子能力
@@ -38,6 +42,9 @@ public class AWSUtils {
     private String mUserInventThingName;
     private int mTopicSum = 0;
     private int mMqttState = STATE_DISCONNECTED;    ///< 当前AWS是否已经联接
+
+    private long mLastRtcUpdateVerNumber = 0;
+    private long mLastRtcGetVerNumber = 0;
 
 
     private AWSUtils() {
@@ -197,12 +204,21 @@ public class AWSUtils {
                 if (jsonMessage.getJSONObject("state").has("desired")
                     && !jsonMessage.getJSONObject("state").isNull("desired")) {
                     JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("desired");
+
                     //去除topic前后内容，获取设备唯一标志
                     String things_name = topic.replaceAll("\\$aws/things/", "");
                     things_name = things_name.replaceAll("/shadow/name/rtc/update/accepted", "");
                     //通知收到APP端控制事件
                     if (things_name.equals(mUserInventThingName)) {
-                        awsListener.onUpdateRtcStatus(desiredObject);
+                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                        if (versionNumber > mLastRtcUpdateVerNumber) {
+                            mLastRtcUpdateVerNumber = versionNumber;
+                            awsListener.onUpdateRtcStatus(desiredObject);
+                        } else {
+                            ALog.getInstance().e(TAG, "<handleMessage> old update version number"
+                                    + ", versionNumber=" + versionNumber
+                                    + ", mLastRtcUpdateVerNumber=" + mLastRtcUpdateVerNumber);
+                        }
                     }
                 }
 
@@ -216,7 +232,15 @@ public class AWSUtils {
                     things_name = things_name.replaceAll("/shadow/name/rtc/get/accepted", "");
                     //通知收到APP端控制事件
                     if (things_name.equals(mUserInventThingName)) {
-                        awsListener.onUpdateRtcStatus(desiredObject);
+                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                        if (versionNumber > mLastRtcGetVerNumber) {
+                            mLastRtcGetVerNumber = versionNumber;
+                            awsListener.onUpdateRtcStatus(desiredObject);
+                        } else {
+                            ALog.getInstance().e(TAG, "<handleMessage> old get version number"
+                                    + ", versionNumber=" + versionNumber
+                                    + ", mLastRtcGetVerNumber=" + mLastRtcGetVerNumber);
+                        }
                     }
                 }
 
@@ -452,6 +476,19 @@ public class AWSUtils {
             return mMqttState;
         }
     }
+
+    long parseJsonLongValue(JSONObject jsonState, String fieldName, long defVal) {
+        try {
+            long value = jsonState.getLong(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonLongValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
 
     /**
      * 设置AWS服务状态监听者
