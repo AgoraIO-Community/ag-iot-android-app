@@ -18,6 +18,7 @@ import android.os.Message;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.IAgoraIotAppSdk;
+import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.aws.AWSUtils;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.logger.ALog;
@@ -246,6 +247,16 @@ public class AccountMgr implements IAccountMgr {
             ALog.getInstance().e(TAG, "<logout> bad state, mStateMachine=" + mStateMachine);
             return ErrCode.XERR_BAD_STATE;
         }
+
+        CallkitMgr callkitMgr = (CallkitMgr)mSdkInstance.getCallkitMgr();
+        if (callkitMgr != null) {
+            int callkitState = callkitMgr.getStateMachine();
+            if (callkitState != ICallkitMgr.CALLKIT_STATE_IDLE) {  // 当前通话正在进行中，不能登出
+                ALog.getInstance().e(TAG, "<logout> bad state, callkit is ongoing, callkitState=" + callkitState);
+                return ErrCode.XERR_CALLKIT_LOCAL_BUSY;
+            }
+        }
+
 
         synchronized (mDataLock) {
             mStateMachine = ACCOUNT_STATE_LOGOUTING;  // 状态机切换到 正在登出中
