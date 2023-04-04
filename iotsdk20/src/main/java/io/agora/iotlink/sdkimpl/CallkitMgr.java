@@ -719,6 +719,9 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
             errCode = doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
                                 callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
+            if (errCode == ErrCode.XERR_INVALID_PARAM) {  // 呼叫或者账号信息已经清除了导致直接返回,实际已经挂断
+                errCode = ErrCode.XOK;
+            }
 
         } else {
             ALog.getInstance().e(TAG, "<DoRequestAnswer> bad status, callkit is NULL");
