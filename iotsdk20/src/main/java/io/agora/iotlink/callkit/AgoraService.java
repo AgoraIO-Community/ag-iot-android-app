@@ -427,6 +427,45 @@ public class AgoraService {
     }
 
 
+    /*
+     * @brief 发送呼叫接听响应
+     * @param appid : seesionId，呼叫会话的session ID
+     * @param callerId : 呼叫会话的发起方ID
+     * @param calleeId : 呼叫会话的被叫方ID
+     * @param isAccept : true：接听，false：挂断
+     * @return 0：成功，<0：失败
+     */
+    public int makeHangup(final String token,
+                          final String sessionId, final String callerId, final String calleeId,
+                          final String localId)  {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+
+        // 请求URL
+        String requestUrl = mCallkitBaseUrl + "/answer";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", sessionId + "-" + callerId + "-" + calleeId);
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+            JSONObject payload = new JSONObject();
+            payload.put("callerId", callerId);
+            payload.put("calleeId", calleeId);
+            payload.put("localId", localId);
+            payload.put("sessionId", sessionId);
+            payload.put("answer", 1);
+            body.put("payload", payload);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return ErrCode.XERR_HTTP_JSON_WRITE;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServerWithoutResp(requestUrl, "POST", token, params, body);
+        return responseObj.mErrorCode;
+    }
+
 
     //////////////////////////////////////////////////////////////////////////////////
     ////////////////////////// Methods for Alert Management ////////////////////////////
@@ -2120,11 +2159,12 @@ public class AgoraService {
         try {
             java.net.URL url = new URL(realURL);
             connection = (HttpURLConnection) url.openConnection();
+            connection.setReadTimeout(HTTP_TIMEOUT);
+            connection.setConnectTimeout(HTTP_TIMEOUT);
             // 设置token
             if ((token != null) && (!token.isEmpty())) {
                 connection.setRequestProperty("authorization", "Bearer " + token);
             }
-
             switch (method) {
                 case "GET":
                     connection.setRequestMethod("GET");
@@ -2154,8 +2194,6 @@ public class AgoraService {
                     responseObj.mErrorCode = ErrCode.XERR_HTTP_METHOD;
                     return responseObj;
             }
-            connection.setReadTimeout(HTTP_TIMEOUT);
-            connection.setConnectTimeout(HTTP_TIMEOUT);
             responseObj.mRespCode = connection.getResponseCode();
             if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
                 responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;
@@ -2203,6 +2241,113 @@ public class AgoraService {
                     e.printStackTrace();
                 }
             }
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    /*
+     * @brief 给服务器发送HTTP请求，但并不等待HTTP回应数据
+     *        该函数是阻塞等待调用，因此最好是在工作线程中执行
+     */
+    private synchronized AgoraService.ResponseObj requestToServerWithoutResp(
+        String baseUrl, String method, String token,
+        Map<String, String> params, JSONObject body)
+    {
+        long t1 = System.currentTimeMillis();
+        AgoraService.ResponseObj responseObj = new AgoraService.ResponseObj();
+
+        if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+            ALog.getInstance().e(TAG, "<requestToServerWithoutResp> Invalid url=" + baseUrl);
+            responseObj.mErrorCode = ErrCode.XERR_HTTP_URL;
+            return responseObj;
+        }
+
+        // 拼接URL和请求参数生成最终URL
+        String realURL = baseUrl;
+        if (!params.isEmpty()) {
+            Iterator<Map.Entry<String, String>> it = params.entrySet().iterator();
+            Map.Entry<String, String> entry =  it.next();
+            realURL += "?" + entry.getKey() + "=" + entry.getValue();
+            while (it.hasNext()) {
+                entry =  it.next();
+                realURL += "&" + entry.getKey() + "=" + entry.getValue();
+            }
+        }
+
+        // 支持json格式消息体
+        String realBody = String.valueOf(body);
+
+        ALog.getInstance().d(TAG, "<requestToServerWithoutResp> requestUrl=" + realURL
+                + ", requestBody="  + realBody.toString());
+
+        //开启子线程来发起网络请求
+        HttpURLConnection connection = null;
+        BufferedReader reader = null;
+
+        //同步方式请求HTTP，因此请求操作最好放在工作线程中进行
+        try {
+            java.net.URL url = new URL(realURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setReadTimeout(HTTP_TIMEOUT);
+            connection.setConnectTimeout(HTTP_TIMEOUT);
+
+            // 设置token
+            if ((token != null) && (!token.isEmpty())) {
+                connection.setRequestProperty("authorization", "Bearer " + token);
+            }
+
+            switch (method) {
+                case "GET":
+                    connection.setRequestMethod("GET");
+                    break;
+
+                case "POST":
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+                    DataOutputStream os = new DataOutputStream(connection.getOutputStream());
+                    os.write(realBody.getBytes());  // 必须是原始数据流，否则中文乱码
+                    os.flush();
+                    os.close();
+                    break;
+
+                case "SET":
+                    connection.setRequestMethod("SET");
+                    break;
+
+                case "DELETE":
+                    connection.setRequestMethod("DELETE");
+                    break;
+
+                default:
+                    ALog.getInstance().e(TAG, "<requestToServerWithoutResp> Invalid method=" + method);
+                    responseObj.mErrorCode = ErrCode.XERR_HTTP_METHOD;
+                    return responseObj;
+            }
+
+            responseObj.mRespCode = connection.getResponseCode();
+            if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
+                responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;
+                ALog.getInstance().e(TAG, "<requestToServerWithoutResp> Error response code="
+                        + responseObj.mRespCode + ", errMessage=" + connection.getResponseMessage());
+                return responseObj;
+            }
+
+            long t2 = System.currentTimeMillis();
+            responseObj.mErrorCode = ErrCode.XOK;
+            ALog.getInstance().d(TAG, "<requestToServerWithoutResp> finished, errCode=" + responseObj.mErrorCode
+                    + ", costTime=" + (t2-t1));
+            return responseObj;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            responseObj.mErrorCode = ErrCode.XERR_HTTP_CONNECT;
+            return responseObj;
+
+        } finally {
             if (connection != null) {
                 connection.disconnect();
             }

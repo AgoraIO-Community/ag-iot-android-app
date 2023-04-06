@@ -326,7 +326,7 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         }
 
         // 发送请求消息
-        ALog.getInstance().d(TAG, "<callDial> ==> BEGIN");
+        ALog.getInstance().d(TAG, "<callDial> ==> BEGIN, attachMsg=" + attachMsg);
         setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
         Object callParams = new Object[] {iotDevice, attachMsg};
         sendMessage(MSGID_CALL_REQ_DIAL, 0, 0, callParams);
@@ -351,12 +351,12 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             ALog.getInstance().e(TAG, "<callHangup> already hangup, currState=" + currState);
             return ErrCode.XOK;
         }
-        synchronized (mDataLock) {
-            if (mCallkitCtx == null) {
-                ALog.getInstance().e(TAG, "<callHangup> bad state, mCallkitCtx is NULL");
-                return ErrCode.XERR_BAD_STATE;
-            }
-        }
+//        synchronized (mDataLock) {
+//            if (mCallkitCtx == null) {
+//                ALog.getInstance().e(TAG, "<callHangup> bad state, mCallkitCtx is NULL");
+//                return ErrCode.XERR_BAD_STATE;
+//            }
+//        }
 
         // 发送请求消息，同步等待执行完成
         ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
@@ -364,7 +364,18 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
         waitingDialReqDone();  // 等待呼叫完成
         mReqHangupErrCode = ErrCode.XOK;
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
-        sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);
+
+        if (mWorkHandler != null) {  // 移除所有中间的消息
+            mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
+            mWorkHandler.removeMessages(MSGID_CALL_REQ_DIAL);
+            mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
+            mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
+            mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
+            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
+        }
+        sendMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null);  // 发送挂断请求
+
         synchronized (mReqHangupEvent) {
             try {
                 mReqHangupEvent.wait(HANGUP_WAIT_TIMEOUT);
@@ -1510,24 +1521,10 @@ public class CallkitMgr implements ICallkitMgr, TalkingEngine.ICallback {
             return ErrCode.XERR_INVALID_PARAM;
         }
 
-        int errCode = ErrCode.XOK;
-        int loopCount = 0;
-        for (;;) {
-            errCode = AgoraService.getInstance().makeAnswer(token, sessionId, callerId, calleeId, localId, false);
-            processTokenErrCode(errCode);  // Token过期统一处理
-            if (errCode != ErrCode.XERR_CALLKIT_ERR_OPT) { // 不是影子更新失败，则不进行重试操作
-                break;
-            }
 
-            loopCount++;
-            if (loopCount >= 2) {
-                break;
-            }
-
-            ThreadSleep(100);
-        }
-
-        return errCode;
+        // 直接发送挂断请求，不用等回应
+        AgoraService.getInstance().makeHangup(token, sessionId, callerId, calleeId, localId);
+        return ErrCode.XOK;
     }
 
     /**

@@ -186,7 +186,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
 
             @Override
             public void onUpdateRtcStatus(JSONObject jsonObject) {
-                ALog.getInstance().d(TAG, "<onUpdateClient> jsonObject=" + jsonObject.toString());
+                ALog.getInstance().d(TAG, "<onUpdateRtcStatus> jsonObject=" + jsonObject.toString());
                 if (mCallkitMgr != null) {
                     mCallkitMgr.onAwsUpdateClient(jsonObject);
                 }
