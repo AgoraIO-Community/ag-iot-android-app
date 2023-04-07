@@ -35,6 +35,22 @@ import io.agora.rtc2.Constants;
 public class CallkitScheduler {
 
     /**
+     * @brief 活动通话的信息
+     */
+    public static class ActiveTalkInfo {
+        public UUID mTalkId;
+        public String mSessionId;
+
+        @Override
+        public String toString() {
+            String infoText = "{ mTalkId=" + mTalkId
+                    + ", mSessionId=" + mSessionId + " }";
+            return infoText;
+        }
+    }
+
+
+    /**
      * @brief 呼叫的异步回调
      */
     public static interface IAsyncDialCallback {
@@ -74,7 +90,7 @@ public class CallkitScheduler {
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
     private CallCmdQueue mCmdQueue = new CallCmdQueue();        ///< 执行命令队列
 
-    private UUID mActiveTalkId = null;                          ///< 当前活动的通话Id
+    private ActiveTalkInfo mActiveTalkInfo = new ActiveTalkInfo();
     private CallkitContext mLastCallCtx;    ///< 最后一次呼叫的信息
 
 
@@ -97,6 +113,49 @@ public class CallkitScheduler {
     }
 
     /**
+     * @brief 判断是否是活动sessionId
+     */
+    public boolean isActiveSessionId(final String sessionId) {
+        if (sessionId == null) {
+            return false;
+        }
+
+        synchronized (mDataLock) {
+            if (mActiveTalkInfo.mSessionId == null) {
+                return false;
+            }
+
+            if (mActiveTalkInfo.mSessionId.compareToIgnoreCase(sessionId) == 0) {
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    /**
+     * @brief 来电操作
+     */
+    public int incoming(final CallkitContext incomingCallCtx) {
+        int cmdCount = mCmdQueue.size();
+        if (cmdCount > 0) {
+            ALog.getInstance().d(TAG, "<incoming> bad state, cmdCount=" + cmdCount);
+            return ErrCode.XERR_BAD_STATE;
+        }
+
+
+        // 设置新的 通话Id 为 活动Id
+        UUID cmdTalkId = UUID.randomUUID();
+        setActiveTalkInfo(cmdTalkId, incomingCallCtx.sessionId);
+
+        // 设置最后的会话上下文
+        setLastCallCtx(incomingCallCtx);
+
+        ALog.getInstance().d(TAG, "<incoming> done, activeTalkInfo=" + mActiveTalkInfo.toString());
+        return ErrCode.XOK;
+    }
+
+    /**
      * @brief 呼叫操作
      */
     public int dial(final String token, final String appId, final String identityId,
@@ -115,10 +174,12 @@ public class CallkitScheduler {
         mCmdQueue.inqueue(dialCmd);
 
         // 设置新的 通话Id 为 活动Id
-        setActiveTalkId(dialCmd.mTalkId);
+        setActiveTalkInfo(dialCmd.mTalkId, null);
 
         sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
-        ALog.getInstance().d(TAG, "<dial> inqueue dial cmd, cmd=" + dialCmd.toString());
+        ALog.getInstance().d(TAG, "<dial> inqueue dial command"
+                + ", hangupCmd=" + dialCmd.toString()
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString());
         return ErrCode.XOK;
     }
 
@@ -145,12 +206,15 @@ public class CallkitScheduler {
         mCmdQueue.inqueue(hangupCmd);
 
         // 清除当前 活动通话Id，表示当前上层是挂断状态
-        setActiveTalkId(null);
+        setActiveTalkInfo(null, null);
 
         sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
-        ALog.getInstance().d(TAG, "<hangup> inqueue hangup cmd, cmd=" + hangupCmd.toString());
+        ALog.getInstance().d(TAG, "<dial> inqueue hangup command"
+                + ", hangupCmd=" + hangupCmd.toString()
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString());
         return ErrCode.XOK;
     }
+
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -280,6 +344,12 @@ public class CallkitScheduler {
         setLastCallCtx(callReqResult.mCallkitCtx);
 
         if (isActiveTalkId(cmd.mTalkId)) { // 回调给上层
+            if (callReqResult.mCallkitCtx != null) {  // 设置当前活动的sessionId
+                setActiveTalkInfo(cmd.mTalkId, callReqResult.mCallkitCtx.sessionId);
+                ALog.getInstance().d(TAG, "<DoExecuteDial> update active sessionId"
+                            + ", activeTalkInfo=" + mActiveTalkInfo.toString());
+            }
+
             ALog.getInstance().d(TAG, "<DoExecuteDial> <==END, callback");
             cmd.mDialCallbk.onAsyncDialDone(callReqResult);
 
@@ -326,17 +396,24 @@ public class CallkitScheduler {
 
 
     /**
-     * @brief 设置/获取 活动通话Id
+     * @brief 设置/获取 活动通话信息
      */
-    void setActiveTalkId(final UUID talkId) {
+    void setActiveTalkInfo(final UUID talkId, final String sessionId) {
         synchronized (mDataLock) {
-            mActiveTalkId = talkId;
+            mActiveTalkInfo.mTalkId = talkId;
+            mActiveTalkInfo.mSessionId = sessionId;
         }
     }
 
     UUID getActiveTalkId() {
         synchronized (mDataLock) {
-            return mActiveTalkId;
+            return mActiveTalkInfo.mTalkId;
+        }
+    }
+
+    String getActiveSessionId() {
+        synchronized (mDataLock) {
+            return mActiveTalkInfo.mSessionId;
         }
     }
 
@@ -345,11 +422,11 @@ public class CallkitScheduler {
      */
     boolean isActiveTalkId(final UUID talkId) {
         synchronized (mDataLock) {
-            if (mActiveTalkId == null) {
+            if (mActiveTalkInfo.mTalkId == null) {
                 return false;
             }
 
-            if (talkId.compareTo(mActiveTalkId) == 0) {
+            if (talkId.compareTo(mActiveTalkInfo.mTalkId) == 0) {
                 return true;
             }
             return false;
