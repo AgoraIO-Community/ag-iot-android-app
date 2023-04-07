@@ -351,7 +351,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         return mThreadPool;
     }
 
-    AccountMgr.AccountInfo getAccountInfo() {
+    public AccountMgr.AccountInfo getAccountInfo() {
         if (mAccountMgr == null) {
             return null;
         }
