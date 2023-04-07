@@ -179,7 +179,8 @@ public class CallkitScheduler {
         sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         ALog.getInstance().d(TAG, "<dial> inqueue dial command"
                 + ", hangupCmd=" + dialCmd.toString()
-                + ", activeTalkInfo=" + mActiveTalkInfo.toString());
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString()
+                + ", cmdQueueSize=" + mCmdQueue.size());
         return ErrCode.XOK;
     }
 
@@ -211,7 +212,8 @@ public class CallkitScheduler {
         sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         ALog.getInstance().d(TAG, "<dial> inqueue hangup command"
                 + ", hangupCmd=" + hangupCmd.toString()
-                + ", activeTalkInfo=" + mActiveTalkInfo.toString());
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString()
+                + ", cmdQueueSize=" + mCmdQueue.size());
         return ErrCode.XOK;
     }
 
@@ -320,6 +322,10 @@ public class CallkitScheduler {
      */
     void DoExecuteDial(final CallkitCmd cmd) {
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
+        if (accountInfo == null) {
+            ALog.getInstance().d(TAG, "<accountInfo> [ERROR] accountInfo is NONE");
+            return;
+        }
         ALog.getInstance().d(TAG, "<DoExecuteDial> ==>BEGIN" + cmd.toString());
 
         // 执行一次呼叫操作
@@ -364,6 +370,10 @@ public class CallkitScheduler {
      */
     void DoExecuteHangup(final CallkitCmd cmd) {
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
+        if (accountInfo == null) {
+            ALog.getInstance().d(TAG, "<DoExecuteHangup> [ERROR] accountInfo is NONE");
+            return;
+        }
 
         // 使用最后一次的通话信息执行一次挂断操作
         CallkitContext lastCallCtx = getLastCallCtx();
