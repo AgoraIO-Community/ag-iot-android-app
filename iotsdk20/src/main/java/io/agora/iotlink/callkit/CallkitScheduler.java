@@ -52,10 +52,7 @@ public class CallkitScheduler {
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitTask";
-    private static final long AWS_EVENT_TIMEOUT = 35000;        ///< HTTP请求后，AWS事件超时35秒
     private static final int EXIT_WAIT_TIMEOUT = 3000;
-    private static final int DIAL_WAIT_TIMEOUT = 3000;
-    private static final int HANGUP_WAIT_TIMEOUT = 3500;
 
 
     //
