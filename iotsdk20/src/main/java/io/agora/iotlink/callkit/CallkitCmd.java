@@ -61,11 +61,7 @@ public class CallkitCmd {
                 + ", mTalkingId=" + mTalkId
                 + ", mIdentityId=" + mIdentityId
                 + ", mPeerId=" + mPeerId
-                + ", mAttachMsg=" + mAttachMsg
-                + ", mSessionId=" + mSessionId
-                + ", mCallerId=" + mCallerId
-                + ", mCalleeId=" + mCalleeId
-                + ", mLocalId=" + mLocalId + " }";
+                + ", mAttachMsg=" + mAttachMsg + " }";
         return infoText;
     }
 

@@ -200,8 +200,7 @@ public class CallkitScheduler {
     /**
      * @brief 挂断操作
      */
-    public int hangup(final String token, final String sessionId,
-                      final String callerId, final String calleeId, final String localId) {
+    public int hangup() {
 
         // 从队列中参数最近的呼叫命令
         CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
@@ -213,11 +212,6 @@ public class CallkitScheduler {
         CallkitCmd hangupCmd = new CallkitCmd();
         hangupCmd.mType = CallkitCmd.CMD_TYPE_HANGUP;
         hangupCmd.mTalkId = getActiveTalkId();     // 直接使用当前talkId
-        hangupCmd.mToken = token;
-        hangupCmd.mSessionId = sessionId;
-        hangupCmd.mCallerId = callerId;
-        hangupCmd.mCalleeId = calleeId;
-        hangupCmd.mLocalId = localId;
         mCmdQueue.inqueue(hangupCmd);
 
         // 清除当前 活动通话Id，表示当前上层是挂断状态
