@@ -133,6 +133,18 @@ public class CallkitScheduler {
         }
     }
 
+    public UUID getActiveTalkId() {
+        synchronized (mDataLock) {
+            return mActiveTalkInfo.mTalkId;
+        }
+    }
+
+    public String getActiveSessionId() {
+        synchronized (mDataLock) {
+            return mActiveTalkInfo.mSessionId;
+        }
+    }
+
     /**
      * @brief 来电操作
      */
@@ -412,18 +424,6 @@ public class CallkitScheduler {
         synchronized (mDataLock) {
             mActiveTalkInfo.mTalkId = talkId;
             mActiveTalkInfo.mSessionId = sessionId;
-        }
-    }
-
-    UUID getActiveTalkId() {
-        synchronized (mDataLock) {
-            return mActiveTalkInfo.mTalkId;
-        }
-    }
-
-    String getActiveSessionId() {
-        synchronized (mDataLock) {
-            return mActiveTalkInfo.mSessionId;
         }
     }
 
