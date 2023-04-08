@@ -227,6 +227,11 @@ public class CallkitScheduler {
      * @brief 挂断操作
      */
     public int hangup() {
+        CallkitContext lastCallCtx = getLastCallCtx();
+        if (lastCallCtx != null) {
+            ALog.getInstance().d(TAG, "<hangup> NO last call context, already hangup!");
+            return ErrCode.XOK;
+        }
 
         // 从队列中参数最近的呼叫命令
         CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
@@ -242,7 +247,6 @@ public class CallkitScheduler {
 
         // 清除当前 活动通话Id，表示当前上层是挂断状态
         setActiveTalkInfo(null, null);
-
 
         ALog.getInstance().d(TAG, "<hangup> inqueue hangup command"
                 + ", hangupCmd=" + hangupCmd.toString()
@@ -416,6 +420,9 @@ public class CallkitScheduler {
             int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
                                     lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
                                     accountInfo.mInventDeviceName, false);
+            if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
+                setLastCallCtx(null);
+            }
             ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup done, errCode=" + errCode
                             + ", cmdTalkId=" + cmd.mTalkId);
 
