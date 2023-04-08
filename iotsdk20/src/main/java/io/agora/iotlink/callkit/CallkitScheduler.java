@@ -38,7 +38,7 @@ public class CallkitScheduler {
      * @brief 活动通话的信息
      */
     public static class ActiveTalkInfo {
-        public UUID mTalkId;
+        public String mTalkId;
         public String mSessionId;
 
         @Override
@@ -69,6 +69,8 @@ public class CallkitScheduler {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitTask";
     private static final int EXIT_WAIT_TIMEOUT = 3000;
+
+    private static long mCmd_Sequence = 1;          ///< 进行操作命令的累加
 
 
     //
@@ -133,7 +135,7 @@ public class CallkitScheduler {
         }
     }
 
-    public UUID getActiveTalkId() {
+    public String getActiveTalkId() {
         synchronized (mDataLock) {
             return mActiveTalkInfo.mTalkId;
         }
@@ -143,6 +145,30 @@ public class CallkitScheduler {
         synchronized (mDataLock) {
             return mActiveTalkInfo.mSessionId;
         }
+    }
+
+    /**
+     * @brief 对AWS事件数据包进行过滤
+     * @return 如果该数据包要丢弃，则返回0； 否则返回true
+     */
+    public boolean filterAwsEvent(JSONObject jsonState) {
+        if (!jsonState.has("callStatus")) {
+            ALog.getInstance().e(TAG, "<filterAwsEvent> no field: callStatus");
+            return false;
+        }
+        String sessionId = parseJsonStringValue(jsonState,"sessionId", null);
+        ALog.getInstance().d(TAG, "<filterAwsEvent> jsonState=" + jsonState.toString() );
+
+        if (sessionId != null) {  // 对端接听的回应包中没有sessionId字段，这种情况不过滤了
+            if (!isActiveSessionId(sessionId)) {
+                ALog.getInstance().e(TAG, "<filterAwsEvent> NOT matched active sessionId"
+                        + ", activeSessionId=" + getActiveSessionId()
+                        + ", awsEventSessionId=" + sessionId);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -157,7 +183,7 @@ public class CallkitScheduler {
 
 
         // 设置新的 通话Id 为 活动Id
-        UUID cmdTalkId = UUID.randomUUID();
+        String cmdTalkId = generateTalkId(false);
         setActiveTalkInfo(cmdTalkId, incomingCallCtx.sessionId);
 
         // 设置最后的会话上下文
@@ -177,7 +203,7 @@ public class CallkitScheduler {
 
         CallkitCmd dialCmd = new CallkitCmd();
         dialCmd.mType = CallkitCmd.CMD_TYPE_DIAL;
-        dialCmd.mTalkId = UUID.randomUUID();        // 生成新的talkId
+        dialCmd.mTalkId = generateTalkId(true);        // 生成新的talkId
         dialCmd.mToken = token;
         dialCmd.mAppId = appId;
         dialCmd.mIdentityId = identityId;
@@ -418,7 +444,7 @@ public class CallkitScheduler {
     /**
      * @brief 设置/获取 活动通话信息
      */
-    void setActiveTalkInfo(final UUID talkId, final String sessionId) {
+    void setActiveTalkInfo(final String talkId, final String sessionId) {
         synchronized (mDataLock) {
             mActiveTalkInfo.mTalkId = talkId;
             mActiveTalkInfo.mSessionId = sessionId;
@@ -428,18 +454,51 @@ public class CallkitScheduler {
     /**
      * @brief 判断 talkId 是否是当前活动通话Id
      */
-    boolean isActiveTalkId(final UUID talkId) {
+    boolean isActiveTalkId(final String talkId) {
         synchronized (mDataLock) {
             if (mActiveTalkInfo.mTalkId == null) {
                 return false;
             }
 
-            if (talkId.compareTo(mActiveTalkInfo.mTalkId) == 0) {
+            if (talkId.compareToIgnoreCase(mActiveTalkInfo.mTalkId) == 0) {
                 return true;
             }
             return false;
         }
+    }
 
+    /**
+     * @brief 根据操作类型设置 talkId
+     */
+    String generateTalkId(boolean bDial) {
+        String talkId = UUID.randomUUID().toString();
+        talkId = talkId + (bDial ? "-Dial-" : "-Income-") + mCmd_Sequence;
+        mCmd_Sequence++;
+        return talkId;
+    }
+
+    int parseJsonIntValue(JSONObject jsonState, String fieldName, int defVal) {
+        try {
+            int value = jsonState.getInt(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+//            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
+//                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
+    String parseJsonStringValue(JSONObject jsonState, String fieldName, String defVal) {
+        try {
+            String value = jsonState.getString(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+//            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
+//                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
     }
 
 }

@@ -38,7 +38,7 @@ public class CallkitCmd {
     public static final int CMD_TYPE_HANGUP = 2;
 
     public int mType;         // 1：呼叫；  2：挂断
-    public UUID mTalkId = UUID.randomUUID();
+    public String mTalkId;
     public String mToken;
 
     // 呼叫使用的参数
