@@ -126,18 +126,15 @@ public class AWSUtils {
     private void subscribe(String clientId, String inventDevciceName) {
         final String topic1 = "$aws/things/+/shadow/get/+";         //获取设备影子内容
         final String topic2 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/update/accepted";   //APP影子更新通知
-        final String topic3 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/get/accepted";      //APP影子当前影子内容
-        final String topic4 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
+        final String topic3 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
         try {
-            mTopicSum = 4;
+            mTopicSum = 3;
             //订阅设备影子更新通知topic
             subscribeTopic(topic1, AWSIotMqttQos.QOS1);
             //订阅设备影子更新通知topic
             subscribeTopic(topic2, AWSIotMqttQos.QOS1);
-            //订阅设备影子内容topic
-            subscribeTopic(topic3, AWSIotMqttQos.QOS1);
             //订阅底层服务通知topic
-            subscribeTopic(topic4, AWSIotMqttQos.QOS1);
+            subscribeTopic(topic3, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Subscription Error", e);
         }

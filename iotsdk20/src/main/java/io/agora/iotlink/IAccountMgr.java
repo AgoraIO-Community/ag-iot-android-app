@@ -115,6 +115,13 @@ public interface IAccountMgr  {
          * @brief Token过期的回调，只能重新登录处理
          */
         default void onTokenInvalid() {}
+
+        /**
+         * @brief 设置公钥完成回调
+         * @param errCode : 设置公钥结果，0表示设置成功
+         */
+        default void onSetPublicKeyDone(int errCode, final String lsAccessToken,
+                                        final String identifyId, final String publicKey) {}
     }
 
 
@@ -180,12 +187,17 @@ public interface IAccountMgr  {
      */
     int getMqttState();
 
-    /*
+    /**
      * @brief 获取用于QRCode二维码的用户Id
      *        如果当前处于未登录状态，则返回空字符串
      *
      */
     String getQRCodeUserId();
 
+    /**
+     * @brief 上传公钥到服务器
+     *
+     */
+    int setPublicKey(final String lsAccessToken, final String identifyId, final String publickKey);
 
 }

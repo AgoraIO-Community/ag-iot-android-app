@@ -97,7 +97,7 @@ public class AccountMgr implements IAccountMgr {
     private static final int MSGID_AWSLOGIN_DONE = 0x1002;
     private static final int MSGID_ACCOUNT_LOGOUT = 0x1003;
     private static final int MSGID_ACCOUNT_TOKEN_INVALID = 0x1004;
-
+    private static final int MSGID_SET_PUBLIC_KEY = 0x1005;
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -145,6 +145,10 @@ public class AccountMgr implements IAccountMgr {
 
            case MSGID_ACCOUNT_TOKEN_INVALID: {
                 DoTokenInvalid(msg);
+            } break;
+
+            case MSGID_SET_PUBLIC_KEY: {
+                DoSetPublicKey(msg);
             } break;
         }
     }
@@ -308,6 +312,16 @@ public class AccountMgr implements IAccountMgr {
         }
     }
 
+    @Override
+    public int setPublicKey(final String lsAccessToken,
+                            final String identifyId, final String publickKey) {
+        Object setParams = new Object[]{lsAccessToken, identifyId, publickKey};
+        sendMessage(MSGID_SET_PUBLIC_KEY, 0, 0, setParams);
+        ALog.getInstance().d(TAG, "<setPublicKey> lsAccessToken=" + lsAccessToken
+                    + ", identifyId=" + identifyId + ", publickKey=" + publickKey);
+        return ErrCode.XOK;
+    }
+
     /**
      * @brief 获取生成的私钥
      * @return 返回私钥
@@ -353,8 +367,19 @@ public class AccountMgr implements IAccountMgr {
             mLocalAccount.mAgoraAccessToken = loginParam.mLsAccessToken;
             mLocalAccount.mAgoraRefreshToken = loginParam.mLsRefreshToken;
             mLocalAccount.mAgoraExpriesIn = loginParam.mLsExpiresIn;
+        }
 
-            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 登录成 状态
+        //
+        // 发送重置请求
+        //
+        int errCode = AgoraService.getInstance().makeReset(loginParam.mLsAccessToken,
+                initParam.mRtcAppId, mLocalAccount.mInventDeviceName);
+        if (errCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<DoAccountLogin> fail to reset, errCode=" + errCode);
+        }
+
+        synchronized (mDataLock) {
+            mStateMachine = ACCOUNT_STATE_RUNNING;  // 状态机切换到 登录成功运行 状态
         }
         mSdkInstance.setStateMachine(IAgoraIotAppSdk.SDK_STATE_RUNNING);
         ALog.getInstance().d(TAG, "<DoAccountLogin> done, successful");
@@ -498,6 +523,10 @@ public class AccountMgr implements IAccountMgr {
                 listener.onTokenInvalid();
             }
         }
+    }
+
+    void DoSetPublicKey(Message msg) {
+
     }
 
     ///////////////////////////////////////////////////////////////////////
