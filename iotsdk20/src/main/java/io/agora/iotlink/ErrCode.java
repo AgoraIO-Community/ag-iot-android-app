@@ -92,7 +92,7 @@ public class ErrCode {
     public static final int XERR_CALLKIT_LOCAL_BUSY = -40008;       ///< 本地端忙
     public static final int XERR_CALLKIT_ERR_OPT = -40009;          ///< 不支持的错误操作
     public static final int XERR_CALLKIT_PEER_UNREG = -40010;       ///< 对端未注册
-
+    public static final int XERR_CALLKIT_RESET = -40011;            ///< 对端未注册
 
     //
     // 设备管理相关错误

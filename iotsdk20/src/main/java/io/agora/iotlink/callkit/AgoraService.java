@@ -221,6 +221,63 @@ public class AgoraService {
         return tokenResult;
     }
 
+    /*
+     * @brief 发送重置请求，通常在刚刚登录完成后发送
+     * @return 0：成功，<0：失败
+     */
+    public int makeReset(final String token, final String appid, final String identityId)  {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+
+        // 请求URL
+        String requestUrl = mCallkitBaseUrl + "/reset";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", appid + "-" + identityId);
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+
+            JSONObject payload = new JSONObject();
+            payload.put("appId", appid);
+            payload.put("deviceId", identityId);
+            body.put("payload", payload);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return ErrCode.XERR_HTTP_JSON_WRITE;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                token, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<makeReset> failure with no response!");
+            return ErrCode.XERR_HTTP_NO_RESPONSE;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<makeReset> failure, mErrorCode=" + responseObj.mErrorCode);
+            return ErrCode.XERR_CALLKIT_ANSWER;
+        }
+
+        if (responseObj.mRespCode == RESP_CODE_SHADOW_UPDATE) { // 影子更新错误，可能需要重试
+            ALog.getInstance().e(TAG, "<makeReset> RESP_CODE_SHADOW_UPDATE");
+            return ErrCode.XERR_CALLKIT_ERR_OPT;
+        }
+
+        if (responseObj.mRespCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<makeReset> invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+        }
+
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<makeReset> failure, mRespCode="
+                    + responseObj.mRespCode);
+            return ErrCode.XERR_CALLKIT_RESET;
+        }
+
+        ALog.getInstance().d(TAG, "<makeReset> successful");
+        return ErrCode.XOK;
+    }
 
 
     /*
