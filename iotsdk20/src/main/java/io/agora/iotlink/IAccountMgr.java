@@ -121,7 +121,7 @@ public interface IAccountMgr  {
          * @param errCode : 设置公钥结果，0表示设置成功
          */
         default void onSetPublicKeyDone(int errCode, final String lsAccessToken,
-                                        final String identifyId, final String publicKey) {}
+                                        final String inventDeviceName, final String publicKey) {}
     }
 
 
@@ -195,9 +195,11 @@ public interface IAccountMgr  {
     String getQRCodeUserId();
 
     /**
-     * @brief 上传公钥到服务器
-     *
+     * @brief 上传公钥到服务器，这个接口可以在任意时刻调用 （即使没有调用 login()之前也可以调用）
+     * @param lsAccessToken : 同 LoginParam.mLsAccessToken
+     * @param inventDeviceName : 同 LoginParam.mInventDeviceName
+     * @param publickKey : 要设置的公钥
      */
-    int setPublicKey(final String lsAccessToken, final String identifyId, final String publickKey);
+    int setPublicKey(final String lsAccessToken, final String inventDeviceName, final String publickKey);
 
 }

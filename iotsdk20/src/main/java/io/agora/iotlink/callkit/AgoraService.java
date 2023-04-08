@@ -221,64 +221,6 @@ public class AgoraService {
         return tokenResult;
     }
 
-    /*
-     * @brief 发送重置请求，通常在刚刚登录完成后发送
-     * @return 0：成功，<0：失败
-     */
-    public int makeReset(final String token, final String appid, final String identityId)  {
-        Map<String, String> params = new HashMap();
-        JSONObject body = new JSONObject();
-
-        // 请求URL
-        String requestUrl = mCallkitBaseUrl + "/reset";
-
-        // body内容
-        JSONObject header = new JSONObject();
-        try {
-            header.put("traceId", appid + "-" + identityId);
-            header.put("timestamp", System.currentTimeMillis());
-            body.put("header", header);
-
-            JSONObject payload = new JSONObject();
-            payload.put("appId", appid);
-            payload.put("deviceId", identityId);
-            body.put("payload", payload);
-        } catch (JSONException e) {
-            e.printStackTrace();
-            return ErrCode.XERR_HTTP_JSON_WRITE;
-        }
-
-        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
-                token, params, body);
-        if (responseObj == null) {
-            ALog.getInstance().e(TAG, "<makeReset> failure with no response!");
-            return ErrCode.XERR_HTTP_NO_RESPONSE;
-        }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<makeReset> failure, mErrorCode=" + responseObj.mErrorCode);
-            return ErrCode.XERR_CALLKIT_ANSWER;
-        }
-
-        if (responseObj.mRespCode == RESP_CODE_SHADOW_UPDATE) { // 影子更新错误，可能需要重试
-            ALog.getInstance().e(TAG, "<makeReset> RESP_CODE_SHADOW_UPDATE");
-            return ErrCode.XERR_CALLKIT_ERR_OPT;
-        }
-
-        if (responseObj.mRespCode == RESP_CODE_INVALID_TOKEN) {
-            ALog.getInstance().e(TAG, "<makeReset> invalid token");
-            return ErrCode.XERR_TOKEN_INVALID;
-        }
-
-        if (responseObj.mRespCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<makeReset> failure, mRespCode="
-                    + responseObj.mRespCode);
-            return ErrCode.XERR_CALLKIT_RESET;
-        }
-
-        ALog.getInstance().d(TAG, "<makeReset> successful");
-        return ErrCode.XOK;
-    }
-
 
     /*
      * @brief 发起一个呼叫请求
@@ -1991,6 +1933,112 @@ public class AgoraService {
         return retreieveResult;
     }
 
+    /*
+     * @brief 发送重置请求，通常在刚刚登录完成后发送
+     * @return 0：成功，<0：失败
+     */
+    public int accountReset(final String token, final String appid, final String identityId)  {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+
+        // 请求URL
+        String requestUrl = mCallkitBaseUrl + "/reset";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", appid + "-" + identityId);
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+
+            JSONObject payload = new JSONObject();
+            payload.put("appId", appid);
+            payload.put("deviceId", identityId);
+            body.put("payload", payload);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return ErrCode.XERR_HTTP_JSON_WRITE;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                token, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<accountReset> failure with no response!");
+            return ErrCode.XERR_HTTP_NO_RESPONSE;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<accountReset> failure, mErrorCode=" + responseObj.mErrorCode);
+            return ErrCode.XERR_CALLKIT_ANSWER;
+        }
+
+        if (responseObj.mRespCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<accountReset> invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+        }
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<accountReset> failure, mRespCode="
+                    + responseObj.mRespCode);
+            return ErrCode.XERR_ACCOUNT_RESET;
+        }
+
+        ALog.getInstance().d(TAG, "<accountReset> successful");
+        return ErrCode.XOK;
+    }
+
+    /*
+     * @brief 向服务器注册用户
+     * @param account : 当前用户账号
+     * @param queryParam : 查询参数
+     * @return AlarmPageResult：包含错误码 和 详细的告警信息
+     */
+    public int setPublicKey(final String token, final String userId, final String publicKey)  {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+
+        // 请求URL
+        String requestUrl = mAuthBaseUrl + "/public-key/set";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", token + "-" + userId + "-" + publicKey);
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+
+            JSONObject payload = new JSONObject();
+            payload.put("userId", userId);
+            payload.put("publicKey", publicKey);
+            body.put("payload", payload);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return ErrCode.XERR_HTTP_JSON_WRITE;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                token, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<setPublicKey> failure with no response!");
+            return ErrCode.XERR_HTTP_NO_RESPONSE;
+        }
+        if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<setPublicKey> failure, mErrorCode=" + responseObj.mErrorCode);
+            return ErrCode.XERR_CALLKIT_ANSWER;
+        }
+
+        if (responseObj.mRespCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<setPublicKey> invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+        }
+        if (responseObj.mRespCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<setPublicKey> failure, mRespCode="
+                    + responseObj.mRespCode);
+            return ErrCode.XERR_ACCOUNT_SET_PUBLICKEY;
+        }
+
+        ALog.getInstance().d(TAG, "<setPublicKey> successful");
+        return ErrCode.XOK;
+    }
 
     //////////////////////////////////////////////////////////////////////////////////
     ///////////////////// Methods for RTM Management Module ////////////////////////

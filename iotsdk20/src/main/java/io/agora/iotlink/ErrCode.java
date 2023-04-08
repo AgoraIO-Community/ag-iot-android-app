@@ -77,6 +77,8 @@ public class ErrCode {
     public static final int XERR_ACCOUNT_USRINFO_QUERY = -30013;    ///< 查询用户信息失败
     public static final int XERR_ACCOUNT_USRINFO_UPDATE = -30014;   ///< 更新用户信息失败
     public static final int XERR_ACCOUNT_VERYCODE = -30015;         ///< 验证码错误
+    public static final int XERR_ACCOUNT_RESET = -30016;            ///< 登录后重置错误
+    public static final int XERR_ACCOUNT_SET_PUBLICKEY = -30017;    ///< 设置公钥错误
 
     //
     // 呼叫系统相关错误
@@ -92,7 +94,7 @@ public class ErrCode {
     public static final int XERR_CALLKIT_LOCAL_BUSY = -40008;       ///< 本地端忙
     public static final int XERR_CALLKIT_ERR_OPT = -40009;          ///< 不支持的错误操作
     public static final int XERR_CALLKIT_PEER_UNREG = -40010;       ///< 对端未注册
-    public static final int XERR_CALLKIT_RESET = -40011;            ///< 对端未注册
+
 
     //
     // 设备管理相关错误

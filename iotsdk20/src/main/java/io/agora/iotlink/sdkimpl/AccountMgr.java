@@ -19,6 +19,7 @@ import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.ICallkitMgr;
+import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.aws.AWSUtils;
 import io.agora.iotlink.callkit.AgoraService;
 import io.agora.iotlink.logger.ALog;
@@ -314,11 +315,11 @@ public class AccountMgr implements IAccountMgr {
 
     @Override
     public int setPublicKey(final String lsAccessToken,
-                            final String identifyId, final String publickKey) {
-        Object setParams = new Object[]{lsAccessToken, identifyId, publickKey};
+                            final String inventDeviceName, final String publickKey) {
+        Object setParams = new Object[]{lsAccessToken, inventDeviceName, publickKey};
         sendMessage(MSGID_SET_PUBLIC_KEY, 0, 0, setParams);
         ALog.getInstance().d(TAG, "<setPublicKey> lsAccessToken=" + lsAccessToken
-                    + ", identifyId=" + identifyId + ", publickKey=" + publickKey);
+                    + ", inventDeviceName=" + inventDeviceName + ", publickKey=" + publickKey);
         return ErrCode.XOK;
     }
 
@@ -372,7 +373,7 @@ public class AccountMgr implements IAccountMgr {
         //
         // 发送重置请求
         //
-        int errCode = AgoraService.getInstance().makeReset(loginParam.mLsAccessToken,
+        int errCode = AgoraService.getInstance().accountReset(loginParam.mLsAccessToken,
                 initParam.mRtcAppId, mLocalAccount.mInventDeviceName);
         if (errCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<DoAccountLogin> fail to reset, errCode=" + errCode);
@@ -526,7 +527,19 @@ public class AccountMgr implements IAccountMgr {
     }
 
     void DoSetPublicKey(Message msg) {
+        Object[] setParams = (Object[]) (msg.obj);
+        String lsAccessToken = (String)(setParams[0]);
+        String inventDeviceName = (String)(setParams[1]);
+        String publickKey = (String)(setParams[2]);
 
+        int errCode = AgoraService.getInstance().setPublicKey(lsAccessToken, inventDeviceName, publickKey);
+
+        ALog.getInstance().d(TAG, "<DoSetPublicKey> finished, errCode=" + errCode);
+        synchronized (mCallbackList) {  // 回调给应用层
+            for (IAccountMgr.ICallback listener : mCallbackList) {
+                listener.onSetPublicKeyDone(errCode, lsAccessToken, inventDeviceName, publickKey);
+            }
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////
