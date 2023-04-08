@@ -77,7 +77,7 @@ public class AgoraService {
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraService";
-    private static final int HTTP_TIMEOUT = 2500;
+    private static final int HTTP_TIMEOUT = 4000;
 
     public static final int RESP_CODE_IN_TALKING = 100001;      ///<	对端通话中，无法接听
     public static final int RESP_CODE_ANSWER = 100002;          ///<	未通话，无法接听
