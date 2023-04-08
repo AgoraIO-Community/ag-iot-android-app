@@ -177,6 +177,7 @@ public class CallkitScheduler {
 
         CallkitCmd dialCmd = new CallkitCmd();
         dialCmd.mType = CallkitCmd.CMD_TYPE_DIAL;
+        dialCmd.mTalkId = UUID.randomUUID();        // 生成新的talkId
         dialCmd.mToken = token;
         dialCmd.mAppId = appId;
         dialCmd.mIdentityId = identityId;
@@ -188,11 +189,11 @@ public class CallkitScheduler {
         // 设置新的 通话Id 为 活动Id
         setActiveTalkInfo(dialCmd.mTalkId, null);
 
-        sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         ALog.getInstance().d(TAG, "<dial> inqueue dial command"
                 + ", hangupCmd=" + dialCmd.toString()
                 + ", activeTalkInfo=" + mActiveTalkInfo.toString()
                 + ", cmdQueueSize=" + mCmdQueue.size());
+        sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         return ErrCode.XOK;
     }
 
@@ -211,6 +212,7 @@ public class CallkitScheduler {
 
         CallkitCmd hangupCmd = new CallkitCmd();
         hangupCmd.mType = CallkitCmd.CMD_TYPE_HANGUP;
+        hangupCmd.mTalkId = getActiveTalkId();     // 直接使用当前talkId
         hangupCmd.mToken = token;
         hangupCmd.mSessionId = sessionId;
         hangupCmd.mCallerId = callerId;
@@ -221,11 +223,12 @@ public class CallkitScheduler {
         // 清除当前 活动通话Id，表示当前上层是挂断状态
         setActiveTalkInfo(null, null);
 
-        sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
-        ALog.getInstance().d(TAG, "<dial> inqueue hangup command"
+
+        ALog.getInstance().d(TAG, "<hangup> inqueue hangup command"
                 + ", hangupCmd=" + hangupCmd.toString()
                 + ", activeTalkInfo=" + mActiveTalkInfo.toString()
                 + ", cmdQueueSize=" + mCmdQueue.size());
+        sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         return ErrCode.XOK;
     }
 
@@ -368,11 +371,11 @@ public class CallkitScheduler {
                             + ", activeTalkInfo=" + mActiveTalkInfo.toString());
             }
 
-            ALog.getInstance().d(TAG, "<DoExecuteDial> <==END, callback");
+            ALog.getInstance().d(TAG, "<DoExecuteDial> <==END, callback, cmdTalkId=" + cmd.mTalkId);
             cmd.mDialCallbk.onAsyncDialDone(callReqResult);
 
         } else {
-            ALog.getInstance().d(TAG, "<DoExecuteDial> <== END");
+            ALog.getInstance().d(TAG, "<DoExecuteDial> <== END, cmdTalkId=" + cmd.mTalkId);
         }
     }
 
@@ -393,10 +396,11 @@ public class CallkitScheduler {
             int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
                                     lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
                                     accountInfo.mInventDeviceName, false);
-            ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup done, errCode=" + errCode);
+            ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup done, errCode=" + errCode
+                            + ", cmdTalkId=" + cmd.mTalkId);
 
         } else {
-            ALog.getInstance().d(TAG, "<DoExecuteHangup> do nothing done");
+            ALog.getInstance().d(TAG, "<DoExecuteHangup> do nothing done, cmdTalkId=" + cmd.mTalkId);
         }
     }
 
