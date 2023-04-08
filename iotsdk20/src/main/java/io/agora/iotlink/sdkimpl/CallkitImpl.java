@@ -1132,33 +1132,28 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
     void exceptionProcess(final JSONObject jsonState) {
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
 
-//        // 获取AWS状态中的 sessionId, callerId 和 calleeId
-//        String sessionId = null;
-//        String callerId = null;
-//        String calleeId = null;
-//        if (jsonState != null) {
-//            sessionId = parseJsonStringValue(jsonState, "sessionId", null);
-//            callerId = parseJsonStringValue(jsonState, "callerId", null);
-//            calleeId = parseJsonStringValue(jsonState, "calleeId", null);
-//        }
-//        if ((!TextUtils.isEmpty(sessionId)) && (!TextUtils.isEmpty(calleeId)) && (!TextUtils.isEmpty(calleeId))) {
-//            doRetryHangup(accountInfo.mAgoraAccessToken, sessionId, callerId, calleeId, accountInfo.mInventDeviceName);
-//
-//        } else {
-//            // 直接调用本地挂断请求
-//            CallkitContext callkitCtx;
-//            synchronized (mDataLock) {
-//                callkitCtx = mCallkitCtx;
-//            }
-//            if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
-//                doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
-//                        callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
-//            }
-//        }
+        // 获取AWS状态中的 sessionId, callerId 和 calleeId
+        String sessionId = null;
+        String callerId = null;
+        String calleeId = null;
+        if (jsonState != null) {
+            sessionId = parseJsonStringValue(jsonState, "sessionId", null);
+            callerId = parseJsonStringValue(jsonState, "callerId", null);
+            calleeId = parseJsonStringValue(jsonState, "calleeId", null);
+        }
+        if ((!TextUtils.isEmpty(sessionId)) && (!TextUtils.isEmpty(calleeId)) && (!TextUtils.isEmpty(calleeId))) {
+            doRetryHangup(accountInfo.mAgoraAccessToken, sessionId, callerId, calleeId, accountInfo.mInventDeviceName);
 
-        // 调度器中执行挂断操作
-        if (mScheduler != null) {
-            mScheduler.hangup();
+        } else {
+            // 直接调用本地挂断请求
+            CallkitContext callkitCtx;
+            synchronized (mDataLock) {
+                callkitCtx = mCallkitCtx;
+            }
+            if ((callkitCtx != null) && (callkitCtx.sessionId != null)) {
+                doRetryHangup(accountInfo.mAgoraAccessToken, callkitCtx.sessionId,
+                        callkitCtx.callerId, callkitCtx.calleeId, accountInfo.mInventDeviceName);
+            }
         }
 
         if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
@@ -1529,21 +1524,26 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                       final String calleeId, final String localId)  {
 
         if (sessionId == null || sessionId.length() <= 0) {
+            mScheduler.hangup();
             return ErrCode.XERR_INVALID_PARAM;
         }
         if (callerId == null || callerId.length() <= 0) {
+            mScheduler.hangup();
             return ErrCode.XERR_INVALID_PARAM;
         }
         if (calleeId == null || calleeId.length() <= 0) {
+            mScheduler.hangup();
             return ErrCode.XERR_INVALID_PARAM;
         }
         if (localId == null || localId.length() <= 0) {
+            mScheduler.hangup();
             return ErrCode.XERR_INVALID_PARAM;
         }
 
 
         // 直接发送挂断请求，不用等回应
-        AgoraService.getInstance().makeHangup(token, sessionId, callerId, calleeId, localId);
+        //AgoraService.getInstance().makeHangup(token, sessionId, callerId, calleeId, localId);
+        mScheduler.hangup(token, sessionId, callerId, calleeId, localId);
         return ErrCode.XOK;
     }
 

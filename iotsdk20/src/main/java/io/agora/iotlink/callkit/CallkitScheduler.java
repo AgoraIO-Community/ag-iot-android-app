@@ -224,15 +224,9 @@ public class CallkitScheduler {
     }
 
     /**
-     * @brief 挂断操作
+     * @brief 挂断操作，通常依赖于lastCallCtx，说明之前至少有一次呼叫或者来电操作
      */
     public int hangup() {
-        CallkitContext lastCallCtx = getLastCallCtx();
-        if (lastCallCtx != null) {
-            ALog.getInstance().d(TAG, "<hangup> NO last call context, already hangup!");
-            return ErrCode.XOK;
-        }
-
         // 从队列中参数最近的呼叫命令
         CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
         if (lastDialCmd != null) {
@@ -249,6 +243,39 @@ public class CallkitScheduler {
         setActiveTalkInfo(null, null);
 
         ALog.getInstance().d(TAG, "<hangup> inqueue hangup command"
+                + ", hangupCmd=" + hangupCmd.toString()
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString()
+                + ", cmdQueueSize=" + mCmdQueue.size());
+        sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
+        return ErrCode.XOK;
+    }
+
+    /**
+     * @brief 挂断操作，适用种情况：上电后直接来AWS事件，事件处理中的异常挂断，此时可能没有 lastCallCtx
+     */
+    public int hangup(final String token, final String sessionId, final String callerId,
+                      final String calleeId, final String localId) {
+        // 从队列中参数最近的呼叫命令
+        CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
+        if (lastDialCmd != null) {
+            ALog.getInstance().d(TAG, "<hangup2> remove dial cmd from queue, cmd=" + lastDialCmd.toString());
+            return ErrCode.XOK;
+        }
+
+        CallkitCmd hangupCmd = new CallkitCmd();
+        hangupCmd.mType = CallkitCmd.CMD_TYPE_HANGUP;
+        hangupCmd.mTalkId = getActiveTalkId();     // 直接使用当前talkId
+        hangupCmd.mToken = token;
+        hangupCmd.mSessionId = sessionId;
+        hangupCmd.mCallerId = callerId;
+        hangupCmd.mCalleeId = calleeId;
+        hangupCmd.mLocalId = localId;
+        mCmdQueue.inqueue(hangupCmd);
+
+        // 清除当前 活动通话Id，表示当前上层是挂断状态
+        setActiveTalkInfo(null, null);
+
+        ALog.getInstance().d(TAG, "<hangup2> inqueue hangup command"
                 + ", hangupCmd=" + hangupCmd.toString()
                 + ", activeTalkInfo=" + mActiveTalkInfo.toString()
                 + ", cmdQueueSize=" + mCmdQueue.size());
@@ -414,17 +441,28 @@ public class CallkitScheduler {
             return;
         }
 
-        // 使用最后一次的通话信息执行一次挂断操作
         CallkitContext lastCallCtx = getLastCallCtx();
-        if (lastCallCtx != null) {
+        if (lastCallCtx != null)  {
+            // 优先使用最后一次的通话信息执行一次挂断操作
             int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-                                    lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
-                                    accountInfo.mInventDeviceName, false);
+                    lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
+                    accountInfo.mInventDeviceName, false);
             if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
                 setLastCallCtx(null);
             }
-            ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup done, errCode=" + errCode
-                            + ", cmdTalkId=" + cmd.mTalkId);
+            ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup with last, done, errCode=" + errCode
+                    + ", cmdTalkId=" + cmd.mTalkId);
+
+         } else if ((cmd.mSessionId != null) && (cmd.mCallerId != null) && (cmd.mCalleeId != null)) {
+            // 没有最后一次通话信息，考虑使用 command中的参数进行挂断操作
+            int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
+                    lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
+                    accountInfo.mInventDeviceName, false);
+            if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
+                setLastCallCtx(null);
+            }
+            ALog.getInstance().d(TAG, "<DoExecuteHangup> hangup with cmd, done, errCode=" + errCode
+                    + ", cmdTalkId=" + cmd.mTalkId);
 
         } else {
             ALog.getInstance().d(TAG, "<DoExecuteHangup> do nothing done, cmdTalkId=" + cmd.mTalkId);

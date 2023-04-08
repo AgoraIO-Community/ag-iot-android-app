@@ -63,7 +63,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     ////////////////////////////////////////////////////////////////////////
     private InitParam mInitParam;
     private AccountMgr mAccountMgr;
-    private CallkitMgr mCallkitMgr;
+    private CallkitImpl mCallkitImpl;
     private DeviceMgr mDeviceMgr;
     private AlarmMgr mAlarmMgr;
     private DevMessageMgr mDevmsgMgr;
@@ -119,8 +119,8 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         mDeviceMgr = new DeviceMgr();
         mDeviceMgr.initialize(this);
 
-        mCallkitMgr = new CallkitMgr();
-        mCallkitMgr.initialize(this);
+        mCallkitImpl = new CallkitImpl();
+        mCallkitImpl.initialize(this);
 
         mAlarmMgr = new AlarmMgr();
         mAlarmMgr.initialize(this);
@@ -187,8 +187,8 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             @Override
             public void onUpdateRtcStatus(JSONObject jsonObject) {
                 ALog.getInstance().d(TAG, "<onUpdateRtcStatus> jsonObject=" + jsonObject.toString());
-                if (mCallkitMgr != null) {
-                    mCallkitMgr.onAwsUpdateClient(jsonObject);
+                if (mCallkitImpl != null) {
+                    mCallkitImpl.onAwsUpdateClient(jsonObject);
                 }
             }
 
@@ -246,9 +246,9 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             mAccountMgr = null;
         }
 
-        if (mCallkitMgr != null) {
-            mCallkitMgr.release();
-            mCallkitMgr = null;
+        if (mCallkitImpl != null) {
+            mCallkitImpl.release();
+            mCallkitImpl = null;
         }
 
         if (mDeviceMgr != null) {
@@ -297,7 +297,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
 
     @Override
     public ICallkitMgr getCallkitMgr() {
-        return mCallkitMgr;
+        return mCallkitImpl;
     }
 
     @Override
@@ -383,7 +383,6 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
                 mAccountMgr.workThreadProcessMessage(msg);
-                mCallkitMgr.workThreadProcessMessage(msg);
                 mRtmMgr.workThreadProcessMessage(msg);
                 mRtcPlayer.workThreadProcessMessage(msg);
                 workThreadProcessMessage(msg);
