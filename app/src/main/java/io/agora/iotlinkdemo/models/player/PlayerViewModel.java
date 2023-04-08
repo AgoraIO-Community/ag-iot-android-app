@@ -319,8 +319,9 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     /**
      * 本地挂断
      */
-    public void callHangup() {
-        AIotAppSdkFactory.getInstance().getCallkitMgr().callHangup();
+    public int callHangup() {
+        int errCode = AIotAppSdkFactory.getInstance().getCallkitMgr().callHangup();
+        return errCode;
     }
 
     /**

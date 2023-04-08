@@ -23,6 +23,7 @@ import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.IDeviceMgr;
 import io.agora.iotlinkdemo.R;
+import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.base.BaseViewBindingFragment;
 import io.agora.iotlinkdemo.base.PermissionHandler;
 import io.agora.iotlinkdemo.base.PermissionItem;
@@ -178,12 +179,14 @@ public class HomeIndexFragment extends BaseViewBindingFragment<FragmentHomeIndex
     }
 
     void doCallDial(IotDevice iotDevice) {
-        showLoadingView();
-        int errCode = homeIndexViewModel.callDial(iotDevice, "home list call");
-        if (errCode != ErrCode.XOK) {
-            hideLoadingView();
-            ErrorToastUtils.showCallError(errCode);
-        }
+//        showLoadingView();
+//        int errCode = homeIndexViewModel.callDial(iotDevice, "home list call");
+//        if (errCode != ErrCode.XOK) {
+//            hideLoadingView();
+//            ErrorToastUtils.showCallError(errCode);
+//        }
+        AgoraApplication.getInstance().setLivingDevice(iotDevice);
+        PagePilotManager.pagePreviewPlay();
     }
 
     public void onFragRequestPermissionsResult(int requestCode, @NonNull String permissions[],

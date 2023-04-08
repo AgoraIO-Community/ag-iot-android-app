@@ -212,6 +212,14 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         int userCount = playerViewModel.getOnlineUserCount();
         String str_usercnt = getString(R.string.user_count) + userCount;
         getBinding().tvUserCount.setText(str_usercnt);
+
+        String attchMsg = "Dial at time: " + System.currentTimeMillis();
+        int errCode = playerViewModel.callDial(attchMsg);
+        if (errCode != ErrCode.XOK) {
+            updateCallWgtStatus();
+            mMsgHandler.removeMessages(MSGID_CHECK_STATE);
+            mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_STATE, 10000);
+        }
     }
 
     @Override
