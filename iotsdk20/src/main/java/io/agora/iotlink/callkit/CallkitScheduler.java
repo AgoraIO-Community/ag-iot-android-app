@@ -460,7 +460,7 @@ public class CallkitScheduler {
          } else if ((cmd.mSessionId != null) && (cmd.mCallerId != null) && (cmd.mCalleeId != null)) {
             // 没有最后一次通话信息，考虑使用 command中的参数进行挂断操作
             int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-                    lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
+                    cmd.mSessionId, cmd.mCallerId, cmd.mCalleeId,
                     accountInfo.mInventDeviceName, false);
             if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
                 setLastCallCtx(null);
