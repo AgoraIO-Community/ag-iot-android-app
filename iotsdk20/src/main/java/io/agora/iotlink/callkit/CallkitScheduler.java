@@ -67,7 +67,7 @@ public class CallkitScheduler {
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
-    private static final String TAG = "IOTSDK/CallkitTask";
+    private static final String TAG = "IOTSDK/CallkitScheduler";
     private static final int EXIT_WAIT_TIMEOUT = 3000;
 
     private static long mCmd_Sequence = 1;          ///< 进行操作命令的累加
@@ -149,26 +149,30 @@ public class CallkitScheduler {
 
     /**
      * @brief 对AWS事件数据包进行过滤
-     * @return 如果该数据包要丢弃，则返回0； 否则返回true
+     * @return 如果该数据包要丢弃，则返回true； 否则返回false
      */
     public boolean filterAwsEvent(JSONObject jsonState) {
         if (!jsonState.has("callStatus")) {
             ALog.getInstance().e(TAG, "<filterAwsEvent> no field: callStatus");
             return false;
         }
-        String sessionId = parseJsonStringValue(jsonState,"sessionId", null);
-        ALog.getInstance().d(TAG, "<filterAwsEvent> jsonState=" + jsonState.toString() );
 
-        if (sessionId != null) {  // 对端接听的回应包中没有sessionId字段，这种情况不过滤了
-            if (!isActiveSessionId(sessionId)) {
-                ALog.getInstance().e(TAG, "<filterAwsEvent> NOT matched active sessionId"
-                        + ", activeSessionId=" + getActiveSessionId()
-                        + ", awsEventSessionId=" + sessionId);
-                return true;
-            }
+        String sessionId = parseJsonStringValue(jsonState,"sessionId", null);
+        if (TextUtils.isEmpty(sessionId)) {  // AWS事件包中没有 sessionId 字段，则不过滤
+            return false;
         }
 
-        return false;
+        String activeSessionId = getActiveSessionId();
+        if (TextUtils.isEmpty(activeSessionId))  { // 当前没有活动sessionId，不在通话中，也不过滤
+            return false;
+        }
+
+        if (activeSessionId.compareToIgnoreCase(sessionId) == 0) { // sessionId相同，也不过滤
+            return false;
+        }
+
+        ALog.getInstance().d(TAG, "<filterAwsEvent> drop AWS event, jsonState=" + jsonState.toString() );
+        return true;
     }
 
     /**
