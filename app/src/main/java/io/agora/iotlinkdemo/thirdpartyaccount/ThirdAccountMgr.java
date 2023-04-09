@@ -35,6 +35,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
+
+import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.utils.RSAUtils;
@@ -207,6 +209,14 @@ public class ThirdAccountMgr {
 
                 case 3: {
                     LoginResult result = accountLogin(mAccount, mPassword, mRsaPublicKey);
+
+                    if (result.mErrCode == ErrCode.XOK) {
+                        // 测试上传公钥处理
+                        AIotAppSdkFactory.getInstance().getAccountMgr().setPublicKey(
+                                result.mLoginParam.mLsAccessToken, result.mLoginParam.mInventDeviceName,
+                                mRsaPublicKey);
+                    }
+
                     if (mLoginCallback != null) {
                         mLoginCallback.onThirdAccountLoginDone(result.mErrCode, result.mMessage,
                                                                 mAccount, mPassword, mRsaPublicKey,
