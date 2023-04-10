@@ -253,9 +253,9 @@ public class AccountMgr implements IAccountMgr {
             return ErrCode.XERR_BAD_STATE;
         }
 
-        CallkitMgr callkitMgr = (CallkitMgr)mSdkInstance.getCallkitMgr();
-        if (callkitMgr != null) {
-            int callkitState = callkitMgr.getStateMachine();
+        CallkitImpl callkitImpl = (CallkitImpl)mSdkInstance.getCallkitMgr();
+        if (callkitImpl != null) {
+            int callkitState = callkitImpl.getStateMachine();
             if (callkitState != ICallkitMgr.CALLKIT_STATE_IDLE) {  // 当前通话正在进行中，不能登出
                 ALog.getInstance().e(TAG, "<logout> bad state, callkit is ongoing, callkitState=" + callkitState);
                 return ErrCode.XERR_CALLKIT_LOCAL_BUSY;
