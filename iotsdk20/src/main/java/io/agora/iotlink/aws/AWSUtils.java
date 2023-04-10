@@ -85,9 +85,12 @@ public class AWSUtils {
                         subscribe(mClientId, mUserInventThingName);
                         setMqttState(STATE_CONNECTED);
                     } else if (String.valueOf(status).equals("ConnectionLost")) {
+                        mqttManager.resetReconnect();
                         setMqttState(STATE_DISCONNECTED);
                     } else if (String.valueOf(status).equals("Connecting")) {
                         setMqttState(STATE_CONNECTING);
+                    } else if (String.valueOf(status).equals("Reconnecting")) {
+                        mqttManager.resetReconnect();
                     }
 
                     //通知连接状态事件
