@@ -327,6 +327,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
     @Override
     public int callDial(IotDevice iotDevice, String attachMsg) {
+        long t1 = System.currentTimeMillis();
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<callDial> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
@@ -362,9 +363,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                     }
                 });
 
+        long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<callDial> <==End done"
                 + ", iotDevice=" + iotDevice.toString()
-                + ", attachMsg=" + attachMsg);
+                + ", attachMsg=" + attachMsg + ", costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
@@ -372,6 +374,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
     @Override
     public int callHangup() {
+        long t1 = System.currentTimeMillis();
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<callHangup> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
@@ -386,7 +389,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 发送请求消息，同步等待执行完成
         ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
-        long t1 = System.currentTimeMillis();
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
 
         // 在调度器中执行 挂断HTTP请求
