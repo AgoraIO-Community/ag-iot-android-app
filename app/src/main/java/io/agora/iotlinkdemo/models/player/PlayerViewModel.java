@@ -221,7 +221,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerTimeout(IotDevice iotDevice) {
-        Log.e(TAG, "<onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
+//        Log.e(TAG, "<onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
         }
