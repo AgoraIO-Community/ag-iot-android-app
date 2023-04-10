@@ -161,13 +161,13 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
     /*
      * @brief 在AWS事件中被调用，对APP端的控制事件
      */
-    void onAwsUpdateClient(JSONObject jsonState) {
+    void onAwsUpdateClient(JSONObject jsonState, long timestamp) {
         //ALog.getInstance().d(TAG, "<onAwsUpdateClient> jsonState=" + jsonState.toString());
 
         // 先通过调度器进行过滤处理
         boolean filterEvent = false;
         if (mScheduler != null) {
-            filterEvent = mScheduler.filterAwsEvent(jsonState);
+            filterEvent = mScheduler.filterAwsEvent(jsonState, timestamp);
         }
 
         if ((mWorkHandler != null) && (!filterEvent)) {

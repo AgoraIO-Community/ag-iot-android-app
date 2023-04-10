@@ -211,9 +211,10 @@ public class AWSUtils {
                     //通知收到APP端控制事件
                     if (things_name.equals(mUserInventThingName)) {
                         long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
                         if (versionNumber > mLastRtcUpdateVerNumber) {
                             mLastRtcUpdateVerNumber = versionNumber;
-                            awsListener.onUpdateRtcStatus(desiredObject);
+                            awsListener.onUpdateRtcStatus(desiredObject, timestamp);
                         } else {
                             ALog.getInstance().e(TAG, "<handleMessage> old update version number"
                                     + ", versionNumber=" + versionNumber
@@ -233,9 +234,10 @@ public class AWSUtils {
                     //通知收到APP端控制事件
                     if (things_name.equals(mUserInventThingName)) {
                         long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
                         if (versionNumber > mLastRtcGetVerNumber) {
                             mLastRtcGetVerNumber = versionNumber;
-                            awsListener.onUpdateRtcStatus(desiredObject);
+                            awsListener.onUpdateRtcStatus(desiredObject, timestamp);
                         } else {
                             ALog.getInstance().e(TAG, "<handleMessage> old get version number"
                                     + ", versionNumber=" + versionNumber
@@ -507,7 +509,7 @@ public class AWSUtils {
         void onConnectStatusChange(String status);                      //连接状态改变事件
         void onConnectFail(String message);                             //连接失败
         void onReceiveShadow(String things_name, JSONObject jsonObject);//设备状态更新事件
-        void onUpdateRtcStatus(JSONObject jsonObject);                     //APP状态控制事件
+        void onUpdateRtcStatus(JSONObject jsonObject, long timestamp);  //APP状态控制事件
         void onDevOnlineChanged(String deviceMac, String deviceId, boolean online);  // 设备上下线事件
         void onDevActionUpdated(String deviceMac, String actionType);    // 绑定设备列表刷新
 

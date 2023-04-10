@@ -69,6 +69,7 @@ public class CallkitScheduler {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitScheduler";
     private static final int EXIT_WAIT_TIMEOUT = 3000;
+    private static final int TIME_RANGE = 5000;     ///< 时间戳过滤的容错时间段 5秒
 
     private static long mCmd_Sequence = 1;          ///< 进行操作命令的累加
 
@@ -94,6 +95,7 @@ public class CallkitScheduler {
 
     private ActiveTalkInfo mActiveTalkInfo = new ActiveTalkInfo();
     private CallkitContext mLastCallCtx;    ///< 最后一次呼叫的信息
+    private long mLastValidTimestamp = 0;   ///< 最后有效的时间戳
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -149,13 +151,24 @@ public class CallkitScheduler {
 
     /**
      * @brief 对AWS事件数据包进行过滤
+     * @param jsonState : AWS事件数据包
+     * @param timestamp : 事件数据包的时间戳
      * @return 如果该数据包要丢弃，则返回true； 否则返回false
      */
-    public boolean filterAwsEvent(JSONObject jsonState) {
+    public boolean filterAwsEvent(JSONObject jsonState, long timestamp) {
         if (!jsonState.has("callStatus")) {
             ALog.getInstance().e(TAG, "<filterAwsEvent> no field: callStatus");
             return false;
         }
+
+        long validTimestamp = getLastValidTimestamp();  // 获取AWS有效开始时间
+        if ((timestamp+TIME_RANGE) < validTimestamp) {  // 5秒的容错时间
+            ALog.getInstance().w(TAG, "<filterAwsEvent> drop old AWS event"
+                        + ",validTimestamp=" + validTimestamp
+                        + ", awsTimestamp=" + timestamp );
+            return true;
+        }
+
 
         String sessionId = parseJsonStringValue(jsonState,"sessionId", null);
         if (TextUtils.isEmpty(sessionId)) {  // AWS事件包中没有 sessionId 字段，则不过滤
@@ -171,7 +184,7 @@ public class CallkitScheduler {
             return false;
         }
 
-        ALog.getInstance().d(TAG, "<filterAwsEvent> drop AWS event, jsonState=" + jsonState.toString() );
+        ALog.getInstance().w(TAG, "<filterAwsEvent> drop AWS event, jsonState=" + jsonState.toString() );
         return true;
     }
 
@@ -185,6 +198,8 @@ public class CallkitScheduler {
             return ErrCode.XERR_BAD_STATE;
         }
 
+        long validTimestamp = System.currentTimeMillis() / 1000;  // 设置AWS有效开始时间
+        setLastValidTimestamp(validTimestamp);
 
         // 设置新的 通话Id 为 活动Id
         String cmdTalkId = generateTalkId(false);
@@ -397,6 +412,8 @@ public class CallkitScheduler {
             return;
         }
         ALog.getInstance().d(TAG, "<DoExecuteDial> ==>BEGIN" + cmd.toString());
+        long validTimestamp = System.currentTimeMillis() / 1000;  // 设置AWS有效开始时间
+        setLastValidTimestamp(validTimestamp);
 
         // 执行一次呼叫操作
         AgoraService.CallReqResult callReqResult = AgoraService.getInstance().makeCall(
@@ -486,6 +503,21 @@ public class CallkitScheduler {
     CallkitContext getLastCallCtx() {
         synchronized (mDataLock) {
             return mLastCallCtx;
+        }
+    }
+
+    /**
+     * @brief 设置/获取 最后的有效时间戳
+     */
+    void setLastValidTimestamp(long timestamp) {
+        synchronized (mDataLock) {
+            mLastValidTimestamp = timestamp;
+        }
+    }
+
+    long getLastValidTimestamp() {
+        synchronized (mDataLock) {
+            return mLastValidTimestamp;
         }
     }
 
