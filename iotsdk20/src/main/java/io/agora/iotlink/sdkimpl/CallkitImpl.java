@@ -712,11 +712,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         synchronized (mDataLock) {
             mPeerDevice = iotDevice;
         }
-
-//        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-//        AgoraService.CallReqResult callReqResult = AgoraService.getInstance().makeCall(
-//                accountInfo.mAgoraAccessToken, mAppId,
-//                accountInfo.mInventDeviceName,  iotDevice.mDeviceID, attachMsg);
         processTokenErrCode(callReqResult.mErrCode);  // Token过期统一处理
 
 

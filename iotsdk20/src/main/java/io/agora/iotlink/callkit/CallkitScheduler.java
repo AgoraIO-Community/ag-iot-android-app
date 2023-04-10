@@ -405,12 +405,9 @@ public class CallkitScheduler {
         if (callReqResult.mErrCode == ErrCode.XERR_CALLKIT_LOCAL_BUSY) { // 本地端忙
             // 直接使用重置接口进行重置操作
             ALog.getInstance().e(TAG, "<DoExecuteDial> local_busy, reset account");
-            CallkitContext lastCallCtx = getLastCallCtx();
-            if (lastCallCtx != null) {
-                AgoraService.getInstance().accountReset(accountInfo.mAgoraAccessToken, cmd.mAppId,
+            AgoraService.getInstance().accountReset(accountInfo.mAgoraAccessToken, cmd.mAppId,
                         accountInfo.mInventDeviceName);
-            }
-            ThreadSleep(100);   // 延迟100ms后再重新呼叫请求
+            ThreadSleep(100);   // 延迟100ms
 
             // 然后重新执行一次呼叫操作
             callReqResult = AgoraService.getInstance().makeCall(
