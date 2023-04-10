@@ -879,7 +879,9 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                 ALog.getInstance().d(TAG, "<DoAwsEventProcess> peer hangup");
                 IotDevice callbackDev = mPeerDevice;
                 talkingStop();  // 停止通话，恢复状态机空闲，清除呼叫和对端信息
-                CallbackPeerHangup(callbackDev);    // 回调对端挂断
+                if (getStateMachine() != CALLKIT_STATE_IDLE){
+                    CallbackPeerHangup(callbackDev);    // 回调对端挂断
+                }
 
             } break;
 
@@ -887,7 +889,9 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                 ALog.getInstance().d(TAG, "<DoAwsEventProcess> call timeout during dialing");
                 IotDevice callbackDev = mPeerDevice;
                 talkingStop();  // 停止通话，恢复状态机空闲，清除呼叫和对端信息
-                CallbackPeerTimeout(callbackDev);   // 回调对端超时
+                if (getStateMachine() != CALLKIT_STATE_IDLE){
+                    CallbackPeerTimeout(callbackDev);   // 回调对端超时
+                }
             } break;
         }
     }

@@ -207,6 +207,9 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerHangup(IotDevice iotDevice) {
+        if (iotDevice == null) {
+            return;
+        }
         Log.d(TAG, "<onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
