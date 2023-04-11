@@ -347,6 +347,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         ALog.getInstance().d(TAG, "<callDial> ==> BEGIN, attachMsg=" + attachMsg);
         setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
 
+        synchronized (mDataLock) {
+            mPeerDevice = iotDevice;
+        }
+
         // 在调度器中执行 呼叫HTTP请求
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
         mScheduler.dial(accountInfo.mAgoraAccessToken, mAppId,
@@ -709,9 +713,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         String attachMsg = (String)(callParams[1]);
         AgoraService.CallReqResult callReqResult = (AgoraService.CallReqResult)(callParams[2]);
 
-        synchronized (mDataLock) {
-            mPeerDevice = iotDevice;
-        }
         processTokenErrCode(callReqResult.mErrCode);  // Token过期统一处理
 
 
@@ -763,7 +764,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
-            mPeerDevice = null;
             mOnlineUserCount = 0;
         }
 
@@ -1117,7 +1117,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
-            mPeerDevice = null;
             mOnlineUserCount = 0;
             mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
         }
@@ -1169,7 +1168,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
             mStateMachine = CALLKIT_STATE_IDLE;
             mCallkitCtx = null;
-            mPeerDevice = null;
             mOnlineUserCount = 0;
         }
 
