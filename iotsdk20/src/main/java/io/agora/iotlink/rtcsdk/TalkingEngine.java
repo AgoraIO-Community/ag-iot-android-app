@@ -1156,8 +1156,8 @@ public class TalkingEngine implements AGEventHandler,
             int scaleHeight = (int)(frameHeight / scaleRate);
             scaledBuffer = videoBuffer.cropAndScale(0, 0, frameWidth, frameHeight, scaledWidth, scaleHeight);
             i420Buffer = scaledBuffer.toI420();
-            ALog.getInstance().d(TAG, "<cacheInVideoFrame> scale frame, frameWidth=" + frameWidth
-                        + ", frameHeight=" + frameHeight + ", scaledWidth=" + scaledWidth + ", scaleHeight=" + scaleHeight);
+//            ALog.getInstance().d(TAG, "<cacheInVideoFrame> scale frame, frameWidth=" + frameWidth
+//                        + ", frameHeight=" + frameHeight + ", scaledWidth=" + scaledWidth + ", scaleHeight=" + scaleHeight);
         } else {
             i420Buffer = videoBuffer.toI420();
         }
