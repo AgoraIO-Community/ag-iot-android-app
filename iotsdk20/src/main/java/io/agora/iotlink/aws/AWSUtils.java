@@ -79,7 +79,7 @@ public class AWSUtils {
                 @Override
                 public void onStatusChanged(final AWSIotMqttClientStatus status,
                                             final Throwable throwable) {
-                    Log.d(TAG, "Status = " + String.valueOf(status));
+                    ALog.getInstance().d(TAG, "Status = " + String.valueOf(status));
                     //连接成功订阅所需topic
                     if (String.valueOf(status).equals("Connected")) {
                         subscribe(mClientId, mUserInventThingName);
@@ -149,7 +149,7 @@ public class AWSUtils {
                 new AWSIotMqttSubscriptionStatusCallback() {
                     @Override
                     public void onSuccess() {
-                        Log.d(TAG, "Subscribe Shadow Success,topic=" + topic);
+                        ALog.getInstance().d(TAG, "Subscribe Shadow Success,topic=" + topic);
                         mTopicSum -= 1;
                         setMqttState(STATE_CONNECTED);
                         if (mTopicSum == 0) {
@@ -178,7 +178,7 @@ public class AWSUtils {
     /* 解析MQTT消息 */
     private void handleMessage(String topic, String payload) {
         try {
-            Log.d(TAG, "<handleMessage> " + topic + " payload=" + payload);
+            ALog.getInstance().d(TAG, "<handleMessage> " + topic + " payload=" + payload);
             JSONObject jsonMessage = new JSONObject(payload);
             if (topic.contains("/shadow/get/accepted")) {
                 //只关注设备端上报的当前状态
