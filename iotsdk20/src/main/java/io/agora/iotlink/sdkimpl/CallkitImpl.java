@@ -62,7 +62,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
     //
     private static final int MSGID_CALL_BASE = 0x3000;
     private static final int MSGID_CALL_PROCESS_AWSEVENT = 0x3001;  ///< 处理AWS端的事件
-    private static final int MSGID_CALL_REQ_DIAL = 0x3002;          ///< 发送拨号请求
+    private static final int MSGID_CALL_RESP_DIAL = 0x3002;          ///< 发送拨号请求
     private static final int MSGID_CALL_REQ_ANSWER = 0x3003;        ///< 发送应答请求
     private static final int MSGID_CALL_REQ_HANGUP = 0x3004;        ///< 发送挂断请求
     private static final int MSGID_CALL_RTC_PEER_ONLINE = 0x3005;   ///< 对端RTC上线
@@ -220,8 +220,8 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                 DoAwsEventProcess(msg);
                 break;
 
-            case MSGID_CALL_REQ_DIAL:
-                DoRequestDial(msg);
+            case MSGID_CALL_RESP_DIAL:
+                DoResponseDial(msg);
                 break;
 
             case MSGID_CALL_REQ_ANSWER:
@@ -263,7 +263,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
     void workThreadClearMessage() {
         if (mWorkHandler != null) {
             mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
-            mWorkHandler.removeMessages(MSGID_CALL_REQ_DIAL);
+            mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_HANGUP);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
@@ -362,7 +362,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
                         if (getStateMachine() == CALLKIT_STATE_DIAL_REQING) { // 当前还在呼叫请求中
                             Object callParams = new Object[]{iotDevice, attachMsg, callReqResult};
-                            sendMessage(MSGID_CALL_REQ_DIAL, 0, 0, callParams);
+                            sendMessage(MSGID_CALL_RESP_DIAL, 0, 0, callParams);
                         }
                     }
                 });
@@ -414,7 +414,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         if (mWorkHandler != null) {  // 移除所有中间的消息
             mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
-            mWorkHandler.removeMessages(MSGID_CALL_REQ_DIAL);
+            mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
@@ -702,12 +702,22 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
     /*
      * @brief 工作线程中运行，发送HTTP呼叫请求
      */
-    void DoRequestDial(Message msg) {
-        if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
-            ALog.getInstance().e(TAG, "<DoRequestDial> failure, bad status, state=" + getStateMachine());
+    void DoResponseDial(Message msg) {
+        int currState = getStateMachine();
+        if (currState == CALLKIT_STATE_DIALING) {  // AWS事件 Idle-->Dial已经过来了
+            ALog.getInstance().e(TAG, "<DoResponseDial> state already in dialing");
             return;
         }
-        ALog.getInstance().d(TAG, "<DoRequestDial> Enter");
+        if ((currState == CALLKIT_STATE_TALKING) && (mTalkEngine != null)) {  // AWS事件 Dial-->Talking已经过来了
+            ALog.getInstance().e(TAG, "<DoResponseDial> state already in talking");
+            return;
+        }
+
+        if (currState != CALLKIT_STATE_DIAL_REQING) {
+            ALog.getInstance().e(TAG, "<DoResponseDial> failure, bad status, state=" + getStateMachine());
+            return;
+        }
+        ALog.getInstance().d(TAG, "<DoResponseDial> Enter");
         Object[] callParams = (Object[]) (msg.obj);
         IotDevice iotDevice = (IotDevice)(callParams[0]);
         String attachMsg = (String)(callParams[1]);
@@ -717,14 +727,14 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
-            ALog.getInstance().d(TAG, "<DoRequestDial> Exit with failure, errCode=" + callReqResult.mErrCode);
+            ALog.getInstance().d(TAG, "<DoResponseDial> Exit with failure, errCode=" + callReqResult.mErrCode);
             exceptionProcess(null);
             CallbackCallDialDone(callReqResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
         }
 
         if (getStateMachine() != CALLKIT_STATE_DIAL_REQING) {
-            ALog.getInstance().e(TAG, "<DoRequestDial> Exit with failure, bad status 2, state=" + getStateMachine());
+            ALog.getInstance().e(TAG, "<DoResponseDial> Exit with failure, bad status 2, state=" + getStateMachine());
             return;
         }
 
@@ -747,7 +757,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         CallbackCallDialDone(ErrCode.XOK, mPeerDevice); // 回调主叫拨号成功
 
-        ALog.getInstance().d(TAG, "<DoRequestDial> Exit, mCallkitCtx=" + mCallkitCtx.toString());
+        ALog.getInstance().d(TAG, "<DoResponseDial> Exit, mCallkitCtx=" + mCallkitCtx.toString());
     }
 
     /*
@@ -955,6 +965,44 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         CallbackPeerIncoming(mPeerDevice, mCallkitCtx.attachMsg); // 回调对端来电
     }
 
+    /*
+     * @brief 工作线程中运行，处理AWS要求切换到呼叫状态事件
+     */
+    void DoAwsEventToDial(int reason, JSONObject jsonState) {
+        int stateMachine = getStateMachine();
+        ALog.getInstance().w(TAG, "<DoAwsEventToDial> "
+                + ", currState=" + getStateMachineTip(stateMachine)
+                + ", reason=" + getReasonTip(reason));
+
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToDial> hangup ongoing, do nothing");
+            return;
+        }
+
+
+        if ((reason == REASON_NONE) && (stateMachine == CALLKIT_STATE_DIAL_REQING)) {
+            // 特殊情况: 呼叫后 HTTP回应数据还没过来，但是 AWS的 Idle-->Done事件过来了
+            ALog.getInstance().d(TAG, "<DoAwsEventToDial> [DIAL_REQING] Enter");
+
+            // 更新上呼叫上下文数据
+            updateCallContext(jsonState);
+
+            // 进入频道，准备主叫通话
+            CallkitContext newCallkitCtx;
+            synchronized (mDataLock) {
+                newCallkitCtx = mCallkitCtx;
+            }
+            talkingPrepare(newCallkitCtx.channelName, newCallkitCtx.rtcToken,
+                    mCallkitCtx.mLocalUid,  mCallkitCtx.mPeerUid);
+
+            // 切换到 正在呼叫中
+            setStateMachine(CALLKIT_STATE_DIALING);
+
+            CallbackCallDialDone(ErrCode.XOK, mPeerDevice); // 回调主叫拨号成功
+
+            ALog.getInstance().d(TAG, "<DoAwsEventToDial> [DIAL_REQING] Exit, mCallkitCtx=" + mCallkitCtx.toString());
+        }
+    }
 
     /*
      * @brief 工作线程中运行，处理AWS要求切换到通话状态事件
@@ -972,7 +1020,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         if ((reason == REASON_PEER_ANSWER) && (stateMachine == CALLKIT_STATE_DIALING)) {
             // 主叫时对端接听
-            ALog.getInstance().d(TAG, "<DoAwsEventToTalking> enter talk during from dialing");
+            ALog.getInstance().w(TAG, "<DoAwsEventToTalking> enter talk during from dialing");
             talkingStart(); // 在频道内推送音频流，开始通话
             CallbackPeerAnswer(ErrCode.XOK, mPeerDevice); // 回调对端接听，进入通话状态
 
@@ -1041,6 +1089,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
             case CALLKIT_STATE_INCOMING: {  // 要求APP端切换到被叫状态
                 DoAwsEventToIncoming(reason, jsonState);
+            } break;
+
+            case CALLKIT_STATE_DIALING: {  // 要求APP端切换到被叫状态
+                DoAwsEventToDial(reason, jsonState);
             } break;
 
             case CALLKIT_STATE_TALKING: {  // 要求APP端切换到通话状态
