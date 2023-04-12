@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -171,7 +172,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", appid + "-" + channelName);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -247,7 +248,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", appid + "-" + identityId);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
             JSONObject payload = new JSONObject();
@@ -386,7 +387,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", sessionId + "-" + callerId + "-" + calleeId);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
             JSONObject payload = new JSONObject();
@@ -456,7 +457,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", sessionId + "-" + callerId + "-" + calleeId);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
             JSONObject payload = new JSONObject();
@@ -498,7 +499,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "1" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -577,7 +578,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "3" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -639,7 +640,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "6" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -711,7 +712,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "7" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -870,7 +871,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1047,7 +1048,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1161,7 +1162,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1272,7 +1273,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1378,7 +1379,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "6" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1445,7 +1446,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "7" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1551,7 +1552,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -1708,7 +1709,7 @@ public class AgoraService {
         try {
             // header
             JSONObject header = new JSONObject();
-            header.put("traceId", account + "-" + "8" );
+            header.put("traceId", UUID.randomUUID().toString() );
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -2017,7 +2018,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", appid + "-" + identityId);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -2075,7 +2076,7 @@ public class AgoraService {
         // body内容
         JSONObject header = new JSONObject();
         try {
-            header.put("traceId", token + "-" + userId + "-" + publicKey);
+            header.put("traceId", UUID.randomUUID().toString());
             header.put("timestamp", System.currentTimeMillis());
             body.put("header", header);
 
@@ -2150,7 +2151,7 @@ public class AgoraService {
         // body内容
         try {
             JSONObject headerObj = new JSONObject();
-            headerObj.put("traceId", appId + "-" + controllerId);
+            headerObj.put("traceId", UUID.randomUUID().toString());
             headerObj.put("timestamp", System.currentTimeMillis());
             body.put("header", headerObj);
 
