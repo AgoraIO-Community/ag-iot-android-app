@@ -272,7 +272,13 @@ public class AgoraService {
             return callReqResult;
         }
         ALog.getInstance().d(TAG, "<makeCall> responseObj=" + responseObj.toString());
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<makeCall> errCode invalid token");
+            callReqResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return callReqResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<makeCall> failure, mErrorCode=" + responseObj.mErrorCode);
             callReqResult.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
             return callReqResult;
@@ -401,7 +407,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<makeAnswer> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<makeAnswer> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<makeAnswer> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_CALLKIT_ANSWER;
         }
@@ -515,7 +525,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<alarmInsert> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<alarmInsert> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<alarmInsert> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_ALARM_ADD;
         }
@@ -585,7 +599,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<alarmDelete> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<alarmDelete> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<alarmDelete> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_ALARM_DEL;
         }
@@ -643,7 +661,10 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<alarmMarkRead> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<alarmMarkRead> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<alarmMarkRead> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_ALARM_MARK;
         }
@@ -710,7 +731,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<getAlarmInfoById> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<getAlarmInfoById> failure, mErrorCode=" + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_ALARM_GETINFO;
             return queryResult;
@@ -898,7 +924,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryAlarmByPage> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmByPage> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_ALARM_PAGEQUERY;
@@ -1059,7 +1090,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryAlarmNumber> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmNumber> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_ALARM_NUMBER;
@@ -1146,7 +1182,12 @@ public class AgoraService {
             result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return result;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryAlarmImageInfo> errCode invalid token");
+            result.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return result;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmImageInfo> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
@@ -1256,7 +1297,12 @@ public class AgoraService {
             result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return result;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> errCode invalid token");
+            result.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return result;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryAlarmRecordInfo> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             result.mErrCode = ErrCode.XERR_ALARM_NUMBER;
@@ -1354,7 +1400,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<devMsgMarkRead> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<devMsgMarkRead> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<devMsgMarkRead> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_DEVMSG_MARK;
         }
@@ -1415,7 +1465,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryDevMsgInfoById> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryDevMsgInfoById> failure, mErrorCode=" + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_DEVMSG_GETINFO;
             return queryResult;
@@ -1555,7 +1610,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryDevMsgByPage> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryDevMsgByPage> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_DEVMSG_PAGEQUERY;
@@ -1696,7 +1756,12 @@ public class AgoraService {
             queryResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return queryResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<queryDevMsgNumber> errCode invalid token");
+            queryResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return queryResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<queryDevMsgNumber> [EXIT] failure, mErrorCode="
                     + responseObj.mErrorCode);
             queryResult.mErrCode = ErrCode.XERR_DEVMSG_NUMBER;
@@ -1765,16 +1830,21 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<accountRegister> [EXIT] failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<accountRegister> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<accountRegister> [EXIT] failure, mErrorCode="
+                    + responseObj.mErrorCode);
+            return ErrCode.XERR_HTTP_RESP_DATA;
+        }
         if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<accountRegister> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
             return ErrCode.XERR_HTTP_RESP_CODE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<accountRegister> [EXIT] failure, mErrorCode="
-                    + responseObj.mErrorCode);
-            return ErrCode.XERR_HTTP_RESP_DATA;
-        }
+
 
         ALog.getInstance().d(TAG, "<accountRegister> [EXIT] successful");
         return ErrCode.XOK;
@@ -1966,7 +2036,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<accountReset> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<accountReset> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<accountReset> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_CALLKIT_ANSWER;
         }
@@ -2021,7 +2095,11 @@ public class AgoraService {
             ALog.getInstance().e(TAG, "<setPublicKey> failure with no response!");
             return ErrCode.XERR_HTTP_NO_RESPONSE;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<setPublicKey> errCode invalid token");
+            return ErrCode.XERR_TOKEN_INVALID;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<setPublicKey> failure, mErrorCode=" + responseObj.mErrorCode);
             return ErrCode.XERR_CALLKIT_ANSWER;
         }
@@ -2094,7 +2172,12 @@ public class AgoraService {
             result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return result;
         }
-        if (responseObj.mRespCode != ErrCode.XOK) {
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<reqRtmAccount> errCode invalid token");
+            result.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return result;
+
+        } else if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<reqRtmAccount> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
             result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
@@ -2188,18 +2271,25 @@ public class AgoraService {
             uploadResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
             return uploadResult;
         }
+        if (responseObj.mErrorCode == ErrCode.XERR_TOKEN_INVALID) {
+            ALog.getInstance().e(TAG, "<uploadImage> errCode invalid token");
+            uploadResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return uploadResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<uploadImage> [EXIT] failure, mErrorCode="
+                    + responseObj.mErrorCode);
+            uploadResult.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
+            return uploadResult;
+        }
+
         if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<uploadImage> [EXIT] failure, mRespCode="
                     + responseObj.mRespCode);
             uploadResult.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
             return uploadResult;
         }
-        if (responseObj.mErrorCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<uploadImage> [EXIT] failure, mErrorCode="
-                    + responseObj.mErrorCode);
-            uploadResult.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
-            return uploadResult;
-        }
+
 
         // 解析上传请求返回结果
         try {
@@ -2300,7 +2390,13 @@ public class AgoraService {
                     return responseObj;
             }
             responseObj.mRespCode = connection.getResponseCode();
-            if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
+            if (responseObj.mRespCode == HttpURLConnection.HTTP_UNAUTHORIZED) {  // token过期特殊处理
+                responseObj.mErrorCode = RESP_CODE_INVALID_TOKEN;
+                ALog.getInstance().e(TAG, "<requestToServer> HTTP_UNAUTHORIZED"
+                        + ", errMessage=" + connection.getResponseMessage());
+                return responseObj;
+
+            } else if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
                 responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;
                 ALog.getInstance().e(TAG, "<requestToServer> Error response code="
                         + responseObj.mRespCode + ", errMessage=" + connection.getResponseMessage());
