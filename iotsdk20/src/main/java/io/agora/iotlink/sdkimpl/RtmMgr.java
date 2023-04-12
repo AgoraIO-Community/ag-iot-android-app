@@ -130,6 +130,12 @@ public class RtmMgr implements IRtmMgr {
         }
     }
 
+    void setStateMachine(int newStateMachine) {
+        synchronized (mDataLock) {
+            mStateMachine = newStateMachine;
+        }
+    }
+
     @Override
     public int registerListener(IRtmMgr.ICallback callback) {
         synchronized (mCallbackList) {
@@ -154,11 +160,20 @@ public class RtmMgr implements IRtmMgr {
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_BAD_STATE;
         }
-        synchronized (mDataLock) {
-            mStateMachine = RTMMGR_STATE_CONNECTING;
+        int state = getStateMachine();
+        if ((state != RTMMGR_STATE_CONNECTING) && (state != RTMMGR_STATE_ABORTED)) {
+            ALog.getInstance().e(TAG, "<connect> connected or connecting, state=" + state);
+            return ErrCode.XERR_RTMMGR_ALREADY_CONNECTED;
         }
+
+        if (mRtmClient != null) {
+            mRtmClient.release();
+            mRtmClient = null;
+        }
+
         mPeerDevice = iotDevice;
         mEntryHandler= new Handler(Looper.myLooper());
+        setStateMachine(RTMMGR_STATE_CONNECTING);  // 设置状态机：正在连接
         sendTaskMessage(MSGID_RTMMGR_REQTOKEN, 0, 0, iotDevice);
         ALog.getInstance().d(TAG, "<connect> finished");
         return ErrCode.XOK;
@@ -166,10 +181,10 @@ public class RtmMgr implements IRtmMgr {
 
     @Override
     public int disconnect() {
+        ALog.getInstance().d(TAG, "<disconnect> ==>Enter");
         rtmEngDestroy();
-        synchronized (mDataLock) {
-            mStateMachine = RTMMGR_STATE_DISCONNECTED;
-        }
+        setStateMachine(RTMMGR_STATE_DISCONNECTED);   // 设置状态机：已经断开
+        ALog.getInstance().d(TAG, "<disconnect> finished");
         return ErrCode.XOK;
     }
 
@@ -222,9 +237,7 @@ public class RtmMgr implements IRtmMgr {
                 accountInfo.mAgoraAccessToken, mSdkInitParam.mRtcAppId, controllerId, controlledId);
         if (rtmAccountInfo.mErrCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<DoRequestToken> fail to request token");
-            synchronized (mDataLock) {
-                mStateMachine = RTMMGR_STATE_DISCONNECTED;
-            }
+            setStateMachine(RTMMGR_STATE_DISCONNECTED);  // 设置状态机：断开
             synchronized (mCallbackList) {
                 for (IRtmMgr.ICallback listener : mCallbackList) {
                     listener.onConnectDone(rtmAccountInfo.mErrCode, iotDevice);
@@ -258,9 +271,8 @@ public class RtmMgr implements IRtmMgr {
         IotDevice iotDevice = (IotDevice)msg.obj;
         ALog.getInstance().e(TAG, "<DoConnectDone> errCode=" + errCode);
 
-        synchronized (mDataLock) {
-            mStateMachine = (errCode == ErrCode.XOK) ? RTMMGR_STATE_CONNECTED : RTMMGR_STATE_DISCONNECTED;
-        }
+        int state = (errCode == ErrCode.XOK) ? RTMMGR_STATE_CONNECTED : RTMMGR_STATE_DISCONNECTED;
+        setStateMachine(state);  // 根据连接是否成功 来设置状态机
 
         synchronized (mCallbackList) {
             for (IRtmMgr.ICallback listener : mCallbackList) {
@@ -341,9 +353,7 @@ public class RtmMgr implements IRtmMgr {
             @Override
             public void onSuccess(Void responseInfo) {
                 ALog.getInstance().d(TAG, "<rtmEngCreate.login.onSuccess> success");
-                synchronized (mDataLock) {
-                    mStateMachine = RTMMGR_STATE_CONNECTED;
-                }
+                setStateMachine(RTMMGR_STATE_CONNECTED); // 设置状态机：连接成功
                 synchronized (mCallbackList) {
                     for (IRtmMgr.ICallback listener : mCallbackList) {
                         listener.onConnectDone(ErrCode.XOK, mPeerDevice);
@@ -356,9 +366,18 @@ public class RtmMgr implements IRtmMgr {
                 ALog.getInstance().i(TAG, "<rtmEngCreate.login.onFailure> failure"
                         + ", errInfo=" + errorInfo.getErrorCode()
                         + ", errDesc=" + errorInfo.getErrorDescription());
-                synchronized (mDataLock) {
-                    mStateMachine = RTMMGR_STATE_DISCONNECTED;
-                }
+
+                setStateMachine(RTMMGR_STATE_DISCONNECTED); // 设置状态机：断开
+                mEntryHandler.post(new Runnable() {  // 释放RTM实例对象
+                    @Override
+                    public void run() {
+                        if (mRtmClient != null) {
+                            mRtmClient.release();
+                            mRtmClient = null;
+                        }
+                    }
+                });
+
                 int errCode = mapErrCode(errorInfo.getErrorCode());
                 synchronized (mCallbackList) {
                     for (IRtmMgr.ICallback listener : mCallbackList) {
@@ -384,6 +403,8 @@ public class RtmMgr implements IRtmMgr {
             ALog.getInstance().d(TAG, "<rtmEngDestroy> done");
         }
     }
+
+
 
 
 
