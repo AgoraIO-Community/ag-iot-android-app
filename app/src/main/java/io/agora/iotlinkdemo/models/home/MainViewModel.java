@@ -114,7 +114,9 @@ public class MainViewModel extends BaseViewModel implements ICallkitMgr.ICallbac
 
     @Override
     public void onMqttStateChanged(int mqttState) {
-        Log.d(TAG, "<onMqttStateChanged> mqttState=" + mqttState);
+        boolean bMqttReady = AIotAppSdkFactory.getInstance().isAwsMqttReady();
+        Log.d(TAG, "<onMqttStateChanged> mqttState=" + mqttState
+                + ", bMqttReady=" + bMqttReady);
     }
 
     @Override
