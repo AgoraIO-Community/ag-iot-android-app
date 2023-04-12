@@ -77,7 +77,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     private ThreadPoolExecutor mThreadPool; ///< 设备消息和告警消息的工作线程池，支持并发执行
 
     private volatile int mStateMachine = AgoraIotAppSdk.SDK_STATE_INVALID;     ///< 当前呼叫状态机
-
+    private volatile int mMqttState = IAccountMgr.MQTT_STATE_DISCONNECTED;
 
     ///////////////////////////////////////////////////////////////////////
     //////////////// Override Methods of IAgoraIotAppSdk //////////////////
@@ -141,6 +141,8 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             @Override
             public void onConnectStatusChange(String status) {
                 ALog.getInstance().d(TAG, "<onConnectStatusChange> status=" + status);
+
+                onAwsConnectStatusChange(status);
 
                 // 账号管理系统会做 登录和登出处理
                 mAccountMgr.onAwsConnectStatusChange(status);
@@ -326,6 +328,16 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         return mRtcPlayer;
     }
 
+    @Override
+    public boolean isAwsMqttReady() {
+        synchronized (mDataLock) {
+            if (mMqttState == IAccountMgr.MQTT_STATE_CONNECTED) {
+                return true;
+            }
+            return false;
+        }
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////// Methods for each sub-module ///////////////////////
@@ -372,6 +384,29 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         return true;
     }
 
+    void onAwsConnectStatusChange(String status) {
+
+        if (status.compareToIgnoreCase("Connecting") == 0) {
+            synchronized (mDataLock) {
+                mMqttState = IAccountMgr.MQTT_STATE_CONNECTING;
+            };
+
+        } else if (status.compareToIgnoreCase("Connected") == 0) {
+            synchronized (mDataLock) {
+                mMqttState = IAccountMgr.MQTT_STATE_CONNECTED;
+            };
+
+        } else if (status.compareToIgnoreCase("Subscribed") == 0) {
+            synchronized (mDataLock) {
+                mMqttState = IAccountMgr.MQTT_STATE_CONNECTED;
+            };
+
+        } else if (status.compareToIgnoreCase("ConnectionLost") == 0) {
+            synchronized (mDataLock) {
+                mMqttState = IAccountMgr.MQTT_STATE_DISCONNECTED;
+            };
+        }
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////// Innternal Utility Methods ////////////////////////
