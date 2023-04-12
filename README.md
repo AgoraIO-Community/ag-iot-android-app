@@ -22,14 +22,14 @@ Software architecture description
 
 #### 编译调试
 
-1. 安装最新版本的 Android Studio开发工具，尽量使用 Chipmunk版本
+1. 安装最新版本的 Android Studio 开发工具，尽量使用 Chipmunk 版本
 
 2. 在'灵隼'官网平台申请相应的开发者账号，获取相关信息
-   https://docs-preprod.agora.io/cn/iot-apaas/landing-page
+   https://docs.agora.io/cn/iot-apaas/landing-page
     
 3. 使用获取到的开发者账号信息，更新 /app/src/main/res/values/config.xml 配置文件
 
-4. 使用Android Studio打开整个项目工程，进行编译和调试
+4. 使用 Android Studio打开整个项目工程，进行编译和调试
 
 
 
