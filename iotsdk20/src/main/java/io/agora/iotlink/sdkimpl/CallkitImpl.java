@@ -825,10 +825,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 切换到 等待接听响应状态
         setStateMachine(CALLKIT_STATE_ANSWER_RSPING);
-
-        // 启动AWS Event超时定时器
-        sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_ANSWER, 0, null, AWS_EVENT_TIMEOUT);
-
+        
         ALog.getInstance().d(TAG, "<DoRequestAnswer> done");
     }
 
