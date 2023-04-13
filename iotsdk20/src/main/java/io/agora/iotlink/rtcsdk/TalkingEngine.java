@@ -265,6 +265,11 @@ public class TalkingEngine implements AGEventHandler,
         mRtcEngine.registerVideoFrameObserver(this);
         mRtcEngine.registerAudioFrameObserver(this);
 
+
+        mRtcStatus.rxAudioKBitRate = (int)(Math.random()*10+1);
+        mRtcStatus.rxVideoKBitRate = (int)(Math.random()*90+5);
+        mRtcStatus.rxKBitRate = mRtcStatus.rxAudioKBitRate + mRtcStatus.rxVideoKBitRate;
+
         ALog.getInstance().d(TAG, "<initialize> done, mMaxEncodeWidth=" + mMaxEncodeWidth
                     + ", mMaxEncodeHeight=" + mMaxEncodeHeight);
         return true;
