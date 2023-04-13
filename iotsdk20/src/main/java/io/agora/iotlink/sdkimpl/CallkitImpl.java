@@ -1033,6 +1033,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
             // 当前已经在通话状态了，不管什么Reason，不做任何处理
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking> already in talking");
 
+        } else if (stateMachine == CALLKIT_STATE_IDLE) {
+            // 当前已经在空闲状态了，不管什么Reason，不做任何处理
+            ALog.getInstance().e(TAG, "<DoAwsEventToTalking> already in idle");
+
         } else {
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking>  bad state machine, auto hangup");
             exceptionProcess(jsonState);
