@@ -825,7 +825,7 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
 
         // 切换到 等待接听响应状态
         setStateMachine(CALLKIT_STATE_ANSWER_RSPING);
-        
+
         ALog.getInstance().d(TAG, "<DoRequestAnswer> done");
     }
 
@@ -1033,6 +1033,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         } else if (stateMachine == CALLKIT_STATE_IDLE) {
             // 当前已经在空闲状态了，不管什么Reason，不做任何处理
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking> already in idle");
+
+        } else if (stateMachine == CALLKIT_STATE_DIAL_REQING) {
+            // 当前正在呼叫请求中，不应该过来这种AWS事件，或者可能是上一个呼叫的事件
+            ALog.getInstance().e(TAG, "<DoAwsEventToTalking> current dial_reqing, ignore it");
 
         } else {
             ALog.getInstance().e(TAG, "<DoAwsEventToTalking>  bad state machine, auto hangup");

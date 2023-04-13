@@ -237,9 +237,12 @@ public class CallkitScheduler {
         // 从队列中参数最近的呼叫命令
         CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
         if (lastDialCmd != null) {
-            ALog.getInstance().d(TAG, "<hangup> remove dial cmd from queue, cmd=" + lastDialCmd.toString());
+            ALog.getInstance().d(TAG, "<hangup> remove dial cmd from queue"
+                    + ", cmd=" + lastDialCmd.toString()
+                    + ", cmdQueueSize=" + mCmdQueue.size());
             return ErrCode.XOK;
         }
+
 
         CallkitCmd hangupCmd = new CallkitCmd();
         hangupCmd.mType = CallkitCmd.CMD_TYPE_HANGUP;
@@ -251,8 +254,8 @@ public class CallkitScheduler {
 
         ALog.getInstance().d(TAG, "<hangup> inqueue hangup command"
                 + ", hangupCmd=" + hangupCmd.toString()
-                + ", activeTalkInfo=" + mActiveTalkInfo.toString()
-                + ", cmdQueueSize=" + mCmdQueue.size());
+                + ", cmdQueueSize=" + mCmdQueue.size()
+                + ", activeTalkInfo=" + mActiveTalkInfo.toString());
         sendMessage(MSGID_CALLTASK_EXECUTE, 0, 0, null);
         return ErrCode.XOK;
     }
@@ -265,7 +268,9 @@ public class CallkitScheduler {
         // 从队列中参数最近的呼叫命令
         CallkitCmd lastDialCmd = mCmdQueue.removeLastDialCmd();
         if (lastDialCmd != null) {
-            ALog.getInstance().d(TAG, "<hangup2> remove dial cmd from queue, cmd=" + lastDialCmd.toString());
+            ALog.getInstance().d(TAG, "<hangup2> remove dial cmd from queue"
+                    + ", cmd=" + lastDialCmd.toString()
+                    + ", cmdQueueSize=" + mCmdQueue.size());
             return ErrCode.XOK;
         }
 
@@ -375,6 +380,7 @@ public class CallkitScheduler {
             ALog.getInstance().d(TAG, "<DoExecuteCmd> no command in queue!");
             return;
         }
+        ALog.getInstance().d(TAG, "<DoExecuteCmd> after dequeue, cmdQueueSize=" + mCmdQueue.size());
 
         if (cmd.mType == CallkitCmd.CMD_TYPE_DIAL) {
             DoExecuteDial(cmd);
