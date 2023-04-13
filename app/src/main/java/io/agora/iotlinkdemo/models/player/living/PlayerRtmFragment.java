@@ -183,14 +183,16 @@ public class PlayerRtmFragment extends BaseViewBindingFragment<FagmentPlayerRtmB
     void onBtnConnect() {
         int rtmState = mRtmViewModel.getRtmState();
 
-        if (rtmState == IRtmMgr.RTMMGR_STATE_CONNECTED) {
-            mRtmViewModel.disconnect();
-            getBinding().btnRtmConnect.setText("联接");
+        mRtmViewModel.connect2();
 
-        } else if (rtmState == IRtmMgr.RTMMGR_STATE_DISCONNECTED) {
-            mRtmViewModel.connect();
-            getBinding().btnRtmConnect.setText("断开");
-        }
+//        if (rtmState == IRtmMgr.RTMMGR_STATE_CONNECTED) {
+//            mRtmViewModel.disconnect();
+//            getBinding().btnRtmConnect.setText("联接");
+//
+//        } else if (rtmState == IRtmMgr.RTMMGR_STATE_DISCONNECTED) {
+//            mRtmViewModel.connect();
+//            getBinding().btnRtmConnect.setText("断开");
+//        }
     }
 
     /**

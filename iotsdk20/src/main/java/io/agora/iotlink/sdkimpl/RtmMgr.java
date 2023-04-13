@@ -55,9 +55,9 @@ public class RtmMgr implements IRtmMgr {
     // The mesage Id
     //
     private static final int MSGID_RTMMGR_BASE = 0x6000;
-    private static final int MSGID_RTMMGR_REQTOKEN = 0x6001;
+    private static final int MSGID_RTMMGR_CONNECT = 0x6001;
     private static final int MSGID_RTMMGR_CONNECT_DONE = 0x6002;
-
+    private static final int MSGID_RTMMGR_DISCONNECT = 0x6003;
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -71,8 +71,8 @@ public class RtmMgr implements IRtmMgr {
 
     private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
     private RtmClient mRtmClient;                               ///< RTM Client SDK
+    private IotDevice mPeerDevice;
     private SendMessageOptions mSendMsgOptions;                 ///< RTM消息配置
-    private IotDevice mPeerDevice;                              ///< 通信的对端设备
     private volatile int mStateMachine = RTMMGR_STATE_DISCONNECTED;  ///< 当前呼叫状态机
 
     ///////////////////////////////////////////////////////////////////////
@@ -81,7 +81,6 @@ public class RtmMgr implements IRtmMgr {
     int initialize(AgoraIotAppSdk sdkInstance) {
         mSdkInstance = sdkInstance;
         mWorkHandler = sdkInstance.getWorkHandler();
-        //mExecSrv = Executors.newSingleThreadExecutor();
 
         mSdkInitParam = sdkInstance.getInitParam();
         mSendMsgOptions = new SendMessageOptions();
@@ -95,20 +94,25 @@ public class RtmMgr implements IRtmMgr {
 
     void workThreadProcessMessage(Message msg) {
         switch (msg.what) {
-            case MSGID_RTMMGR_REQTOKEN: {
-                DoRequestToken(msg);
+            case MSGID_RTMMGR_CONNECT: {
+                DoTaskConnect(msg);
             } break;
 
             case MSGID_RTMMGR_CONNECT_DONE: {
-                DoConnectDone(msg);
+                DoTaskConnectDone(msg);
+            } break;
+
+            case MSGID_RTMMGR_DISCONNECT: {
+                DoTaskDisconnect(msg);
             } break;
         }
     }
 
     void workThreadClearMessage() {
         if (mWorkHandler != null) {
-            mWorkHandler.removeMessages(MSGID_RTMMGR_REQTOKEN);
+            mWorkHandler.removeMessages(MSGID_RTMMGR_CONNECT);
             mWorkHandler.removeMessages(MSGID_RTMMGR_CONNECT_DONE);
+            mWorkHandler.removeMessages(MSGID_RTMMGR_DISCONNECT);
             mWorkHandler = null;
         }
     }
@@ -161,6 +165,7 @@ public class RtmMgr implements IRtmMgr {
 
     @Override
     public int connect(final IotDevice iotDevice) {
+        long t1 = System.currentTimeMillis();
         if (!mSdkInstance.isAccountReady()) {
             ALog.getInstance().e(TAG, "<connect> bad state, sdkState="
                     + mSdkInstance.getStateMachine());
@@ -172,31 +177,29 @@ public class RtmMgr implements IRtmMgr {
             return ErrCode.XERR_RTMMGR_ALREADY_CONNECTED;
         }
 
-        if (mRtmClient != null) {
-            mRtmClient.release();
-            mRtmClient = null;
-        }
-
-        mPeerDevice = iotDevice;
-        mEntryHandler= new Handler(Looper.myLooper());
         setStateMachine(RTMMGR_STATE_CONNECTING);  // 设置状态机：正在连接
-        sendTaskMessage(MSGID_RTMMGR_REQTOKEN, 0, 0, iotDevice);
-        ALog.getInstance().d(TAG, "<connect> finished");
+        sendTaskMessage(MSGID_RTMMGR_CONNECT, 0, 0, iotDevice);
+
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<connect> finished, costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
     @Override
     public int disconnect() {
-        ALog.getInstance().d(TAG, "<disconnect> ==>Enter");
-        rtmEngDestroy();
+        long t1 = System.currentTimeMillis();
+        if (getStateMachine() != RTMMGR_STATE_DISCONNECTED) {
+            sendTaskMessage(MSGID_RTMMGR_DISCONNECT, 0, 0, null);
+        }
         setStateMachine(RTMMGR_STATE_DISCONNECTED);   // 设置状态机：已经断开
-        ALog.getInstance().d(TAG, "<disconnect> finished");
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<disconnect> finished, costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
     @Override
     public int sendMessage(byte[] messageData, final IRtmMgr.ISendCallback sendCallback) {
-        if (mRtmClient == null) {
+        if (getStateMachine() != RTMMGR_STATE_CONNECTED) {
             ALog.getInstance().e(TAG, "<sendMessage> NOT ready");
             return ErrCode.XERR_BAD_STATE;
         }
@@ -230,7 +233,7 @@ public class RtmMgr implements IRtmMgr {
     /**
      * @brief 在工作线程中执行，请求Token信息
      */
-    void DoRequestToken(Message msg) {
+    void DoTaskConnect(Message msg) {
         IotDevice iotDevice = (IotDevice)msg.obj;
 
         //
@@ -242,8 +245,10 @@ public class RtmMgr implements IRtmMgr {
         AgoraService.RtmAccountInfo rtmAccountInfo = AgoraService.getInstance().reqRtmAccount(
                 accountInfo.mAgoraAccessToken, mSdkInitParam.mRtcAppId, controllerId, controlledId);
         if (rtmAccountInfo.mErrCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<DoRequestToken> fail to request token");
+            ALog.getInstance().e(TAG, "<DoTaskConnect> fail to request token");
             setStateMachine(RTMMGR_STATE_DISCONNECTED);  // 设置状态机：断开
+
+            // 回调连接失败
             synchronized (mCallbackList) {
                 for (IRtmMgr.ICallback listener : mCallbackList) {
                     listener.onConnectDone(rtmAccountInfo.mErrCode, iotDevice);
@@ -255,43 +260,50 @@ public class RtmMgr implements IRtmMgr {
         //
         // 在入口调用线程中，创建RTM联接并且登录
         //
-        mEntryHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                int errCode = rtmEngCreate(rtmAccountInfo.mToken, accountInfo.mInventDeviceName);
-                if (errCode != ErrCode.XOK) {
-                    sendTaskMessage(MSGID_RTMMGR_CONNECT_DONE, errCode, 0, iotDevice);
-                }
-           }
-        });
+        String rtmToken = rtmAccountInfo.mToken;
+        int errCode = rtmEngCreate(rtmToken, accountInfo.mInventDeviceName, iotDevice);
+        if (errCode != ErrCode.XOK) {
+            sendTaskMessage(MSGID_RTMMGR_CONNECT_DONE, errCode, 0, iotDevice);
+        }
 
-        ALog.getInstance().d(TAG, "<DoRequestToken> finished"
-                + ", mUid=" + accountInfo.mInventDeviceName + ", mToken=" + rtmAccountInfo.mToken);
+        ALog.getInstance().d(TAG, "<DoTaskConnect> finished"
+                + ", mUid=" + accountInfo.mInventDeviceName + ", mToken=" + rtmToken);
     }
 
     /**
-     * @brief 在工作线程中执行，联接请求完成
+     * @brief 在工作线程中执行，联接请求完成处理，成功或者失败
      */
-    void DoConnectDone(Message msg) {
+    void DoTaskConnectDone(Message msg) {
         int errCode = msg.arg1;
-        IotDevice iotDevice = (IotDevice)msg.obj;
-        ALog.getInstance().e(TAG, "<DoConnectDone> errCode=" + errCode);
-
         int state = (errCode == ErrCode.XOK) ? RTMMGR_STATE_CONNECTED : RTMMGR_STATE_DISCONNECTED;
         setStateMachine(state);  // 根据连接是否成功 来设置状态机
+        ALog.getInstance().d(TAG, "<DoTaskConnectDone> errCode=" + errCode);
 
         synchronized (mCallbackList) {
             for (IRtmMgr.ICallback listener : mCallbackList) {
-                listener.onConnectDone(errCode, iotDevice);
+                listener.onConnectDone(errCode, mPeerDevice);
             }
         }
+    }
+
+    /**
+     * @brief 在工作线程中执行，执行断开连接处理
+     */
+    void DoTaskDisconnect(Message msg) {
+        long t1 = System.currentTimeMillis();
+        rtmEngDestroy();
+        setStateMachine(RTMMGR_STATE_DISCONNECTED);
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<DoTaskDisconnect> done, costTime=" + (t2-t1));
     }
 
 
     /**
      * @brief 在调用主线程中执行，创建RTM联接并且登录
      */
-    int rtmEngCreate(final String token, final String localUserId) {
+    int rtmEngCreate(final String token, final String localUserId, final IotDevice iotDevice) {
+        long t1 = System.currentTimeMillis();
+        mPeerDevice = iotDevice;
         RtmClientListener rtmListener = new RtmClientListener() {
             @Override
             public void onConnectionStateChanged(int state, int reason) {   //连接状态改变
@@ -300,7 +312,6 @@ public class RtmMgr implements IRtmMgr {
 
                 switch (state) {
                     case CONNECTION_STATE_DISCONNECTED:
-                        setStateMachine(RTMMGR_STATE_DISCONNECTED);
                         break;
 
                     case CONNECTION_STATE_CONNECTING:
@@ -371,6 +382,7 @@ public class RtmMgr implements IRtmMgr {
         } catch (Exception exp) {
             exp.printStackTrace();
             ALog.getInstance().e(TAG, "<rtmLogin> [EXCEPTION] exp=" + exp.toString());
+            sendTaskMessage(MSGID_RTMMGR_CONNECT_DONE, ErrCode.XERR_UNSUPPORTED, 0, iotDevice);
             return ErrCode.XERR_UNSUPPORTED;
         }
 
@@ -378,12 +390,7 @@ public class RtmMgr implements IRtmMgr {
             @Override
             public void onSuccess(Void responseInfo) {
                 ALog.getInstance().d(TAG, "<rtmEngCreate.login.onSuccess> success");
-                setStateMachine(RTMMGR_STATE_CONNECTED); // 设置状态机：连接成功
-                synchronized (mCallbackList) {
-                    for (IRtmMgr.ICallback listener : mCallbackList) {
-                        listener.onConnectDone(ErrCode.XOK, mPeerDevice);
-                    }
-                }
+                sendTaskMessage(MSGID_RTMMGR_CONNECT_DONE, ErrCode.XOK, 0, iotDevice);
             }
 
             @Override
@@ -391,28 +398,13 @@ public class RtmMgr implements IRtmMgr {
                 ALog.getInstance().i(TAG, "<rtmEngCreate.login.onFailure> failure"
                         + ", errInfo=" + errorInfo.getErrorCode()
                         + ", errDesc=" + errorInfo.getErrorDescription());
-
-                setStateMachine(RTMMGR_STATE_DISCONNECTED); // 设置状态机：断开
-                mEntryHandler.post(new Runnable() {  // 释放RTM实例对象
-                    @Override
-                    public void run() {
-                        if (mRtmClient != null) {
-                            mRtmClient.release();
-                            mRtmClient = null;
-                        }
-                    }
-                });
-
                 int errCode = mapErrCode(errorInfo.getErrorCode());
-                synchronized (mCallbackList) {
-                    for (IRtmMgr.ICallback listener : mCallbackList) {
-                        listener.onConnectDone(errCode, mPeerDevice);
-                    }
-                }
+                sendTaskMessage(MSGID_RTMMGR_CONNECT_DONE, errCode, 0, iotDevice);
             }
         });
 
-        ALog.getInstance().d(TAG, "<rtmEngCreate> done");
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<rtmEngCreate> finished, costTime=" + (t2-t1));
         return ErrCode.XOK;
     }
 
@@ -422,7 +414,7 @@ public class RtmMgr implements IRtmMgr {
      */
     void rtmEngDestroy() {
         if (mRtmClient != null) {
-            mRtmClient.logout(null);
+            //mRtmClient.logout(null);
             mRtmClient.release();
             mRtmClient = null;
             ALog.getInstance().d(TAG, "<rtmEngDestroy> done");
