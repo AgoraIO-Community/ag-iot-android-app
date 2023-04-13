@@ -44,6 +44,12 @@ public class RtmMgr implements IRtmMgr {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/RtmMgr";
 
+    private static final int CONNECTION_STATE_DISCONNECTED = 1;
+    private static final int CONNECTION_STATE_CONNECTING = 2;
+    private static final int CONNECTION_STATE_CONNECTED = 3;
+    private static final int CONNECTION_STATE_RECONNECTING = 4;
+    private static final int CONNECTION_STATE_ABORTED = 5;
+
 
     //
     // The mesage Id
@@ -161,7 +167,7 @@ public class RtmMgr implements IRtmMgr {
             return ErrCode.XERR_BAD_STATE;
         }
         int state = getStateMachine();
-        if ((state != RTMMGR_STATE_CONNECTING) && (state != RTMMGR_STATE_ABORTED)) {
+        if ((state == RTMMGR_STATE_CONNECTING) || (state == RTMMGR_STATE_CONNECTED)) {
             ALog.getInstance().e(TAG, "<connect> connected or connecting, state=" + state);
             return ErrCode.XERR_RTMMGR_ALREADY_CONNECTED;
         }
@@ -291,6 +297,25 @@ public class RtmMgr implements IRtmMgr {
             public void onConnectionStateChanged(int state, int reason) {   //连接状态改变
                 ALog.getInstance().d(TAG, "<onConnectionStateChanged> state=" + state
                         + ", reason=" + reason);
+
+                switch (state) {
+                    case CONNECTION_STATE_DISCONNECTED:
+                        setStateMachine(RTMMGR_STATE_DISCONNECTED);
+                        break;
+
+                    case CONNECTION_STATE_CONNECTING:
+                        break;
+
+                    case CONNECTION_STATE_CONNECTED:
+                        break;
+
+                    case CONNECTION_STATE_RECONNECTING:
+                        break;
+
+                    case CONNECTION_STATE_ABORTED:
+                        setStateMachine(RTMMGR_STATE_ABORTED);
+                        break;
+                }
 
                 synchronized (mCallbackList) {
                     for (IRtmMgr.ICallback listener : mCallbackList) {
