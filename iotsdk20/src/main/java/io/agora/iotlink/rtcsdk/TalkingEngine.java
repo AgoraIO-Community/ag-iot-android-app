@@ -164,6 +164,7 @@ public class TalkingEngine implements AGEventHandler,
     private boolean mMuteLocalVideo = true;
     private boolean mMuteLocalAudio = true;
     private final ICallkitMgr.RtcNetworkStatus mRtcStatus = new ICallkitMgr.RtcNetworkStatus();
+    private long mRtcInitTime;
 
     private final Object mVideoDataLock = new Object();
     private byte[] mInVideoYData;           ///< 订阅的视频帧YUV数据
@@ -266,6 +267,7 @@ public class TalkingEngine implements AGEventHandler,
         mRtcEngine.registerAudioFrameObserver(this);
 
 
+        mRtcInitTime = System.currentTimeMillis();
         mRtcStatus.rxAudioKBitRate = (int)(Math.random()*10+1);
         mRtcStatus.rxVideoKBitRate = (int)(Math.random()*90+5);
         mRtcStatus.rxKBitRate = mRtcStatus.rxAudioKBitRate + mRtcStatus.rxVideoKBitRate;
@@ -906,6 +908,13 @@ public class TalkingEngine implements AGEventHandler,
         if (mRtcEngine == null) {
             return;
         }
+
+        if ((System.currentTimeMillis()-mRtcInitTime) < 4000) {
+            if ((stats.rxVideoKBitRate <= 0) || (stats.rxAudioKBitRate <= 0)) {
+                return;
+            }
+        }
+
         synchronized (mRtcStatus) {
             mRtcStatus.totalDuration = stats.totalDuration;
             mRtcStatus.txBytes = stats.txBytes;
