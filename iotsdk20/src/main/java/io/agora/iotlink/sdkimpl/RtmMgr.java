@@ -292,7 +292,6 @@ public class RtmMgr implements IRtmMgr {
     void DoTaskDisconnect(Message msg) {
         long t1 = System.currentTimeMillis();
         rtmEngDestroy();
-        setStateMachine(RTMMGR_STATE_DISCONNECTED);
         long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<DoTaskDisconnect> done, costTime=" + (t2-t1));
     }
