@@ -351,6 +351,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
             mPeerDevice = iotDevice;
         }
 
+        // 启动AWS Event超时定时器
+        sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
+
+
         // 在调度器中执行 呼叫HTTP请求
         AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
         mScheduler.dial(accountInfo.mAgoraAccessToken, mAppId,
@@ -361,6 +365,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                                 + ", mStateMachine=" + getStateMachine());
 
                         if (getStateMachine() == CALLKIT_STATE_DIAL_REQING) { // 当前还在呼叫请求中
+                            if (mWorkHandler != null) {   // 取消 AWS 超时定时器
+                                mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+                            }
+
                             Object callParams = new Object[]{iotDevice, attachMsg, callReqResult};
                             sendMessage(MSGID_CALL_RESP_DIAL, 0, 0, callParams);
                         }
@@ -724,7 +732,9 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         AgoraService.CallReqResult callReqResult = (AgoraService.CallReqResult)(callParams[2]);
 
         processTokenErrCode(callReqResult.mErrCode);  // Token过期统一处理
-
+        if (mWorkHandler != null) {   // 取消 AWS 超时定时器
+            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+        }
 
         if (callReqResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoResponseDial> Exit with failure, errCode=" + callReqResult.mErrCode);
@@ -748,9 +758,6 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                 callReqResult.mCallkitCtx.rtcToken,
                 mCallkitCtx.mLocalUid,
                 mCallkitCtx.mPeerUid);
-
-        // 启动AWS Event超时定时器
-        sendMessageDelay(MSGID_CALL_AWSEVENT_TIMEOUT, HTTP_REQID_DIAL, 0, null, AWS_EVENT_TIMEOUT);
 
         // 切换到 正在呼叫中
         setStateMachine(CALLKIT_STATE_DIALING);
@@ -980,6 +987,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         if ((reason == REASON_NONE) && (stateMachine == CALLKIT_STATE_DIAL_REQING)) {
             // 特殊情况: 呼叫后 HTTP回应数据还没过来，但是 AWS的 Idle-->Done事件过来了
             ALog.getInstance().d(TAG, "<DoAwsEventToDial> [DIAL_REQING] Enter");
+
+            if (mWorkHandler != null) {   // 取消 AWS 超时定时器
+                mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_TIMEOUT);
+            }
 
             // 更新上呼叫上下文数据
             updateCallContext(jsonState);
@@ -1432,6 +1443,13 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> width=" + width
                 + ", height=" + height);
+
+        // TODO: 如果对端首帧回调过来，可以直接认为对端已经接听并且进入通话状态，跳过AWS的两个事件数据
+        if (stateMachine == CALLKIT_STATE_DIALING) {
+            ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> enter talk from peer first video frame");
+            talkingStart(); // 在频道内推送音频流，开始通话
+            CallbackPeerAnswer(ErrCode.XOK, mPeerDevice); // 回调对端接听，进入通话状态
+        }
 
         if ((stateMachine != CALLKIT_STATE_IDLE) && (stateMachine != CALLKIT_STATE_HANGUP_REQING)) {
             IotDevice callbackDev = mPeerDevice;
