@@ -458,9 +458,8 @@ public class CallkitScheduler {
         CallkitContext lastCallCtx = getLastCallCtx();
         if (lastCallCtx != null)  {
             // 优先使用最后一次的通话信息执行一次挂断操作
-            int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-                    lastCallCtx.sessionId, lastCallCtx.callerId, lastCallCtx.calleeId,
-                    accountInfo.mInventDeviceName, false);
+            int errCode = doRetryHangup(accountInfo.mAgoraAccessToken, lastCallCtx.sessionId,
+                       lastCallCtx.callerId, lastCallCtx.calleeId,  accountInfo.mInventDeviceName);
             if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
                 ALog.getInstance().d(TAG, "<DoExecuteHangup> clear last callkctx, last");
                 setLastCallCtx(null);
@@ -470,9 +469,8 @@ public class CallkitScheduler {
 
          } else if ((cmd.mSessionId != null) && (cmd.mCallerId != null) && (cmd.mCalleeId != null)) {
             // 没有最后一次通话信息，考虑使用 command中的参数进行挂断操作
-            int errCode = AgoraService.getInstance().makeAnswer(accountInfo.mAgoraAccessToken,
-                    cmd.mSessionId, cmd.mCallerId, cmd.mCalleeId,
-                    accountInfo.mInventDeviceName, false);
+            int errCode = doRetryHangup(accountInfo.mAgoraAccessToken, cmd.mSessionId,
+                    cmd.mCallerId, cmd.mCalleeId, accountInfo.mInventDeviceName);
             if (errCode == ErrCode.XOK) {  // 最后一次呼叫信息清空
                 ALog.getInstance().d(TAG, "<DoExecuteHangup> clear last callkctx, cmd");
                 setLastCallCtx(null);
@@ -483,6 +481,29 @@ public class CallkitScheduler {
         } else {
             ALog.getInstance().d(TAG, "<DoExecuteHangup> do nothing done, cmdTalkId=" + cmd.mTalkId);
         }
+    }
+
+    /**
+     * @brief 挂断处理，尝试3次确保挂断不会因为更新影子失败而错误
+     */
+    int doRetryHangup(final String token,
+                       final String sessionId, final String callerId, final String calleeId,
+                       final String localId )
+    {
+        int tryCount = 1;
+
+        while (tryCount < 4) {
+            int errCode = AgoraService.getInstance().makeAnswer(token, sessionId,
+                            callerId, calleeId, localId, false);
+            if (errCode != ErrCode.XERR_CALLKIT_ERR_OPT) {
+                break;
+            }
+
+            tryCount++;
+            ThreadSleep(50);
+        }
+
+        return ErrCode.XOK;
     }
 
 
