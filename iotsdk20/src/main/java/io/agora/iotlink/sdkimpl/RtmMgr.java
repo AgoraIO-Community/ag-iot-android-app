@@ -189,6 +189,7 @@ public class RtmMgr implements IRtmMgr {
     public int disconnect() {
         long t1 = System.currentTimeMillis();
         if (getStateMachine() != RTMMGR_STATE_DISCONNECTED) {
+            mWorkHandler.removeMessages(MSGID_RTMMGR_CONNECT_DONE);  // 移除连接完成消息
             sendTaskMessage(MSGID_RTMMGR_DISCONNECT, 0, 0, null);
         }
         setStateMachine(RTMMGR_STATE_DISCONNECTED);   // 设置状态机：已经断开
@@ -291,7 +292,9 @@ public class RtmMgr implements IRtmMgr {
      */
     void DoTaskDisconnect(Message msg) {
         long t1 = System.currentTimeMillis();
+        mWorkHandler.removeMessages(MSGID_RTMMGR_CONNECT_DONE);  // 移除连接完成消息
         rtmEngDestroy();
+        mWorkHandler.removeMessages(MSGID_RTMMGR_CONNECT_DONE);  // 移除连接完成消息
         long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<DoTaskDisconnect> done, costTime=" + (t2-t1));
     }
