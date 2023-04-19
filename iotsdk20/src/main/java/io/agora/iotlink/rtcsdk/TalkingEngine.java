@@ -257,11 +257,24 @@ public class TalkingEngine implements AGEventHandler,
         String codecParam = "{\"che.audio.custom_payload_type\":0}";
         codecParam = String.format("{\"che.audio.custom_payload_type\":%d}", SET_AUD_CODEC);
         int ret = mRtcEngine.setParameters(codecParam);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<initialize> fail to set audio codec, ret=" + ret);
+        }
 
         // 设置私参：采样率，G711U是 8kHz
         String smplRate = "{\"che.audio.input_sample_rate\":8000}";
         smplRate = String.format("{\"che.audio.input_sample_rate\":%d}", SET_AUD_SAMPLERATE);
         ret = mRtcEngine.setParameters(smplRate);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<initialize> fail to set sample rate, ret=" + ret);
+        }
+
+        // 设置私参：使用硬件解码
+        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
+        ret = mRtcEngine.setParameters(hwDecoder);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<initialize> fail to set HW decoder, ret=" + ret);
+        }
 
         mRtcEngine.registerVideoFrameObserver(this);
         mRtcEngine.registerAudioFrameObserver(this);
