@@ -510,9 +510,7 @@ public class AccountMgr implements IAccountMgr {
     void DoTokenInvalid(Message msg) {
         // 断开 AWS 联接
         AWSUtils.getInstance().disConnect();
-        String account;
         synchronized (mDataLock) {
-            account = mLocalAccount.mAccount;
             mLocalAccount = null;               // 清空本地账号
             mStateMachine = ACCOUNT_STATE_IDLE;    // 状态机切换到 未登录 状态
         }
