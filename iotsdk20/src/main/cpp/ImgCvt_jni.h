@@ -24,6 +24,16 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1I420ToRg
 JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToNv12
         (JNIEnv *, jobject, jbyteArray, jbyteArray, jbyteArray, jint, jint, jbyteArray);
 
+
+/*
+ * Class:     io_agora_iotlink_utils_ImageConvert
+ * Method:    ImgCvt_YuvToI420
+ * Signature: (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;II[B[B[B)I
+ */
+JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI420
+        (JNIEnv *, jobject, jobject, jobject, jobject, jint, jint, jbyteArray, jbyteArray, jbyteArray);
+
+
 #ifdef __cplusplus
 }
 #endif

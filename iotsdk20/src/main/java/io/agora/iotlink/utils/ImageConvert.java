@@ -12,6 +12,8 @@ package io.agora.iotlink.utils;
 
 import android.graphics.*;
 
+import java.nio.ByteBuffer;
+
 
 public class ImageConvert
 {
@@ -39,6 +41,28 @@ public class ImageConvert
         return instance;
     }
 
+
+    /*
+     * @brief 将I420图像数据转换成Bitmap对象
+     * @param yData, uData, vData 分别是 Y U V 数据
+     * @param width, height 是图像大小
+     * @param outBmp 是输出的图像数据，调用该函数前需要先分配好对象
+     * @return error code
+     */
+    public int YuvToI420(
+        final ByteBuffer yBuffer,
+        final ByteBuffer uBuffer,
+        final ByteBuffer vBuffer,
+        int width,
+        int height,
+        byte[] outYbytes,
+        byte[] outUbytes,
+        byte[] outVbytes        )
+    {
+        int ret = ImgCvt_YuvToI420(yBuffer, uBuffer, vBuffer, width, height,
+                                    outYbytes, outUbytes, outVbytes);
+        return ret;
+    }
 
     /*
      * @brief 将I420图像数据转换成Bitmap对象
@@ -117,4 +141,7 @@ public class ImageConvert
     public native int ImgCvt_YuvToNv12(byte[] yData, byte[] uData, byte[] vData,
                                         int width, int height, byte[] nv12Buffer);
 
+    public native int ImgCvt_YuvToI420(Object yBuffer, Object uBuffer, Object vBuffer,
+                                       int width, int height,
+                                       byte[] dstYbytes, byte[] dstUbytes, byte[] dstVbytes);
 }

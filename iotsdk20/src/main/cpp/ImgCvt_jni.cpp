@@ -191,3 +191,67 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToNv1
     return 0;
 }
 
+/*
+ * Class:     io_agora_iotlink_utils_ImageConvert
+ * Method:    ImgCvt_YuvToI420
+ * Signature: (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;II[B[B[B)I
+ */
+JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI420(
+    JNIEnv*			env,
+    jobject thiz,
+    jobject yBufferObj,
+    jobject uBufferObj,
+    jobject vBufferObj,
+    jint width,
+    jint height,
+    jbyteArray jb_yData,
+    jbyteArray jb_uData,
+    jbyteArray jb_vData        )
+{
+    jbyte* in_y_buffer = (jbyte*)env->GetDirectBufferAddress( yBufferObj);
+    jbyte* in_u_buffer = (jbyte*)env->GetDirectBufferAddress( uBufferObj);
+    jbyte* in_v_buffer = (jbyte*)env->GetDirectBufferAddress( vBufferObj);
+
+    // Lock target YUV buffer
+    jbyte* out_y_buffer =  env->GetByteArrayElements(jb_yData, 0);
+    jbyte* out_u_buffer =  env->GetByteArrayElements(jb_uData, 0);
+    jbyte* out_v_buffer =  env->GetByteArrayElements(jb_vData, 0);
+    if (NULL == out_y_buffer || NULL == out_u_buffer || NULL == out_v_buffer) {
+        LOGE("<ImgCvt_1YuvToI420> fail to lock YUV data");
+        return -1;
+    }
+
+    int half_wdith = (width + 1) / 2;
+    int half_height = (height + 1) / 2;
+    int yDataSize = width * height;
+    int i;
+
+    // Y数据直接拷贝
+    memcpy(out_y_buffer, in_y_buffer, yDataSize);
+
+    // U数据要分行拷贝
+    jbyte* src_u_buffer = in_u_buffer;
+    jbyte* dst_u_buffer = out_u_buffer;
+    for (i = 0; i < half_height; i++) {
+        memcpy(dst_u_buffer, src_u_buffer, half_wdith);
+        src_u_buffer += width;
+        dst_u_buffer += half_wdith;
+    }
+
+    // V数据也要分行拷贝
+    jbyte* src_v_buffer = in_v_buffer;
+    jbyte* dst_v_buffer = out_v_buffer;
+    for (i = 0; i < half_height; i++) {
+        memcpy(dst_v_buffer, src_v_buffer, half_wdith);
+        src_v_buffer += width;
+        dst_v_buffer += half_wdith;
+    }
+
+
+    // Unlock target YUV buffer
+    env->ReleaseByteArrayElements(jb_yData, out_y_buffer, 0);
+    env->ReleaseByteArrayElements(jb_uData, out_u_buffer, 0);
+    env->ReleaseByteArrayElements(jb_vData, out_v_buffer, 0);
+
+    return 0;
+}
