@@ -53,13 +53,14 @@ public class ImageConvert
         final ByteBuffer yBuffer,
         final ByteBuffer uBuffer,
         final ByteBuffer vBuffer,
-        int width,
-        int height,
+        int width, int height,
+        int yStride, int uStride, int vStride,
         byte[] outYbytes,
         byte[] outUbytes,
         byte[] outVbytes        )
     {
         int ret = ImgCvt_YuvToI420(yBuffer, uBuffer, vBuffer, width, height,
+                                    yStride, uStride, vStride,
                                     outYbytes, outUbytes, outVbytes);
         return ret;
     }
@@ -143,5 +144,6 @@ public class ImageConvert
 
     public native int ImgCvt_YuvToI420(Object yBuffer, Object uBuffer, Object vBuffer,
                                        int width, int height,
+                                       int yStride, int uStride, int vStride,
                                        byte[] dstYbytes, byte[] dstUbytes, byte[] dstVbytes);
 }

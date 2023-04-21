@@ -28,11 +28,10 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToNv1
 /*
  * Class:     io_agora_iotlink_utils_ImageConvert
  * Method:    ImgCvt_YuvToI420
- * Signature: (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;II[B[B[B)I
+ * Signature: (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;IIIII[B[B[B)I
  */
 JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI420
-        (JNIEnv *, jobject, jobject, jobject, jobject, jint, jint, jbyteArray, jbyteArray, jbyteArray);
-
+        (JNIEnv *, jobject, jobject, jobject, jobject, jint, jint, jint, jint, jint, jbyteArray, jbyteArray, jbyteArray);
 
 #ifdef __cplusplus
 }

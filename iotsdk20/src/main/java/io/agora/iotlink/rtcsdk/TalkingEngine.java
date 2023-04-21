@@ -1200,26 +1200,22 @@ public class TalkingEngine implements AGEventHandler,
         ByteBuffer yBuffer = i420Buffer.getDataY();
         ByteBuffer uBuffer = i420Buffer.getDataU();
         ByteBuffer vBuffer = i420Buffer.getDataV();
-
-        int yDataSize = yBuffer.capacity();
-        int uDataSize = uBuffer.capacity();
-        int vDataSize = vBuffer.capacity();
-        int yuvDataSize = yDataSize + uDataSize + vDataSize;
-
-
+        int yStride = i420Buffer.getStrideY();
+        int uStride = i420Buffer.getStrideU();
+        int vStride = i420Buffer.getStrideV();
+        int width = i420Buffer.getWidth();
+        int height = i420Buffer.getHeight();
+        int chromaWidth = (width + 1) / 2;
+        int chromaHeight = (height + 1) / 2;
+        int yDataSize = width * height;
+        int uDataSize = chromaWidth * chromaHeight;
+        int vDataSize = uDataSize;
         byte[] yBytes = new byte[yDataSize];
-        yBuffer.position(0);
-        yBuffer.get(yBytes);
-
         byte[] uBytes = new byte[uDataSize];
-        uBuffer.position(0);
-        uBuffer.get(uBytes);
-
         byte[] vBytes = new byte[vDataSize];
-        vBuffer.position(0);
-        vBuffer.get(vBytes);
-
-
+        ImageConvert.getInstance().ImgCvt_YuvToI420(yBuffer, uBuffer, vBuffer, width, height,
+                yStride, uStride, vStride, yBytes, uBytes, vBytes);
+        
         // 数据拷贝和赋值需要加锁
         synchronized (mVideoDataLock) {
             mInVideoWidth = i420Buffer.getWidth();

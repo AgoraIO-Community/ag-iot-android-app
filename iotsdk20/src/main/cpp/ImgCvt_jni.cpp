@@ -204,6 +204,9 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI42
     jobject vBufferObj,
     jint width,
     jint height,
+    jint yStride,
+    jint uStride,
+    jint vStride,
     jbyteArray jb_yData,
     jbyteArray jb_uData,
     jbyteArray jb_vData        )
@@ -234,7 +237,7 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI42
     jbyte* dst_u_buffer = out_u_buffer;
     for (i = 0; i < half_height; i++) {
         memcpy(dst_u_buffer, src_u_buffer, half_wdith);
-        src_u_buffer += width;
+        src_u_buffer += uStride;
         dst_u_buffer += half_wdith;
     }
 
@@ -243,7 +246,7 @@ JNIEXPORT jint JNICALL Java_io_agora_iotlink_utils_ImageConvert_ImgCvt_1YuvToI42
     jbyte* dst_v_buffer = out_v_buffer;
     for (i = 0; i < half_height; i++) {
         memcpy(dst_v_buffer, src_v_buffer, half_wdith);
-        src_v_buffer += width;
+        src_v_buffer += vStride;
         dst_v_buffer += half_wdith;
     }
 
