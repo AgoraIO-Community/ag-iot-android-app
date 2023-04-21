@@ -173,6 +173,7 @@ public class TalkingEngine implements AGEventHandler,
     private volatile int mInVideoWidth;     ///< 订阅的视频帧宽度
     private volatile int mInVideoHeight;    ///< 订阅的视频帧高度
     private volatile int mInVideoRotation;  ///< 订阅的视频旋转角度
+    private boolean mCacheVideoFrame = false;   ///< 标记当前是否缓存视频帧
 
     private final Object mAudioDataLock = new Object();
     private int mInAudioBytesPerSample = 2;               ///< 订阅的音频每个采样字节数
@@ -564,6 +565,14 @@ public class TalkingEngine implements AGEventHandler,
             return null;
         }
 
+
+        boolean oldCacheFlag;
+        synchronized (mVideoDataLock) {
+            oldCacheFlag = mCacheVideoFrame;  // 保存原先帧缓存状态
+            mCacheVideoFrame = true;          // 此时一定要做帧缓存
+        }
+        ThreadSleep(200);
+
         int width, height, rotation;
         byte[] yBytes;
         byte[] uBytes;
@@ -573,6 +582,9 @@ public class TalkingEngine implements AGEventHandler,
         synchronized (mVideoDataLock) {
             if ((mInVideoYData == null) || (mInVideoWidth <= 0) || (mInVideoHeight <= 0)) {
                 ALog.getInstance().e(TAG, "<capturePeerVideoFrame> invalid video frame");
+                synchronized (mVideoDataLock) {
+                    mCacheVideoFrame = oldCacheFlag; // 恢复原先帧缓存状态
+                }
                 return null;
             }
             width = mInVideoWidth;
@@ -598,6 +610,9 @@ public class TalkingEngine implements AGEventHandler,
         int ret = ImageConvert.getInstance().I420ToRgba(yBytes, uBytes, vBytes, width, height, bmp);
         if (ret != 0) {
             bmp.recycle();
+            synchronized (mVideoDataLock) {
+                mCacheVideoFrame = oldCacheFlag;  // 恢复原先帧缓存状态
+            }
             ALog.getInstance().e(TAG, "<capturePeerVideoFrame> fail to I420ToRgba(), ret=" + ret);
             return null;
         }
@@ -606,6 +621,10 @@ public class TalkingEngine implements AGEventHandler,
         if (rotation > 0) {
             capturedBmp = ImageConvert.rotateBmp(bmp, rotation);
         }
+        synchronized (mVideoDataLock) {
+            mCacheVideoFrame = oldCacheFlag;  // 恢复原先帧缓存状态
+        }
+
         long t2 = System.currentTimeMillis();
 
         ALog.getInstance().d(TAG, "<capturePeerVideoFrame> width=" + width + ", height=" + height
@@ -632,6 +651,7 @@ public class TalkingEngine implements AGEventHandler,
             videoWidth = mInVideoWidth;
             videoHeight = mInVideoHeight;
             videoRotation = mInVideoRotation;
+            mCacheVideoFrame = true;
         }
 
         synchronized (mAudioDataLock) {
@@ -718,6 +738,9 @@ public class TalkingEngine implements AGEventHandler,
         if (ret != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<recordingStart> initialize() error, ret=" + ret);
             mRecorder = null;
+            synchronized (mVideoDataLock) {
+                mCacheVideoFrame = false;
+            }
             return ret;
         }
         ret = mRecorder.recordingStart();
@@ -738,6 +761,9 @@ public class TalkingEngine implements AGEventHandler,
             mRecorder.release();
             mRecorder = null;
             ALog.getInstance().d(TAG, "<recordingStop> done");
+        }
+        synchronized (mVideoDataLock) {
+            mCacheVideoFrame = false;
         }
 
         mInAudioFrameQueue.clear();
@@ -996,8 +1022,46 @@ public class TalkingEngine implements AGEventHandler,
             return false;
         }
 
-        // 缓存当前预览视频帧
-        cacheInVideoFrame(videoFrame);
+        boolean isCacheVideo;
+        synchronized (mVideoDataLock) {
+            isCacheVideo = mCacheVideoFrame;
+        }
+        if (isCacheVideo) {
+            // 录像时缓存当前预览视频帧
+            cacheInVideoFrame(videoFrame);
+
+        } else {
+            // 否则只计算可以录像的参数
+            VideoFrame.Buffer videoBuffer = videoFrame.getBuffer();
+            if (videoBuffer == null) {
+                ALog.getInstance().e(TAG, "<onRenderVideoFrame> videoBuffer is NULL");
+                return false;
+            }
+            int frameWidth = videoBuffer.getWidth();
+            int frameHeight = videoBuffer.getHeight();
+            if ((frameWidth > mMaxEncodeWidth) || (frameHeight > mMaxEncodeHeight)) {
+                float scaleRateW = (float)frameWidth / (float)mMaxEncodeWidth;
+                float scaleRateH = (float)frameHeight / (float)mMaxEncodeHeight;
+                float scaleRate = (scaleRateW > scaleRateH) ? scaleRateW : scaleRateH;
+                int scaledWidth = (int)(frameWidth / scaleRate);
+                int scaleHeight = (int)(frameHeight / scaleRate);
+
+                // 记录可录像的缩放后参数
+                synchronized (mVideoDataLock) {
+                    mInVideoWidth = scaledWidth;
+                    mInVideoHeight = scaleHeight;
+                    mInVideoRotation = videoFrame.getRotation();
+                }
+                
+            } else {
+                // 记录可录像的原始参数
+                synchronized (mVideoDataLock) {
+                    mInVideoWidth = frameWidth;
+                    mInVideoHeight = frameHeight;
+                    mInVideoRotation = videoFrame.getRotation();
+                }
+            }
+        }
 
         return false;
     }
@@ -1357,5 +1421,11 @@ public class TalkingEngine implements AGEventHandler,
         return bitrate;
     }
 
-
+    void ThreadSleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException interruptExp) {
+            interruptExp.printStackTrace();
+        }
+    }
 }
