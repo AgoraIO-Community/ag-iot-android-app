@@ -333,10 +333,10 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
                     + mSdkInstance.getStateMachine());
             return ErrCode.XERR_ACCOUNT_LOGIN;
         }
-        if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
-            ALog.getInstance().e(TAG, "<callDial> bad state, Mqtt disconnected");
-            return ErrCode.XERR_MQTT_DISCONNECT;
-        }
+//        if (AWSUtils.getInstance().getAwsState() != AWSUtils.STATE_CONNECTED) {
+//            ALog.getInstance().e(TAG, "<callDial> bad state, Mqtt disconnected");
+//            return ErrCode.XERR_MQTT_DISCONNECT;
+//        }
         int currState = getStateMachine();
         if (currState != CALLKIT_STATE_IDLE) {
             ALog.getInstance().e(TAG, "<callDial> bad state, currState=" + currState);
