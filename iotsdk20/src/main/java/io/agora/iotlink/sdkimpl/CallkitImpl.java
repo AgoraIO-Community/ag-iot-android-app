@@ -1711,4 +1711,8 @@ public class CallkitImpl implements ICallkitMgr, TalkingEngine.ICallback {
             accountMgr.onTokenInvalid();
         }
     }
+
+    void onAwsEventIncoming(JSONObject jsonState, long timestamp) {
+
+    }
 }

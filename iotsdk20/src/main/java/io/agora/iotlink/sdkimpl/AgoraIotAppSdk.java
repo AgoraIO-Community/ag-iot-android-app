@@ -177,6 +177,16 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             }
 
             @Override
+            public void onDevIncoming(JSONObject jsonObject, long timestamp) {
+                ALog.getInstance().d(TAG, "<onDevIncome> timestamp=" + timestamp
+                        + ", jsonObject=" + jsonObject.toString());
+
+                if (mCallkitImpl != null) {
+                    mCallkitImpl.onAwsEventIncoming(jsonObject, timestamp);
+                }
+            }
+
+            @Override
             public void onReceiveShadow(String things_name, JSONObject jsonObject) {
                 ALog.getInstance().d(TAG, "<onReceiveShadow> things_name=" + things_name
                         + ", jsonObject=" + jsonObject.toString());

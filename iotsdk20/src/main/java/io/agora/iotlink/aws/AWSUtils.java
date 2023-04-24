@@ -45,6 +45,7 @@ public class AWSUtils {
 
     private long mLastRtcUpdateVerNumber = 0;
     private long mLastRtcGetVerNumber = 0;
+    private long mLastDevIncomeNumber = 0;
 
 
     private AWSUtils() {
@@ -130,14 +131,17 @@ public class AWSUtils {
         final String topic1 = "$aws/things/+/shadow/get/+";         //获取设备影子内容
         final String topic2 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/update/accepted";   //APP影子更新通知
         final String topic3 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
+        final String topic4 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc2/update/delta";  // 1.5版本中来电通知
         try {
-            mTopicSum = 3;
+            mTopicSum = 4;
             //订阅设备影子更新通知topic
             subscribeTopic(topic1, AWSIotMqttQos.QOS1);
             //订阅设备影子更新通知topic
             subscribeTopic(topic2, AWSIotMqttQos.QOS1);
             //订阅底层服务通知topic
             subscribeTopic(topic3, AWSIotMqttQos.QOS1);
+            //订阅底来电通知的topic
+            subscribeTopic(topic4, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Subscription Error", e);
         }
@@ -242,6 +246,35 @@ public class AWSUtils {
                             ALog.getInstance().e(TAG, "<handleMessage> old get version number"
                                     + ", versionNumber=" + versionNumber
                                     + ", mLastRtcGetVerNumber=" + mLastRtcGetVerNumber);
+                        }
+                    }
+                }
+
+            } else if (topic.contains("shadow/name/rtc2/update/delta")) {
+                //只关注APP端影子的期望值
+                if (jsonMessage.getJSONObject("state").has("desired")
+                        && !jsonMessage.getJSONObject("state").isNull("desired")) {
+                    JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("desired");
+
+                    //去除topic前后内容，获取设备唯一标志
+                    String things_name = topic.replaceAll("\\$aws/things/", "");
+                    things_name = things_name.replaceAll("/shadow/name/rtc2/update/delta", "");
+                    //通知收到设备端来电事件
+                    if (things_name.equals(mUserInventThingName)) {
+
+                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
+
+                        if (versionNumber > mLastDevIncomeNumber) {
+                            mLastDevIncomeNumber = versionNumber;
+
+
+                            awsListener.onDevIncoming(desiredObject, timestamp);
+
+                        } else {
+                            ALog.getInstance().e(TAG, "<handleMessage> old get version number"
+                                    + ", versionNumber=" + versionNumber
+                                    + ", mLastDevIncomeNumber=" + mLastDevIncomeNumber);
                         }
                     }
                 }
@@ -512,6 +545,7 @@ public class AWSUtils {
         void onUpdateRtcStatus(JSONObject jsonObject, long timestamp);  //APP状态控制事件
         void onDevOnlineChanged(String deviceMac, String deviceId, boolean online);  // 设备上下线事件
         void onDevActionUpdated(String deviceMac, String actionType);    // 绑定设备列表刷新
+        void onDevIncoming(JSONObject jsonObject, long timestamp);       // 设备来电事件
 
         // 设备属性更新
         void onDevPropertyUpdated(String deviceMac, String deviceId, Map<String, Object> properties);
