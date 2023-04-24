@@ -876,14 +876,15 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     public void onTalkingPeerLeft(int localUid, int peerUid, int reason) {
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<onTalkingPeerLeft> localUid=" + localUid
-                + ", peerUid=" + peerUid
+                + ", peerUid=" + peerUid + ", reason=" + reason
                 + ", stateMachine=" + stateMachine);
         if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
             return;
         }
 
         // 发送对端RTC掉线事件
-        sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, localUid, peerUid, null, 0);
+        Object leftParam = new Object[]{ (Integer)localUid, (Integer)peerUid, (Integer)reason};
+        sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, 0, 0, leftParam, 0);
     }
 
     @Override
@@ -942,19 +943,27 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
      * @brief 工作线程中运行，对端RTC下线
      */
     void DoRtcPeerOffline(Message msg) {
-        int localUid = msg.arg1;
-        int peerUid = msg.arg2;
+        Object[] offlineParam = (Object[])(msg.obj);
+        int localUid = (Integer)(offlineParam[0]);
+        int peerUid = (Integer)(offlineParam[1]);
+        int reason = (Integer)(offlineParam[2]);
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<DoRtcPeerOffline> localUid=" + localUid
-                + ", peerUid=" + peerUid
+                + ", peerUid=" + peerUid + ", reason=" + reason
                 + ", stateMachine=" + stateMachine);
 
-        if (stateMachine == CALLKIT_STATE_INCOMING ||
-            stateMachine == CALLKIT_STATE_ANSWER_REQING ||
-            stateMachine == CALLKIT_STATE_TALKING)  {
-            IotDevice callbackDev = mPeerDevice;
-            exceptionProcess();
-            CallbackPeerHangup(callbackDev);   // 回调对端挂断
+        if (reason == 0) {  // 对端主动退出RTC
+            if (stateMachine == CALLKIT_STATE_INCOMING ||
+                stateMachine == CALLKIT_STATE_DIALING ||
+                stateMachine == CALLKIT_STATE_TALKING)
+            {
+                IotDevice callbackDev = mPeerDevice;
+                exceptionProcess();
+                CallbackPeerHangup(callbackDev);   // 回调对端挂断
+            }
+
+        } else { // 对端丢包太多后掉线
+
         }
     }
 
