@@ -91,7 +91,7 @@ public class TalkingEngine implements AGEventHandler,
         /**
          * @brief 通话对端RTC下线
          */
-        default void onTalkingPeerLeft(int localUid, int peerUid) {  }
+        default void onTalkingPeerLeft(int localUid, int peerUid, int reason) {  }
 
         /**
          * @brief 对端首帧出图
@@ -923,7 +923,7 @@ public class TalkingEngine implements AGEventHandler,
 
         if (uid == mPeerUid) {
             if (mInitParam.mCallback != null) {
-                mInitParam.mCallback.onTalkingPeerLeft(mLocalUid, mPeerUid);
+                mInitParam.mCallback.onTalkingPeerLeft(mLocalUid, mPeerUid, reason);
             }
         }
 

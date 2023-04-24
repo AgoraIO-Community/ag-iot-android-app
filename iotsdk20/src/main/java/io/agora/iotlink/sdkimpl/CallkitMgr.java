@@ -873,7 +873,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     @Override
-    public void onTalkingPeerLeft(int localUid, int peerUid) {
+    public void onTalkingPeerLeft(int localUid, int peerUid, int reason) {
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<onTalkingPeerLeft> localUid=" + localUid
                 + ", peerUid=" + peerUid
