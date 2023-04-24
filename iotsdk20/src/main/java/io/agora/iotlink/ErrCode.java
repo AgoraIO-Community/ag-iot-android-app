@@ -94,7 +94,8 @@ public class ErrCode {
     public static final int XERR_CALLKIT_LOCAL_BUSY = -40008;       ///< 本地端忙
     public static final int XERR_CALLKIT_ERR_OPT = -40009;          ///< 不支持的错误操作
     public static final int XERR_CALLKIT_PEER_UNREG = -40010;       ///< 对端未注册
-
+    public static final int XERR_CALLKIT_CALLDEV_FAILURE = -40011;  ///< 呼叫设备失败
+    public static final int XERR_CALLKIT_RTCTOKEN_FAILURE = -40012; ///< 生成RTC token失败
 
     //
     // 设备管理相关错误

@@ -89,6 +89,8 @@ public class AgoraService {
     public static final int RESP_CODE_PEER_UNREG = 999999;      ///< 被叫端未注册
     public static final int RESP_CODE_SHADOW_UPDATE = 999998;   ///< 影子更新错误
     public static final int RESP_CODE_INVALID_TOKEN = 401;      ///< Token过期
+    public static final int RESP_CODE_CALLDEV_FAILURE = 100010; ///< 呼叫通知设备失败
+    public static final int RESP_CODE_RTCTOKEN_FAILURE = 100012; ///< 生成RTC token错误
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
@@ -2889,6 +2891,16 @@ public class AgoraService {
             dialResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
             return dialResult;
 
+        } else if (responseObj.mRespCode == RESP_CODE_CALLDEV_FAILURE) {
+            ALog.getInstance().e(TAG, "<callDial> call device failure");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_CALLDEV_FAILURE;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_RTCTOKEN_FAILURE) {
+            ALog.getInstance().e(TAG, "<callDial> rtc token failure");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_RTCTOKEN_FAILURE;
+            return dialResult;
+
         } else if (responseObj.mRespCode != ErrCode.XOK) {
             ALog.getInstance().e(TAG, "<callDial> status failure, mRespCode="
                     + responseObj.mRespCode);
@@ -2911,8 +2923,8 @@ public class AgoraService {
                 dialResult.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
                 return dialResult;
             }
-            callkitCtx.channelName = parseJsonStringValue(dataObj, "channelName", null);
-            callkitCtx.rtcToken = parseJsonStringValue(dataObj, "rtcToken", null);
+            callkitCtx.channelName = parseJsonStringValue(dataObj, "cname", null);
+            callkitCtx.rtcToken = parseJsonStringValue(dataObj, "token", null);
             callkitCtx.mLocalUid = parseJsonIntValue(dataObj, "uid", 0);
             callkitCtx.mPeerUid = 10;
 
