@@ -147,6 +147,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         }
     }
 
+    void onAwsUpdateClient(JSONObject jsonState, long timestamp) {
+    }
+
 
 
     ///////////////////////////////////////////////////////////////////////////
