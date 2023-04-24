@@ -618,7 +618,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
 
         if (dialResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
             ALog.getInstance().d(TAG, "<DoDialResponse> Exit with failure, errCode=" + dialResult.mErrCode);
-            talkingStop();  // 此时应该还没有进入频道，复位状态
+            talkingStop();      // 此时应该还没有进入频道，复位状态
             dialTimeoutStop();  // 停止呼叫超时定时器
             CallbackCallDialDone(dialResult.mErrCode, iotDevice); // 回调主叫拨号失败
             return;
@@ -629,15 +629,15 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             mCallkitCtx = dialResult.mCallkitCtx;
         }
 
-        // 进入频道，准备主叫通话
-        talkingPrepare(dialResult.mCallkitCtx.channelName, dialResult.mCallkitCtx.rtcToken,
-                        dialResult.mCallkitCtx.mLocalUid, dialResult.mCallkitCtx.mPeerUid);
-
         // 切换到 正在呼叫中
         setStateMachine(CALLKIT_STATE_DIALING);
 
         // 重新启动呼叫超时定时器
         dialTimeoutStart();
+
+        // 进入频道，准备主叫通话
+        talkingPrepare(dialResult.mCallkitCtx.channelName, dialResult.mCallkitCtx.rtcToken,
+                        dialResult.mCallkitCtx.mLocalUid, dialResult.mCallkitCtx.mPeerUid);
 
         ALog.getInstance().d(TAG, "<DoDialResponse> Exit, mCallkitCtx=" + mCallkitCtx.toString());
 
@@ -654,6 +654,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             ALog.getInstance().e(TAG, "<DoDialTimeout> bad state, currState=" + currState);
             return;
         }
+
+        // 停止呼叫超时记时
+        dialTimeoutStop();
 
         // 结束通话
         IotDevice iotDevice = mPeerDevice;
@@ -828,10 +831,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         // 挂断通话
         talkingStop();
 
-
         // 停止拨号超时
         dialTimeoutStop();
-
 
         ALog.getInstance().d(TAG, "<exceptionProcess> done");
     }
@@ -913,9 +914,24 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         ALog.getInstance().d(TAG, "<DoRtcPeerOnline> localUid=" + localUid
                 + ", peerUid=" + peerUid
                 + ", stateMachine=" + stateMachine);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
             return;
         }
+
+        // 停止呼叫超时定时器
+        dialTimeoutStop();
+
+        // 如果当前正在主叫状态，则回调对端应答
+        if (stateMachine == CALLKIT_STATE_DIALING) {
+            ALog.getInstance().d(TAG, "<DoRtcPeerOnline> Peer answer, enter talking...");
+
+            // 进入通话状态
+            setStateMachine(CALLKIT_STATE_TALKING);
+
+            // 回调对端应答
+            CallbackPeerAnswer(ErrCode.XOK, mPeerDevice);
+        }
+
 
         if ((mPeerVidew != null) && (mTalkEngine != null)) {
             mTalkEngine.setRemoteVideoView(mPeerVidew);
