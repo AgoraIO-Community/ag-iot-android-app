@@ -2783,4 +2783,148 @@ public class AgoraService {
 
 
 
+    /////////////////////////////////////////////////////////////////////////
+    //////////////////////// Methods for Protocol 1.5 ///////////////////////
+    /////////////////////////////////////////////////////////////////////////
+    /*
+     * @brief 发起一个呼叫请求
+     * @param appid : Agora AppId，来自于声网开发者平台
+     * @param identityId : MQTT的本地client ID，来自于AWS登录账号
+     * @param peerId : 呼叫目标client ID
+     * @param attachMsg : 附加消息
+     * @return 服务端分配的RTC通道信息
+     */
+    public CallReqResult callDial(
+        final String token,
+        final String appId,
+        final String userId,
+        final String deviceId,
+        final String attachMsg)
+    {
+        Map<String, String> params = new HashMap();
+        JSONObject body = new JSONObject();
+        CallReqResult dialResult = new CallReqResult();
+
+        // 请求URL
+        String requestUrl = mCallkitBaseUrl + "/call";
+
+        // body内容
+        JSONObject header = new JSONObject();
+        try {
+            header.put("traceId", UUID.randomUUID().toString());
+            header.put("timestamp", System.currentTimeMillis());
+            body.put("header", header);
+
+            JSONObject payload = new JSONObject();
+            payload.put("appId", appId);
+            payload.put("userId", userId);
+            payload.put("deviceId", deviceId);
+            payload.put("extraMsg", attachMsg);
+            body.put("payload", payload);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            dialResult.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            return dialResult;
+        }
+
+        AgoraService.ResponseObj responseObj = requestToServer(requestUrl, "POST",
+                token, params, body);
+        if (responseObj == null) {
+            ALog.getInstance().e(TAG, "<callDial> failure with no response!");
+            dialResult.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
+            return dialResult;
+        }
+        ALog.getInstance().d(TAG, "<callDial> responseObj=" + responseObj.toString());
+
+        if (responseObj.mErrorCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<callDial> errCode invalid token");
+            dialResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return dialResult;
+
+        } else if (responseObj.mErrorCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<callDial> failure, mErrorCode=" + responseObj.mErrorCode);
+            dialResult.mErrCode = ErrCode.XERR_HTTP_RESP_DATA;
+            return dialResult;
+        }
+
+        if (responseObj.mRespCode == RESP_CODE_IN_TALKING) {
+            ALog.getInstance().e(TAG, "<callDial> bad status IN_TALKING, mRespCode="
+                    + responseObj.mRespCode);
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_PEER_BUSY;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_ANSWER) {
+            ALog.getInstance().e(TAG, "<callDial> bad status ANSWER");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_ANSWER;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_HANGUP) {
+            ALog.getInstance().e(TAG, "<callDial> bad status HANGUP");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_HANGUP;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_ANSWER_TIMEOUT) {
+            ALog.getInstance().e(TAG, "<callDial> bad status ANSWER_TIMEOUT");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_TIMEOUT;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_CALL) {
+            ALog.getInstance().e(TAG, "<callDial> bad status CALL");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_LOCAL_BUSY;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_INVALID_ANSWER) {
+            ALog.getInstance().e(TAG, "<callDial> bad status INVALID_ANSWER");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_ERR_OPT;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_PEER_UNREG) {
+            ALog.getInstance().e(TAG, "<callDial> bad status PEER_UNREG");
+            dialResult.mErrCode = ErrCode.XERR_CALLKIT_PEER_UNREG;
+            return dialResult;
+
+        } else if (responseObj.mRespCode == RESP_CODE_INVALID_TOKEN) {
+            ALog.getInstance().e(TAG, "<callDial> invalid token");
+            dialResult.mErrCode = ErrCode.XERR_TOKEN_INVALID;
+            return dialResult;
+
+        } else if (responseObj.mRespCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<callDial> status failure, mRespCode="
+                    + responseObj.mRespCode);
+            dialResult.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
+            return dialResult;
+        }
+
+        // 解析呼叫请求返回结果
+        CallkitContext callkitCtx = new CallkitContext();
+        callkitCtx.appId = appId;
+        callkitCtx.callerId = userId;
+        callkitCtx.calleeId = deviceId;
+        callkitCtx.attachMsg = attachMsg;
+        callkitCtx.callStatus = 2;
+
+        try {
+            JSONObject dataObj = responseObj.mRespJsonObj.getJSONObject("data");
+            if (dataObj == null) {
+                ALog.getInstance().e(TAG, "<callDial> no data field");
+                dialResult.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
+                return dialResult;
+            }
+            callkitCtx.channelName = parseJsonStringValue(dataObj, "channelName", null);
+            callkitCtx.rtcToken = parseJsonStringValue(dataObj, "rtcToken", null);
+            callkitCtx.mLocalUid = parseJsonIntValue(dataObj, "uid", 0);
+            callkitCtx.mPeerUid = 10;
+
+            dialResult.mErrCode = ErrCode.XOK;
+            dialResult.mCallkitCtx = callkitCtx;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            dialResult.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
+            return dialResult;
+        }
+
+        return dialResult;
+    }
 }
