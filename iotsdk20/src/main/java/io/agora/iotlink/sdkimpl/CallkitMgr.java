@@ -317,13 +317,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
 
         // 在调度器中执行 挂断HTTP请求
-        CallkitContext callkitCtx;
-        synchronized (mDataLock) {
-            callkitCtx = mCallkitCtx;
-        }
         mScheduler.hangup();
-
-
 
         if (mWorkHandler != null) {  // 移除所有中间的消息
             mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
@@ -673,6 +667,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
      */
     void DoRequestHangup(Message msg) {
         ALog.getInstance().d(TAG, "<DoRequestHangup> Enter");
+
+        // 停止呼叫超时定时器
+        dialTimeoutStop();
 
         // 结束通话，清除信息，设置状态到空闲，
         talkingStop();
