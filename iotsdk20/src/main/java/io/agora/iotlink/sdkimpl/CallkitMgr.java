@@ -46,22 +46,24 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitMgr";
-    private static final int DIAL_WAIT_TIMEOUT = 30000;          ///< 呼叫超时请求
+    private static final int DIAL_WAIT_TIMEOUT = 30000;          ///< 呼叫超时请求 30秒
+    private static final int ANSWER_WAIT_TIMEOUT = 30000;        ///< 接听处理超时 30秒
     private static final int HANGUP_WAIT_TIMEOUT = 1000;
-
+    private static final int DEFAULT_DEV_UID = 10;               ///< 设备端uid，固定为10
 
 
     //
     // The mesage Id
     //
     private static final int MSGID_CALL_BASE = 0x3000;
-    private static final int MSGID_CALL_PROCESS_AWSEVENT = 0x3001;  ///< 处理AWS端的事件
+    private static final int MSGID_CALL_AWSEVENT_INCOMING = 0x3001; ///< 处理AWS端的事件
     private static final int MSGID_CALL_RESP_DIAL = 0x3002;          ///< 发送拨号请求
     private static final int MSGID_CALL_REQ_HANGUP = 0x3004;        ///< 发送挂断请求
     private static final int MSGID_CALL_RTC_PEER_ONLINE = 0x3005;   ///< 对端RTC上线
     private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3006;  ///< 对端RTC掉线
     private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3007;  ///< 对端RTC首帧出图
-    private static final int MSGID_CALL_DIAL_TIMEOUT = 0x3008;         ///< 呼叫请求超时定时器
+    private static final int MSGID_CALL_DIAL_TIMEOUT = 0x3008;      ///< 呼叫超时定时器
+    private static final int MSGID_CALL_ANSWER_TIMEOUT = 0x3009;    ///< 接听超时定时器
     private static final int MSGID_RECORDING_ERROR = 0x3010;        ///< 录像出现错误
 
 
@@ -141,13 +143,13 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     /*
-     * @brief 在AWS事件中被调用，对APP端的控制事件
+     * @brief 在AWS事件中被调用，来电消息
      */
-    void onAwsUpdateClient(JSONObject jsonState, long timestamp) {
+    void onAwsEventIncoming(JSONObject jsonState, long timestamp) {
         //ALog.getInstance().d(TAG, "<onAwsUpdateClient> jsonState=" + jsonState.toString());
         if (mWorkHandler != null) {
             Message msg = new Message();
-            msg.what = MSGID_CALL_PROCESS_AWSEVENT;
+            msg.what = MSGID_CALL_AWSEVENT_INCOMING;
             msg.obj = jsonState;
             mWorkHandler.sendMessage(msg);   // 所有事件都不要遗漏，全部发送
         }
@@ -161,8 +163,11 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     @Override
     public void processWorkMessage(Message msg) {
         switch (msg.what) {
-            case MSGID_CALL_PROCESS_AWSEVENT:
-           //     DoAwsEventProcess(msg);
+            case MSGID_CALL_AWSEVENT_INCOMING:
+                DoAwsEventIncoming(msg);
+                break;
+            case MSGID_CALL_ANSWER_TIMEOUT:
+                DoAnswerTimeout(msg);
                 break;
 
             case MSGID_CALL_RESP_DIAL:
@@ -194,7 +199,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     @Override
     protected void removeAllMessages() {
         synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
+            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
+            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_HANGUP);
@@ -309,6 +315,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return ErrCode.XOK;
         }
 
+        // 停止接听超时
+        answerTimeoutStop();
+
         // 停止呼叫超时定时器
         dialTimeoutStop();
 
@@ -320,7 +329,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         mScheduler.hangup();
 
         if (mWorkHandler != null) {  // 移除所有中间的消息
-            mWorkHandler.removeMessages(MSGID_CALL_PROCESS_AWSEVENT);
+            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
             mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
@@ -593,6 +602,101 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     /////////////////////////// APP端发送RESTful请求到服务器 //////////////////////
     /////////////////////////////////////////////////////////////////////////////
     /**
+     * @brief 工作线程中运行，处理AWS要求切换到被叫状态事件
+     */
+    void DoAwsEventIncoming(Message msg) {
+        int stateMachine = getStateMachine();
+
+        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> hangup ongoing, do nothing");
+            return;
+        }
+        if (stateMachine != CALLKIT_STATE_IDLE) {    // 不是在空闲状态中来电，呼叫状态有问题
+            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, ignore it, stateMachine" + stateMachine);
+            return;
+        }
+
+        JSONObject jsonState = (JSONObject)(msg.obj);
+        ALog.getInstance().d(TAG, "<DoAwsEventIncoming> jsonState=" + jsonState + ", Peer incoming call...");
+
+        // 解析来电数据包
+        String traceId = parseJsonStringValue(jsonState, "traceId", null);
+        String rtcToken = parseJsonStringValue(jsonState, "token", null);
+        int localUid = parseJsonIntValue(jsonState, "uid", 0);
+        String chnlName = parseJsonStringValue(jsonState, "cname", null);
+        String extraMsg = parseJsonStringValue(jsonState, "extraMsg", null);
+        String deviceId = parseJsonStringValue(jsonState, "peerId", null);
+        if (TextUtils.isEmpty(chnlName) || TextUtils.isEmpty(deviceId)) {
+            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> parse parameter error, ignore it");
+            return;
+        }
+
+        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
+        IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
+
+        synchronized (mDataLock) {
+            mStateMachine = CALLKIT_STATE_INCOMING;      // 切换当前状态机到来电
+
+            mCallkitCtx = new CallkitContext();
+            mCallkitCtx.appId = sdkInitParam.mRtcAppId;
+            mCallkitCtx.callerId = deviceId;
+            mCallkitCtx.calleeId = accountInfo.mInventDeviceName;
+            mCallkitCtx.channelName = chnlName;
+            mCallkitCtx.rtcToken = rtcToken;
+            mCallkitCtx.attachMsg = extraMsg;
+            mCallkitCtx.mLocalUid = localUid;
+            mCallkitCtx.mPeerUid = DEFAULT_DEV_UID;
+            mCallkitCtx.callStatus = 3;
+
+            // 这里需要从已有的绑定设备列表中，找到相应的绑定设备
+            DeviceMgr deviceMgr = (DeviceMgr)(mSdkInstance.getDeviceMgr());
+            IotDevice iotDevice = deviceMgr.findBindDeviceByDevMac(mCallkitCtx.callerId);
+            if (iotDevice == null) {
+                mPeerDevice = new IotDevice();
+                mPeerDevice.mDeviceName = mCallkitCtx.callerId;
+                mPeerDevice.mDeviceID = mCallkitCtx.callerId;
+                ALog.getInstance().e(TAG, "<DoAwsEventIncoming> cannot found incoming device"
+                        + ", callerId=" + mCallkitCtx.callerId);
+            } else {
+                mPeerDevice = iotDevice;
+            }
+        }
+
+        // 进入频道，准备被叫通话
+        talkingPrepare(chnlName, rtcToken, localUid, DEFAULT_DEV_UID);
+
+        // 启动接听超时定时器
+        answerTimeoutStart();
+
+        // 回调对端来电
+        CallbackPeerIncoming(mPeerDevice, mCallkitCtx.attachMsg);
+    }
+
+
+    /**
+     * @brief 工作线程中运行，处理接听超时
+     */
+    void DoAnswerTimeout(Message msg) {
+        int currState = getStateMachine();
+        if (currState != CALLKIT_STATE_INCOMING) {
+            ALog.getInstance().e(TAG, "<DoAnswerTimeout> bad state, currState=" + currState);
+            return;
+        }
+
+        // 停止接听超时记时
+        answerTimeoutStop();
+
+        // 停止呼叫超时记时
+        dialTimeoutStop();
+
+        // 结束通话
+        IotDevice iotDevice = mPeerDevice;
+        talkingStop();
+
+        ALog.getInstance().d(TAG, "<DoAnswerTimeout> done");
+    }
+
+    /**
      * @brief 工作线程中运行，HTTP请求有响应
      */
     void DoDialResponse(Message msg) {
@@ -671,6 +775,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         // 停止呼叫超时定时器
         dialTimeoutStop();
 
+        // 停止接听超时
+        answerTimeoutStop();
+
         // 结束通话，清除信息，设置状态到空闲，
         talkingStop();
 
@@ -678,65 +785,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         synchronized (mReqHangupEvent) {
             mReqHangupEvent.notify();    // 事件通知
         }
-    }
-
-
-
-    ///////////////////////////////////////////////////////////////////////
-    ///////////////////////////// 处理AWS的事件 ////////////////////////////
-    ///////////////////////////////////////////////////////////////////////
-    /*
-     * @brief 工作线程中运行，处理AWS要求切换到被叫状态事件
-     */
-    void DoAwsEventToIncoming(int reason, JSONObject jsonState) {
-        int stateMachine = getStateMachine();
-
-
-        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> hangup ongoing, do nothing");
-            return;
-        }
-        if (stateMachine != CALLKIT_STATE_IDLE) {    // 不是在空闲状态中来电，呼叫状态有问题
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, auto hangup");
-            exceptionProcess();
-            CallbackError(ErrCode.XERR_BAD_STATE);  // 回调状态错误
-            return;
-        }
-
-        ALog.getInstance().d(TAG, "<DoAwsEventToIncoming> peer incoming call...");
-
-        String channelName, rtcToken;
-        int localUid = 0, peerUid = 0;
-        synchronized (mDataLock) {
-            mStateMachine = CALLKIT_STATE_INCOMING;      // 切换当前状态机到来电
-            if (mCallkitCtx.calleeId == null) {   // 如果来电数据没有被呼账号，用本地填充
-                AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-                mCallkitCtx.calleeId = accountInfo.mInventDeviceName;
-            }
-
-            channelName = mCallkitCtx.channelName;
-            rtcToken = mCallkitCtx.rtcToken;
-            localUid = mCallkitCtx.mLocalUid;
-            peerUid = mCallkitCtx.mPeerUid;
-
-            // 这里需要从已有的绑定设备列表中，找到相应的绑定设备
-            DeviceMgr deviceMgr = (DeviceMgr)(mSdkInstance.getDeviceMgr());
-            IotDevice iotDevice = deviceMgr.findBindDeviceByDevMac(mCallkitCtx.callerId);
-            if (iotDevice == null) {
-                mPeerDevice = new IotDevice();
-                mPeerDevice.mDeviceName = mCallkitCtx.callerId;
-                mPeerDevice.mDeviceID = mCallkitCtx.callerId;
-                ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> cannot found incoming device"
-                        + ", callerId=" + mCallkitCtx.callerId);
-            } else {
-                mPeerDevice = iotDevice;
-            }
-        }
-
-        // 进入频道，准备被叫通话
-        talkingPrepare(channelName, rtcToken, localUid, peerUid);
-
-        CallbackPeerIncoming(mPeerDevice, mCallkitCtx.attachMsg); // 回调对端来电
     }
 
 
@@ -831,6 +879,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         // 停止拨号超时
         dialTimeoutStop();
 
+        // 停止接听超时
+        answerTimeoutStop();
+
         ALog.getInstance().d(TAG, "<exceptionProcess> done");
     }
 
@@ -850,6 +901,21 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         }
     }
 
+    /**
+     * @brief 启动接听超时定时器
+     */
+    void answerTimeoutStart() {
+        sendSingleMessage(MSGID_CALL_ANSWER_TIMEOUT, 0, 0, null, ANSWER_WAIT_TIMEOUT);
+    }
+
+    /**
+     * @brief 停止接听超时定时器
+     */
+    void answerTimeoutStop() {
+        synchronized (mMsgQueueLock) {
+            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+        }
+    }
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1159,4 +1225,58 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             accountMgr.onTokenInvalid();
         }
     }
+
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////// Methods for JSON parse /////////////////////////
+    //////////////////////////////////////////////////////////////////////////////
+    int parseJsonIntValue(JSONObject jsonState, String fieldName, int defVal) {
+        try {
+            int value = jsonState.getInt(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
+    long parseJsonLongValue(JSONObject jsonState, String fieldName, long defVal) {
+        try {
+            long value = jsonState.getLong(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonLongValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
+    boolean parseJsonBoolValue(JSONObject jsonState, String fieldName, boolean defVal) {
+        try {
+            boolean value = jsonState.getBoolean(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonBoolValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
+    String parseJsonStringValue(JSONObject jsonState, String fieldName, String defVal) {
+        try {
+            String value = jsonState.getString(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
 }
