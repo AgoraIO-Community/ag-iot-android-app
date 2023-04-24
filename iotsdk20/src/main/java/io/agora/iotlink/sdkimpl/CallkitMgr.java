@@ -58,6 +58,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private static final int MSGID_CALL_BASE = 0x3000;
     private static final int MSGID_CALL_AWSEVENT_INCOMING = 0x3001; ///< 处理AWS端的事件
     private static final int MSGID_CALL_RESP_DIAL = 0x3002;          ///< 发送拨号请求
+    private static final int MSGID_CALL_REQ_ANSWER = 0x3003;        ///< 发送接听请求
     private static final int MSGID_CALL_REQ_HANGUP = 0x3004;        ///< 发送挂断请求
     private static final int MSGID_CALL_RTC_PEER_ONLINE = 0x3005;   ///< 对端RTC上线
     private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3006;  ///< 对端RTC掉线
@@ -66,16 +67,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private static final int MSGID_CALL_ANSWER_TIMEOUT = 0x3009;    ///< 接听超时定时器
     private static final int MSGID_RECORDING_ERROR = 0x3010;        ///< 录像出现错误
 
-
-    //
-    // Reason code
-    //
-    private static final int REASON_NONE = 0;            ///< 没有reason字段
-    private static final int REASON_LOCAL_HANGUP = 1;    ///< 本地挂断
-    private static final int REASON_LOCAL_ANSWER = 2;    ///< 本地应答
-    private static final int REASON_PEER_HANGUP = 3;     ///< 对端挂断
-    private static final int REASON_PEER_ANSWER = 4;     ///< 对端应答
-    private static final int REASON_CALL_TIMEOUT = 5;    ///< 呼叫超时
 
 
 
@@ -169,6 +160,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             case MSGID_CALL_ANSWER_TIMEOUT:
                 DoAnswerTimeout(msg);
                 break;
+            case MSGID_CALL_REQ_ANSWER:
+                DoRequestAnswer(msg);
+                break;
 
             case MSGID_CALL_RESP_DIAL:
                 DoDialResponse(msg);
@@ -201,6 +195,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         synchronized (mMsgQueueLock) {
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
             mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
             mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_HANGUP);
@@ -331,6 +326,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         if (mWorkHandler != null) {  // 移除所有中间的消息
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
             mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
+            mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
             mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
@@ -366,7 +362,15 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return ErrCode.XERR_BAD_STATE;
         }
 
-        // 接听不做任何的处理
+        // 停止呼叫超时计时器
+        dialTimeoutStop();
+
+        // 停止接听超时计时器
+        answerTimeoutStop();
+
+        // 发送请求消息，同步等待执行完成
+        setStateMachine(CALLKIT_STATE_ANSWER_REQING);  // 接听请求中
+        sendSingleMessage(MSGID_CALL_REQ_ANSWER, 0, 0, null, 0);
 
         ALog.getInstance().d(TAG, "<callAnswer> done");
         return ErrCode.XOK;
@@ -672,6 +676,24 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         CallbackPeerIncoming(mPeerDevice, mCallkitCtx.attachMsg);
     }
 
+    /**
+     * @brief 工作线程中运行，接听处理
+     */
+    void DoRequestAnswer(Message msg) {
+        if (getStateMachine() != CALLKIT_STATE_ANSWER_REQING) {
+            ALog.getInstance().e(TAG, "<DoRequestAnswer> failure, bad status, state=" + getStateMachine());
+            return;
+        }
+
+        // 在频道内推送音频流，开始通话
+        talkingStart();
+
+        // 切换到 正在通话中状态
+        setStateMachine(CALLKIT_STATE_TALKING);
+
+        ALog.getInstance().d(TAG, "<DoRequestAnswer> done");
+    }
+
 
     /**
      * @brief 工作线程中运行，处理接听超时
@@ -690,11 +712,14 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         dialTimeoutStop();
 
         // 结束通话
-        IotDevice iotDevice = mPeerDevice;
         talkingStop();
 
         ALog.getInstance().d(TAG, "<DoAnswerTimeout> done");
     }
+
+
+
+
 
     /**
      * @brief 工作线程中运行，HTTP请求有响应
@@ -871,17 +896,10 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
      *          主动挂断，停止通话，状态机切换到空闲，清除对端设备和peerUid
      */
     void exceptionProcess() {
-        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-
-        // 挂断通话
-        talkingStop();
-
-        // 停止拨号超时
-        dialTimeoutStop();
-
-        // 停止接听超时
-        answerTimeoutStop();
-
+        dialTimeoutStop();  // 停止拨号超时
+        answerTimeoutStop();  // 停止接听超时
+        talkingStop();  // 挂断通话
+        
         ALog.getInstance().d(TAG, "<exceptionProcess> done");
     }
 
@@ -1018,10 +1036,14 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         if (reason == 0) {  // 对端主动退出RTC
             if (stateMachine == CALLKIT_STATE_INCOMING ||
                 stateMachine == CALLKIT_STATE_DIALING ||
+                stateMachine == CALLKIT_STATE_INCOMING ||
                 stateMachine == CALLKIT_STATE_TALKING)
             {
                 IotDevice callbackDev = mPeerDevice;
-                exceptionProcess();
+                dialTimeoutStop();  // 停止呼叫超时
+                answerTimeoutStop();  // 停止接听超时
+                talkingStop();   // 结束通话
+
                 CallbackPeerHangup(callbackDev);   // 回调对端挂断
             }
 
@@ -1039,13 +1061,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> width=" + width
                 + ", height=" + height);
-
-        // TODO: 如果对端首帧回调过来，可以直接认为对端已经接听并且进入通话状态，跳过AWS的两个事件数据
-        if (stateMachine == CALLKIT_STATE_DIALING) {
-            ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> enter talk from peer first video frame");
-            talkingStart(); // 在频道内推送音频流，开始通话
-            CallbackPeerAnswer(ErrCode.XOK, mPeerDevice); // 回调对端接听，进入通话状态
-        }
 
         if ((stateMachine != CALLKIT_STATE_IDLE) && (stateMachine != CALLKIT_STATE_HANGUP_REQING)) {
             IotDevice callbackDev = mPeerDevice;
