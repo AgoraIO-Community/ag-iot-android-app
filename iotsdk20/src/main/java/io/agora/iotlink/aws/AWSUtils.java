@@ -251,31 +251,17 @@ public class AWSUtils {
                 }
 
             } else if (topic.contains("shadow/name/rtc2/update/delta")) {
-                //只关注APP端影子的期望值
-                if (jsonMessage.getJSONObject("state").has("desired")
-                        && !jsonMessage.getJSONObject("state").isNull("desired")) {
-                    JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("desired");
-
-                    //去除topic前后内容，获取设备唯一标志
-                    String things_name = topic.replaceAll("\\$aws/things/", "");
-                    things_name = things_name.replaceAll("/shadow/name/rtc2/update/delta", "");
-                    //通知收到设备端来电事件
-                    if (things_name.equals(mUserInventThingName)) {
-
-                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
-                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
-
-                        if (versionNumber > mLastDevIncomeNumber) {
-                            mLastDevIncomeNumber = versionNumber;
-
-
-                            awsListener.onDevIncoming(desiredObject, timestamp);
-
-                        } else {
-                            ALog.getInstance().e(TAG, "<handleMessage> old get version number"
-                                    + ", versionNumber=" + versionNumber
-                                    + ", mLastDevIncomeNumber=" + mLastDevIncomeNumber);
-                        }
+                long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
+                JSONObject stateJsonObj = parseJsonObjectValue(jsonMessage, "state", null);
+                if (stateJsonObj != null) {
+                    if (versionNumber > mLastDevIncomeNumber) {
+                        mLastDevIncomeNumber = versionNumber;
+                        awsListener.onDevIncoming(stateJsonObj, timestamp);
+                    } else {
+                        ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/update/delta] old get version number"
+                                + ", versionNumber=" + versionNumber
+                                + ", mLastDevIncomeNumber=" + mLastDevIncomeNumber);
                     }
                 }
 
@@ -523,6 +509,19 @@ public class AWSUtils {
             return defVal;
         }
     }
+
+    JSONObject parseJsonObjectValue(JSONObject jsonState, String fieldName, JSONObject defVal) {
+        try {
+            JSONObject value = jsonState.getJSONObject(fieldName);
+            return value;
+
+        } catch (JSONException e) {
+            ALog.getInstance().e(TAG, "<parseJsonObjectValue> "
+                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
+            return defVal;
+        }
+    }
+
 
 
     /**
