@@ -2808,7 +2808,7 @@ public class AgoraService {
         CallReqResult dialResult = new CallReqResult();
 
         // 请求URL
-        String requestUrl = mCallkitBaseUrl + "/call";
+        String requestUrl = mCallkitBaseUrl + "/simple-call";
 
         // body内容
         JSONObject header = new JSONObject();
