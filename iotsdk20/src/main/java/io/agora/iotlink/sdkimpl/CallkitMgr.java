@@ -1021,12 +1021,13 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return;
         }
 
-        // 停止所有超时定时器
-        allTimeoutStop();
 
         // 如果当前正在主叫状态，则回调对端应答
         if (stateMachine == CALLKIT_STATE_DIALING) {
             ALog.getInstance().d(TAG, "<DoRtcPeerOnline> Peer answer, enter talking...");
+
+            // 停止所有超时定时器
+            allTimeoutStop();
 
             // 进入通话状态
             setStateMachine(CALLKIT_STATE_TALKING);
