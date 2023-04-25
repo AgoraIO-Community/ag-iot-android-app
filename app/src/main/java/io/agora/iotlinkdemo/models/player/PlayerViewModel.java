@@ -190,9 +190,23 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         return callStatus;
     }
 
+    public boolean isIncoming() {
+        int callkitStatus = AIotAppSdkFactory.getInstance().getCallkitMgr().getStateMachine();
+
+        if (callkitStatus == ICallkitMgr.CALLKIT_STATE_INCOMING ||
+            callkitStatus == ICallkitMgr.CALLKIT_STATE_ANSWER_REQING ||
+            callkitStatus == ICallkitMgr.CALLKIT_STATE_ANSWER_RSPING ||
+            callkitStatus == ICallkitMgr.CALLKIT_STATE_TALKING )
+        {
+            return true;
+        }
+
+      return false;
+    }
+
     @Override
     public void onDialDone(int errCode, IotDevice iotDevice) {
-        Log.d(TAG, "<onDialDone> errCode=" + errCode);
+        Log.d(TAG, "[IOTSDK/] <onDialDone> errCode=" + errCode);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_DIAL_DONE, errCode);
     }
 
@@ -201,7 +215,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerAnswer(IotDevice iotDevice) {
-        Log.d(TAG, "<onPeerAnswer> iotDevice=" + iotDevice.mDeviceID);
+        Log.d(TAG, "[IOTSDK/] <onPeerAnswer> iotDevice=" + iotDevice.mDeviceID);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ANSWER, 0);
     }
 
@@ -210,7 +224,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         if (iotDevice == null) {
             return;
         }
-        Log.d(TAG, "<onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
+        Log.d(TAG, "[IOTSDK/] <onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
         }
@@ -221,7 +235,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerTimeout(IotDevice iotDevice) {
-//        Log.e(TAG, "<onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
+        Log.e(TAG, "[IOTSDK/] <onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
         }
@@ -232,6 +246,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerFirstVideo(IotDevice iotDevice, int videoWidth, int videoHeight) {
+        Log.d(TAG, "[IOTSDK/] <onPeerFirstVideo> width=" + videoWidth + ", height=" + videoHeight);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO, null);
     }
 
@@ -447,13 +462,13 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onUserOnline(int uid, int onlineUserCount) {
-        Log.d(TAG, "<onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        Log.d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_ONLINE, onlineUserCount);
     }
 
     @Override
     public void onUserOffline(int uid, int onlineUserCount) {
-        Log.d(TAG, "<onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        Log.d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_OFFLINE, onlineUserCount);
     }
 
@@ -487,7 +502,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onRecordingError(int errCode) {
-        Log.d(TAG, "<onRecordingError> errCode=" + errCode);
+        Log.d(TAG, "[IOTSDK/] <onRecordingError> errCode=" + errCode);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_RECORDING_ERROR, errCode);
     }
 
