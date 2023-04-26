@@ -48,7 +48,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private static final String TAG = "IOTSDK/CallkitMgr";
     private static final int DIAL_WAIT_TIMEOUT = 30000;          ///< 呼叫超时请求 30秒
     private static final int ANSWER_WAIT_TIMEOUT = 30000;        ///< 接听处理超时 30秒
-    private static final int RTC_OFFLINE_TIMEOUT = 30000;        ///< RTC掉线超时 30秒
     private static final int HANGUP_WAIT_TIMEOUT = 1000;
     private static final int DEFAULT_DEV_UID = 10;               ///< 设备端uid，固定为10
 
@@ -67,7 +66,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private static final int MSGID_CALL_DIAL_TIMEOUT = 0x3008;      ///< 呼叫超时定时器
     private static final int MSGID_CALL_ANSWER_TIMEOUT = 0x3009;    ///< 接听超时定时器
     private static final int MSGID_RECORDING_ERROR = 0x3010;        ///< 录像出现错误
-    private static final int MSGID_RTC_OFFLINE_TIMEOUT = 0x3011;    ///< RTC掉线超时
 
 
 
@@ -187,9 +185,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             case MSGID_CALL_RTC_PEER_FIRSTVIDEO:
                 DoRtcPeerFirstVideo(msg);
                 break;
-            case MSGID_RTC_OFFLINE_TIMEOUT:
-                DoRtcOfflineTimeout(msg);
-                break;
 
             case MSGID_RECORDING_ERROR:
                 DoRecordingError(msg);
@@ -208,7 +203,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             mWorkHandler.removeMessages(MSGID_CALL_REQ_HANGUP);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
-            mWorkHandler.removeMessages(MSGID_RTC_OFFLINE_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
         }
     }
@@ -931,29 +925,12 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     /**
-     * @brief 启动RTC掉线超时定时器
-     */
-    void offlineTimeoutStart() {
-        sendSingleMessage(MSGID_RTC_OFFLINE_TIMEOUT, 0, 0, null, RTC_OFFLINE_TIMEOUT);
-    }
-
-    /**
-     * @brief 停止RTC掉线超时定时器
-     */
-    void offlineTimeoutStop() {
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_RTC_OFFLINE_TIMEOUT);
-        }
-    }
-
-    /**
      * @brief 停止所有超时定时器
      */
     void allTimeoutStop() {
         synchronized (mMsgQueueLock) {
             mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_RTC_OFFLINE_TIMEOUT);
         }
     }
 
@@ -1055,36 +1032,18 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
                 + ", peerUid=" + peerUid + ", reason=" + reason
                 + ", stateMachine=" + stateMachine);
 
-        if (reason == 0) {  // 对端主动退出RTC
-            if (stateMachine == CALLKIT_STATE_INCOMING ||
-                stateMachine == CALLKIT_STATE_DIALING ||
-                stateMachine == CALLKIT_STATE_INCOMING ||
-                stateMachine == CALLKIT_STATE_TALKING)
-            {
-                IotDevice callbackDev = mPeerDevice;
-                allTimeoutStop();   // 停止所有超时计时器
-                talkingStop();   // 结束通话
 
-                CallbackPeerHangup(callbackDev);   // 回调对端挂断
-            }
+        if (stateMachine == CALLKIT_STATE_INCOMING ||
+            stateMachine == CALLKIT_STATE_DIALING ||
+            stateMachine == CALLKIT_STATE_INCOMING ||
+            stateMachine == CALLKIT_STATE_TALKING)
+        {
+            IotDevice callbackDev = mPeerDevice;
+            allTimeoutStop();   // 停止所有超时计时器
+            talkingStop();   // 结束通话
 
-        } else { // 对端丢包太多后掉线
-
-            // 启动对端掉线计时器
-            offlineTimeoutStart();
+            CallbackPeerHangup(callbackDev);   // 回调对端挂断
         }
-    }
-
-    /**
-     * @brief 工作线程中运行，对端掉线超时处理
-     */
-    void DoRtcOfflineTimeout(Message msg) {
-        IotDevice callbackDev = mPeerDevice;
-        allTimeoutStop();   // 停止所有超时计时器
-        talkingStop();   // 结束通话
-
-        ALog.getInstance().d(TAG, "<DoRtcOfflineTimeout> done");
-        CallbackPeerHangup(callbackDev);   // 回调对端挂断
     }
 
     /**
@@ -1096,9 +1055,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         int stateMachine = getStateMachine();
         ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> width=" + width
                 + ", height=" + height);
-
-        // 停止对端掉线计时器
-        offlineTimeoutStop();
 
         if ((stateMachine != CALLKIT_STATE_IDLE) && (stateMachine != CALLKIT_STATE_HANGUP_REQING)) {
             IotDevice callbackDev = mPeerDevice;
