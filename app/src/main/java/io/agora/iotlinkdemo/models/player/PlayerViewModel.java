@@ -14,6 +14,7 @@ import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
 
 import io.agora.iotlink.IotPropertyDesc;
+import io.agora.iotlink.logger.ALog;
 import io.agora.iotlinkdemo.api.bean.IotDeviceProperty;
 import io.agora.iotlinkdemo.base.AgoraApplication;
 import io.agora.iotlinkdemo.common.Constant;
@@ -215,7 +216,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerAnswer(IotDevice iotDevice) {
-        Log.d(TAG, "[IOTSDK/] <onPeerAnswer> iotDevice=" + iotDevice.mDeviceID);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onPeerAnswer> iotDevice=" + iotDevice.mDeviceID);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_ANSWER, 0);
     }
 
@@ -224,7 +225,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
         if (iotDevice == null) {
             return;
         }
-        Log.d(TAG, "[IOTSDK/] <onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onPeerHangup> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
         }
@@ -235,7 +236,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerTimeout(IotDevice iotDevice) {
-        Log.e(TAG, "[IOTSDK/] <onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
+        ALog.getInstance().e(TAG, "[IOTSDK/] <onPeerTimeout> iotDevice=" + iotDevice.mDeviceID);
         if (mLivingDevice == null) {
             return;
         }
@@ -246,7 +247,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onPeerFirstVideo(IotDevice iotDevice, int videoWidth, int videoHeight) {
-        Log.d(TAG, "[IOTSDK/] <onPeerFirstVideo> width=" + videoWidth + ", height=" + videoHeight);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onPeerFirstVideo> width=" + videoWidth + ", height=" + videoHeight);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_DEVICE_PEER_FIRST_VIDEO, null);
     }
 
@@ -263,6 +264,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
      * @brief 通话功能
      */
     public void onBtnVoiceTalk() {
+        long t1 = System.currentTimeMillis();
         if (mSendingVoice) {
             // 结束语音发送处理
             AIotAppSdkFactory.getInstance().getCallkitMgr().muteLocalAudio(true);
@@ -272,6 +274,8 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
             AIotAppSdkFactory.getInstance().getCallkitMgr().muteLocalAudio(false);
             mSendingVoice = true;
         }
+        long t2 = System.currentTimeMillis();
+        Log.d(TAG, "[IOTSDK/] <onBtnVoiceTalk> done, costTime=" + (t2-t1));
     }
 
     public void pausePlayer() {
@@ -348,7 +352,11 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     private void requestSetDeviceProperty(Map<String, Object> properties) {
         Log.d("cwtsw", "requestSetDeviceProperty properties = " + properties);
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().setDeviceProperty(mLivingDevice, properties);
-        if (ret != ErrCode.XOK) {
+
+        if (ret == ErrCode.XERR_MQTT_DISCONNECT) {
+            ToastUtils.INSTANCE.showToast("当前MQTT还未连接，稍后再设置设备属配置");
+
+        } else if (ret != ErrCode.XOK) {
             ToastUtils.INSTANCE.showToast("不能设置设备属性 配置信息, 错误码: " + ret);
         }
     }
@@ -421,7 +429,10 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
     public void requestViewModelData() {
         // 先查询 设备属性信息
         int ret = AIotAppSdkFactory.getInstance().getDeviceMgr().getDeviceProperty(mLivingDevice);
-        if (ret != ErrCode.XOK) {
+        if (ret == ErrCode.XERR_MQTT_DISCONNECT) {
+            ToastUtils.INSTANCE.showToast("当前MQTT还未连接，稍后再获取设备属配置");
+
+        } else if (ret != ErrCode.XOK) {
             ToastUtils.INSTANCE.showToast("不能获取设备属性 配置信息, 错误码: " + ret);
         }
     }
@@ -462,13 +473,13 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onUserOnline(int uid, int onlineUserCount) {
-        Log.d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_ONLINE, onlineUserCount);
     }
 
     @Override
     public void onUserOffline(int uid, int onlineUserCount) {
-        Log.d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onUserOnline> uid=" + uid + ", onlineUserCount=" + onlineUserCount);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_USER_OFFLINE, onlineUserCount);
     }
 
@@ -502,7 +513,7 @@ public class PlayerViewModel extends BaseViewModel implements IDeviceMgr.ICallba
 
     @Override
     public void onRecordingError(int errCode) {
-        Log.d(TAG, "[IOTSDK/] <onRecordingError> errCode=" + errCode);
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onRecordingError> errCode=" + errCode);
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_RECORDING_ERROR, errCode);
     }
 

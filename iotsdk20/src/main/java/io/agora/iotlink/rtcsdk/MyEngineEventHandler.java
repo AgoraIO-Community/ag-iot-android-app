@@ -135,6 +135,18 @@ public class MyEngineEventHandler {
         }
 
         @Override
+        public void onRequestToken() {
+            ALog.getInstance().d(TAG, "<onRequestToken>");
+
+            Iterator<AGEventHandler> it = mEventHandlerList.keySet().iterator();
+            while (it.hasNext()) {
+                AGEventHandler handler = it.next();
+                handler.onRequestToken();
+            }
+        }
+
+
+        @Override
         public void onJoinChannelSuccess(String channel, int uid, int elapsed) {
             String strLog = String.format(Locale.getDefault(),"<onJoinChannelSuccess> channel=%s, uid=%d, elapsed=%d",
                     channel, uid, elapsed);
@@ -146,6 +158,7 @@ public class MyEngineEventHandler {
                 handler.onJoinChannelSuccess(channel, uid, elapsed);
             }
         }
+
 
         public void onRejoinChannelSuccess(String channel, int uid, int elapsed) {
             String strLog = String.format(Locale.getDefault(),"<onRejoinChannelSuccess> channel=%s, uid=%d, elapsed=%d",

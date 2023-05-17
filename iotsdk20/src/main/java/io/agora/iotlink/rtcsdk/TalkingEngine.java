@@ -82,6 +82,10 @@ public class TalkingEngine implements AGEventHandler,
          */
         default void onTalkingLeftDone() {  }
 
+        /**
+         * @brief 通话过程中错误
+         */
+        default void onTalkingError(int localUid, int peerUid, int errCode) {  }
 
         /**
          * @brief 通话对端RTC上线
@@ -108,7 +112,6 @@ public class TalkingEngine implements AGEventHandler,
          * @brief 用户下线
          */
         default void onUserOffline(int uid) {  }
-
 
         /**
          * @brief 录像时产生错误
@@ -384,7 +387,7 @@ public class TalkingEngine implements AGEventHandler,
         ChannelMediaOptions options = new ChannelMediaOptions();
         options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
         options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeAudio = false;
         options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
         options.publishCameraTrack = mInitParam.mPublishVideo;
         options.publishMicrophoneTrack = mInitParam.mPublishAudio;
@@ -392,6 +395,13 @@ public class TalkingEngine implements AGEventHandler,
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<joinChannel> Exit with error, ret=" + ret);
             return false;
+        }
+
+        int[] whiteUidList = new int[1];
+        whiteUidList[0] = mPeerUid;
+        ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
+        if (ret != Constants.ERR_OK) {
+            ALog.getInstance().e(TAG, "<joinChannel> setSubscribeAudioWhitelist() error, ret=" + ret);
         }
 
         ret = mRtcEngine.muteLocalVideoStream(mMuteLocalAudio);
@@ -492,7 +502,7 @@ public class TalkingEngine implements AGEventHandler,
         ChannelMediaOptions options = new ChannelMediaOptions();
         options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
         options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeAudio = false;
         options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
         options.publishCameraTrack = (!mMuteLocalVideo);
         options.publishMicrophoneTrack = (!mMuteLocalAudio);
@@ -505,6 +515,7 @@ public class TalkingEngine implements AGEventHandler,
     }
 
     public synchronized boolean muteLocalAudioStream(boolean mute) {
+        long t1 = System.currentTimeMillis();
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<muteLocalAudioStream> bad state");
             return false;
@@ -515,35 +526,59 @@ public class TalkingEngine implements AGEventHandler,
         ChannelMediaOptions options = new ChannelMediaOptions();
         options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
         options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = mInitParam.mSubscribeAudio;
+        options.autoSubscribeAudio = false;
         options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
         options.publishCameraTrack = (!mMuteLocalVideo);
         options.publishMicrophoneTrack = (!mMuteLocalAudio);
         int ret1 = mRtcEngine.updateChannelMediaOptions(options);
 
         int ret = mRtcEngine.muteLocalAudioStream(mute);
+        long t2 = System.currentTimeMillis();
         ALog.getInstance().d(TAG, "<muteLocalAudioStream> mute=" + mute
-                + ", ret1=" + ret1 + ", ret=" + ret);
+                + ", ret1=" + ret1 + ", ret=" + ret + ", costTime=" + (t2-t1));
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean mutePeerVideoStream(boolean mute) {
+        long t1 = System.currentTimeMillis();
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<mutePeerVideoStream> bad state");
             return false;
         }
         int ret = mRtcEngine.muteAllRemoteVideoStreams(mute);
-        ALog.getInstance().d(TAG, "<mutePeerVideoStream> mute=" + mute + ", ret=" + ret);
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<mutePeerVideoStream> mute=" + mute
+                + ", ret=" + ret + ", costTime=" + (t2-t1));
         return (ret == Constants.ERR_OK);
     }
 
     public synchronized boolean mutePeerAudioStream(boolean mute) {
+        long t1 = System.currentTimeMillis();
+        int ret;
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<mutePeerAudioStream> bad state");
             return false;
         }
-        int ret = mRtcEngine.muteAllRemoteAudioStreams(mute);
-        ALog.getInstance().d(TAG, "<mutePeerAudioStream> mute=" + mute + ", ret=" + ret);
+
+        int[] whiteUidList = new int[1];
+        if (!mute) {
+            whiteUidList[0] = mPeerUid;
+            ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
+            if (ret != Constants.ERR_OK) {
+                ALog.getInstance().e(TAG, "<mutePeerAudioStream> setSubscribeAudioWhitelist() error, ret=" + ret);
+            }
+
+        } else {
+            ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
+            if (ret != Constants.ERR_OK) {
+                ALog.getInstance().e(TAG, "<mutePeerAudioStream> setSubscribeAudioWhitelist() error, ret=" + ret);
+            }
+            ret = mRtcEngine.muteRemoteAudioStream(mPeerUid, mute);
+        }
+
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<mutePeerAudioStream> mute=" + mute
+                + ", ret=" + ret + ", costTime=" + (t2-t1));
         return (ret == Constants.ERR_OK);
     }
 
@@ -997,6 +1032,17 @@ public class TalkingEngine implements AGEventHandler,
     public void onRecorderInfoUpdate(Object info)
     {  }
 
+    @Override
+    public void onRequestToken() {
+        ALog.getInstance().d(TAG, "<onRequestToken> ");
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onTalkingError(mLocalUid, mPeerUid, ErrCode.XERR_TOKEN_INVALID);
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     //////////////////// Override Methods of IVideoFrameObserver ///////////////

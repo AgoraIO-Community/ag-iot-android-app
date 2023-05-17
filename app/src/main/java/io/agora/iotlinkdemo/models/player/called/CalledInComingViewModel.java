@@ -4,6 +4,8 @@ import android.view.SurfaceView;
 
 import com.agora.baselibrary.base.BaseViewModel;
 import com.agora.baselibrary.utils.ToastUtils;
+
+import io.agora.iotlink.logger.ALog;
 import io.agora.iotlinkdemo.common.Constant;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
@@ -14,6 +16,7 @@ import io.agora.iotlink.IotDevice;
  * 主页接收消息 viewModel
  */
 public class CalledInComingViewModel extends BaseViewModel implements ICallkitMgr.ICallback {
+    private final String TAG = "IOTLINK/PlayerViewModel";
 
     public void onStart() {
         AIotAppSdkFactory.getInstance().getCallkitMgr().registerListener(this);
@@ -72,6 +75,7 @@ public class CalledInComingViewModel extends BaseViewModel implements ICallkitMg
      */
     @Override
     public void onPeerHangup(IotDevice iotDevice) {
+        ALog.getInstance().d(TAG, "[IOTSDK/] <onPeerHangup>");
         getISingleCallback().onSingleCallback(Constant.CALLBACK_TYPE_PLAYER_CALL_HANG_UP, iotDevice);
     }
 

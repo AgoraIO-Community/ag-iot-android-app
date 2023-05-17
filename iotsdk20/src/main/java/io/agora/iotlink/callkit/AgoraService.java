@@ -78,7 +78,9 @@ public class AgoraService {
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraService";
-    private static final int HTTP_TIMEOUT = 4000;
+    private static final int HTTP_CONNECT_TIMEOUT = 4000;
+    private static final int HTTP_READ_TIMEOUT = 6000;
+
 
     public static final int RESP_CODE_IN_TALKING = 100001;      ///<	对端通话中，无法接听
     public static final int RESP_CODE_ANSWER = 100002;          ///<	未通话，无法接听
@@ -2357,8 +2359,8 @@ public class AgoraService {
         try {
             java.net.URL url = new URL(realURL);
             connection = (HttpURLConnection) url.openConnection();
-            connection.setReadTimeout(HTTP_TIMEOUT);
-            connection.setConnectTimeout(HTTP_TIMEOUT);
+            connection.setReadTimeout(HTTP_READ_TIMEOUT);
+            connection.setConnectTimeout(HTTP_CONNECT_TIMEOUT);
             // 设置token
             if ((token != null) && (!token.isEmpty())) {
                 connection.setRequestProperty("authorization", "Bearer " + token);
@@ -2434,6 +2436,7 @@ public class AgoraService {
 
         } catch (Exception e) {
             e.printStackTrace();
+            ALog.getInstance().e(TAG, "<requestToServer> [EXCEPTION] exp=" + e.toString());
             responseObj.mErrorCode = ErrCode.XERR_HTTP_CONNECT;
             return responseObj;
 
@@ -2494,8 +2497,8 @@ public class AgoraService {
         try {
             java.net.URL url = new URL(realURL);
             connection = (HttpURLConnection) url.openConnection();
-            connection.setReadTimeout(HTTP_TIMEOUT);
-            connection.setConnectTimeout(HTTP_TIMEOUT);
+            connection.setReadTimeout(HTTP_READ_TIMEOUT);
+            connection.setConnectTimeout(HTTP_CONNECT_TIMEOUT);
 
             // 设置token
             if ((token != null) && (!token.isEmpty())) {
@@ -2670,8 +2673,8 @@ public class AgoraService {
             os.flush();
             os.close();
 
-            connection.setReadTimeout(HTTP_TIMEOUT);
-            connection.setConnectTimeout(HTTP_TIMEOUT);
+            connection.setReadTimeout(HTTP_READ_TIMEOUT);
+            connection.setConnectTimeout(HTTP_CONNECT_TIMEOUT);
             responseObj.mRespCode = connection.getResponseCode();
             if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
                 responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;

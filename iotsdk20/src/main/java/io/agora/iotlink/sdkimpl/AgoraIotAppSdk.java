@@ -32,6 +32,9 @@ import io.agora.iotlink.lowservice.AgoraLowService;
 import io.agora.iotlink.rtcsdk.TalkingEngine;
 
 import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -50,6 +53,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraIotAppSdk";
     private static final int EXIT_WAIT_TIMEOUT = 3000;
+    private static final long INCOMING_TIMEOUT = 30;   ///< 早于SDK初始化30秒之前的来电消息，直接忽略
 
     //
     // The mesage Id
@@ -63,7 +67,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     ////////////////////////////////////////////////////////////////////////
     private InitParam mInitParam;
     private AccountMgr mAccountMgr;
-    private CallkitImpl mCallkitImpl;
+    private CallkitMgr mCallkitMgr;
     private DeviceMgr mDeviceMgr;
     private AlarmMgr mAlarmMgr;
     private DevMessageMgr mDevmsgMgr;
@@ -119,8 +123,8 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         mDeviceMgr = new DeviceMgr();
         mDeviceMgr.initialize(this);
 
-        mCallkitImpl = new CallkitImpl();
-        mCallkitImpl.initialize(this);
+        mCallkitMgr = new CallkitMgr();
+        mCallkitMgr.initialize(this);
 
         mAlarmMgr = new AlarmMgr();
         mAlarmMgr.initialize(this);
@@ -157,8 +161,8 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
                     params.put("localRecord", 0);
                     params.put("disabledPush", false); // 使用离线推送
 
-                    AWSUtils.getInstance().updateRtcStatus(params);
-                    AWSUtils.getInstance().getRtcStatus();
+                    AWSUtils.getInstance().updateRtcStatus(params);  // 这个要更新到 rtc
+                    AWSUtils.getInstance().getRtcStatus();  // 这个要从 rtc2 获取
 
                     Map<String, Object> rtmParams = new HashMap<String, Object>();
                     rtmParams.put("appId", mInitParam.mRtcAppId);
@@ -177,12 +181,21 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             }
 
             @Override
-            public void onDevIncoming(JSONObject jsonObject, long timestamp) {
-                ALog.getInstance().d(TAG, "<onDevIncome> timestamp=" + timestamp
+            public void onDevIncoming(JSONObject jsonObject, long msgTimestamp, long tokenTimestamp) {
+                ALog.getInstance().d(TAG, "<onDevIncome> msgTimestamp=" + msgTimestamp
+                        + ", msgDate=" + timestampToText(msgTimestamp*1000L)
+                        + ", tokenTimestamp=" + tokenTimestamp
+                        + ", tokenDate=" + timestampToText(tokenTimestamp*1000L)
                         + ", jsonObject=" + jsonObject.toString());
 
-                if (mCallkitImpl != null) {
-                    mCallkitImpl.onAwsEventIncoming(jsonObject, timestamp);
+                if ((tokenTimestamp+INCOMING_TIMEOUT) < msgTimestamp) {
+                    // 早于SDK启动30秒之前的来电消息直接过滤
+                    ALog.getInstance().e(TAG, "<onDevIncome> Incoming too early, ignore it");
+                    return;
+                }
+
+                if (mCallkitMgr != null) {
+                    mCallkitMgr.onAwsEventIncoming(jsonObject, tokenTimestamp);
                 }
             }
 
@@ -200,8 +213,9 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             public void onUpdateRtcStatus(JSONObject jsonObject, long timestamp) {
                 ALog.getInstance().d(TAG, "<onUpdateRtcStatus> timestamp=" + timestamp
                             + ", jsonObject=" + jsonObject.toString());
-                if (mCallkitImpl != null) {
-                    mCallkitImpl.onAwsUpdateClient(jsonObject, timestamp);
+
+                if (mCallkitMgr != null) {
+                    mCallkitMgr.onAwsUpdateClient(jsonObject, timestamp);
                 }
             }
 
@@ -259,9 +273,9 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             mAccountMgr = null;
         }
 
-        if (mCallkitImpl != null) {
-            mCallkitImpl.release();
-            mCallkitImpl = null;
+        if (mCallkitMgr != null) {
+            mCallkitMgr.release();
+            mCallkitMgr = null;
         }
 
         if (mDeviceMgr != null) {
@@ -310,7 +324,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
 
     @Override
     public ICallkitMgr getCallkitMgr() {
-        return mCallkitImpl;
+        return mCallkitMgr;
     }
 
     @Override
@@ -485,5 +499,11 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         }
     }
 
+
+    String timestampToText(long timestamp) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
+        String time = format.format(new Date(timestamp));
+        return time;
+    }
 
 }

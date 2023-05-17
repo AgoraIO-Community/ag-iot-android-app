@@ -1,10 +1,13 @@
-#  Agora Link
+#  Agora Link Ver1.5
 
 #### 应用说明
 该应用是灵隼系统Android端Demo程序
+必须要使用配套的 device_sdk_ver1.5 版本的设备SDK使用
 
 #### 软件架构
-Software architecture description
+1. app目录         ：应用层demo程序代码
+2. iotsdk20目录 ：SDK代码
+3. avengine目录：录像功能SDK目录
 
 #### 功能列表
 
@@ -30,6 +33,8 @@ Software architecture description
 3. 使用获取到的开发者账号信息，更新 /app/src/main/res/values/config.xml 配置文件
 
 4. 使用Android Studio打开整个项目工程，进行编译和调试
+
+5. 
 
 
 

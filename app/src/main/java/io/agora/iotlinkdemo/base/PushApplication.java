@@ -17,6 +17,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Process;
 import android.text.TextUtils;
 import android.util.Log;
@@ -32,6 +33,7 @@ import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.IotDevice;
 import io.agora.iotlink.utils.PreferenceManager;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -171,8 +173,10 @@ public class PushApplication extends BaseApplication {
         initParam.mPublishAudio = false;
         initParam.mSubscribeAudio = true;
         initParam.mSubscribeVideo = true;
-        //String storageRootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-        //initParam.mLogFilePath = storageRootPath + "/callkit.log";
+
+        File file = this.getExternalFilesDir(null);
+        String cachePath = file.getAbsolutePath();
+        initParam.mLogFilePath = cachePath + "/callkit.log";
 
         int ret = AIotAppSdkFactory.getInstance().initialize(initParam);
 

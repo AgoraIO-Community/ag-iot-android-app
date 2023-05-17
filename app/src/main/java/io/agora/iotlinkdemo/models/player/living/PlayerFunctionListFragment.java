@@ -65,6 +65,8 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
     // message Id
     //
     public static final int MSGID_CHECK_STATE = 0x1001;    ///< 检测当前呼叫状态
+    public static final int MSGID_QUERY_FIRMWARE = 0x1002; ///< 查询固件版本
+
 
     private PermissionHandler mPermHandler;             ///< 权限申请处理
     private Handler mMsgHandler = null;                 ///< 主线程中的消息处理
@@ -101,6 +103,8 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
      */
     private PlayerViewModel playerViewModel;
 
+    private long mVoiceTalkTimestamp = 0;
+
     @NonNull
     @Override
     protected FagmentPlayerFunctionBinding getViewBinding(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
@@ -136,6 +140,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
 
                     } else if (type == Constant.CALLBACK_TYPE_DEVICE_DIAL_DONE) {  // 呼叫设备完成
                         updateCallWgtStatus();
+
                         mMsgHandler.removeMessages(MSGID_CHECK_STATE);
                         mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_STATE, 10000);
 
@@ -202,6 +207,11 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
                         Log.d(TAG, "<handleMessage> MSGID_CHECK_STATE");
                         updateCallWgtStatus();
                     } break;
+
+                    case MSGID_QUERY_FIRMWARE: {
+                        updateCallWgtStatus();
+                        playerViewModel.queryMcuVersion();
+                    } break;
                 }
             }
         };
@@ -212,6 +222,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         int userCount = playerViewModel.getOnlineUserCount();
         String str_usercnt = getString(R.string.user_count) + userCount;
         getBinding().tvUserCount.setText(str_usercnt);
+        mVoiceTalkTimestamp = 0;
 
         // 判断如果不是来电，则进行主动呼叫操作
         if (!playerViewModel.isIncoming()) {
@@ -237,13 +248,11 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         getBinding().btnSelectLegibilityFull.setOnClickListener(view -> showSelectLegibilityDialog());
 
         getBinding().ivCall.setOnClickListener(view -> {
-                    playerViewModel.onBtnVoiceTalk();
-                    getBinding().ivCall.setSelected(playerViewModel.mSendingVoice);
+                    onBtnVoiceTalk();
                 }
         );
         getBinding().ivCallFull.setOnClickListener(view -> {
-                    playerViewModel.onBtnVoiceTalk();
-                    getBinding().ivCallFull.setSelected(playerViewModel.mSendingVoice);
+                    onBtnVoiceTalk();
                 }
         );
         getBinding().ivChangeOfVoice.setOnClickListener(view -> showChangeOfVoiceDialog());
@@ -401,14 +410,10 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         }
 
         // 延迟调用查询当前MCU固件版本版本
-        new android.os.Handler(Looper.getMainLooper()).postDelayed(
-                new Runnable() {
-                    public void run() {
-                        updateCallWgtStatus();
-                        playerViewModel.queryMcuVersion();
-                    }
-                },
-                300);
+        if (mMsgHandler != null) {
+            mMsgHandler.removeMessages(MSGID_QUERY_FIRMWARE);
+            mMsgHandler.sendEmptyMessageDelayed(MSGID_QUERY_FIRMWARE, 300);
+        }
     }
 
     @Override
@@ -430,6 +435,7 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
         playerViewModel.release();
         if (mMsgHandler != null) {
             mMsgHandler.removeMessages(MSGID_CHECK_STATE);
+            mMsgHandler.removeMessages(MSGID_QUERY_FIRMWARE);
             mMsgHandler = null;
         }
     }
@@ -650,6 +656,13 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             getBinding().tvTips2.setVisibility(View.VISIBLE);
             getBinding().loadingBG.setVisibility(View.VISIBLE);
         }
+
+        // 刷新在线用户数量
+        getBinding().tvUserCount.post(() -> {
+            int userCount = playerViewModel.getOnlineUserCount();
+            String str_usercnt = getString(R.string.user_count) + userCount;
+            getBinding().tvUserCount.setText(str_usercnt);
+        });
     }
 
     /**
@@ -661,6 +674,23 @@ public class PlayerFunctionListFragment extends BaseViewBindingFragment<FagmentP
             return;
         }
         updateCallWgtStatus();
+    }
+
+    /**
+     * @brief 控制是否发送本地音频
+     */
+    void onBtnVoiceTalk() {
+        long voiceTalkSpan = System.currentTimeMillis() - mVoiceTalkTimestamp;
+        if (voiceTalkSpan < 500) {
+            Log.d(TAG, "<onBtnVoiceTalk> skip voice talk, voiceTalkSpan=" + voiceTalkSpan);
+            return;
+        }
+
+        playerViewModel.onBtnVoiceTalk();
+        getBinding().ivCall.setSelected(playerViewModel.mSendingVoice);
+        getBinding().ivCallFull.setSelected(playerViewModel.mSendingVoice);
+        mVoiceTalkTimestamp = System.currentTimeMillis();
+
     }
 
     /**

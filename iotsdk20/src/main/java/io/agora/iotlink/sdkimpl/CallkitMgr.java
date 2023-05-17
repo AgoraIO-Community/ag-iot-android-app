@@ -20,7 +20,9 @@ import android.view.SurfaceView;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
@@ -46,8 +48,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitMgr";
-    private static final int DIAL_WAIT_TIMEOUT = 30000;          ///< 呼叫超时请求 30秒
-    private static final int ANSWER_WAIT_TIMEOUT = 30000;        ///< 接听处理超时 30秒
+    private static final int DIAL_WAIT_TIMEOUT = 30000;         ///< 呼叫超时请求 30秒
+    private static final int ANSWER_WAIT_TIMEOUT = 30000;       ///< 接听处理超时 30秒
+    private static final int DEVONLINE_WAIT_TIMEOUT = 15000;    ///< 来电时设备上线超时 15秒
     private static final int HANGUP_WAIT_TIMEOUT = 1000;
     private static final int DEFAULT_DEV_UID = 10;               ///< 设备端uid，固定为10
 
@@ -65,7 +68,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3007;  ///< 对端RTC首帧出图
     private static final int MSGID_CALL_DIAL_TIMEOUT = 0x3008;      ///< 呼叫超时定时器
     private static final int MSGID_CALL_ANSWER_TIMEOUT = 0x3009;    ///< 接听超时定时器
-    private static final int MSGID_RECORDING_ERROR = 0x3010;        ///< 录像出现错误
+    private static final int MSGID_CALL_DEVONLINE_TIMEOUT = 0x3010; ///< 设备上线超时定时器
+    private static final int MSGID_RECORDING_ERROR = 0x3011;        ///< 录像出现错误
 
 
 
@@ -136,7 +140,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
      * @brief 在AWS事件中被调用，来电消息
      */
     void onAwsEventIncoming(JSONObject jsonState, long timestamp) {
-        //ALog.getInstance().d(TAG, "<onAwsUpdateClient> jsonState=" + jsonState.toString());
         if (mWorkHandler != null) {
             Message msg = new Message();
             msg.what = MSGID_CALL_AWSEVENT_INCOMING;
@@ -158,6 +161,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         switch (msg.what) {
             case MSGID_CALL_AWSEVENT_INCOMING:
                 DoAwsEventIncoming(msg);
+                break;
+            case MSGID_CALL_DEVONLINE_TIMEOUT:
+                DoDevonlineTimeout(msg);
                 break;
             case MSGID_CALL_ANSWER_TIMEOUT:
                 DoAnswerTimeout(msg);
@@ -197,6 +203,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         synchronized (mMsgQueueLock) {
             mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
             mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
             mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
             mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
@@ -364,8 +371,11 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return ErrCode.XERR_BAD_STATE;
         }
 
-        // 停止所有超时计时器
-        allTimeoutStop();
+        // 停止呼叫和接听计时器
+        synchronized (mMsgQueueLock) {
+            mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+        }
 
         // 发送请求消息，同步等待执行完成
         setStateMachine(CALLKIT_STATE_ANSWER_REQING);  // 接听请求中
@@ -615,7 +625,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return;
         }
         if (stateMachine != CALLKIT_STATE_IDLE) {    // 不是在空闲状态中来电，呼叫状态有问题
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, ignore it, stateMachine" + stateMachine);
+            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, ignore it, stateMachine=" + stateMachine);
             return;
         }
 
@@ -665,10 +675,14 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             }
         }
 
+        allTimeoutStop();   // 停止所有超时计时器
+
+        // 启动设备上线超时
+        devOnlineTimeoutStart();
+
         // 进入频道，准备被叫通话
         talkingPrepare(chnlName, rtcToken, localUid, DEFAULT_DEV_UID);
 
-        allTimeoutStop();   // 停止所有超时计时器
 
         // 启动接听超时定时器
         answerTimeoutStart();
@@ -695,6 +709,30 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         ALog.getInstance().d(TAG, "<DoRequestAnswer> done");
     }
 
+    /**
+     * @brief 工作线程中运行，处理设备上线超时
+     */
+    void DoDevonlineTimeout(Message msg) {
+        int currState = getStateMachine();
+        if ((currState != CALLKIT_STATE_INCOMING) &&
+                (currState != CALLKIT_STATE_ANSWER_REQING) &&
+                (currState != CALLKIT_STATE_TALKING))
+        {
+            ALog.getInstance().e(TAG, "<DoDevonlineTimeout> bad state, currState=" + currState);
+            return;
+        }
+        IotDevice callbackDev = mPeerDevice;
+
+        // 停止所有超时计时器
+        allTimeoutStop();
+
+        // 结束通话
+        talkingStop();
+
+        ALog.getInstance().d(TAG, "<DoDevonlineTimeout> done");
+
+        CallbackPeerHangup(callbackDev);   // 回调对端挂断，这里主动做一个回调
+    }
 
     /**
      * @brief 工作线程中运行，处理接听超时
@@ -705,6 +743,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             ALog.getInstance().e(TAG, "<DoAnswerTimeout> bad state, currState=" + currState);
             return;
         }
+        IotDevice callbackDev = mPeerDevice;
 
         // 停止所有超时计时器
         allTimeoutStop();
@@ -713,6 +752,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         talkingStop();
 
         ALog.getInstance().d(TAG, "<DoAnswerTimeout> done");
+
+        CallbackPeerHangup(callbackDev);   // 回调对端挂断，这里主动做一个回调
     }
 
 
@@ -925,12 +966,29 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     /**
+     * @brief 启动设备上线超时定时器
+     */
+    void devOnlineTimeoutStart() {
+        sendSingleMessage(MSGID_CALL_DEVONLINE_TIMEOUT, 0, 0, null, DEVONLINE_WAIT_TIMEOUT);
+    }
+
+    /**
+     * @brief 停止设备上线超时定时器
+     */
+    void devOnlineTimeoutStop() {
+        synchronized (mMsgQueueLock) {
+            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
+        }
+    }
+
+    /**
      * @brief 停止所有超时定时器
      */
     void allTimeoutStop() {
         synchronized (mMsgQueueLock) {
             mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
             mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
         }
     }
 
@@ -980,6 +1038,21 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         sendSingleMessage(MSGID_CALL_RTC_PEER_FIRSTVIDEO, videoWidth, videoHeight, null, 0);
     }
 
+    @Override
+    public void onTalkingError(int localUid, int peerUid, int errCode) {
+        int stateMachine = getStateMachine();
+        ALog.getInstance().d(TAG, "<onTalkingError> errCode=" + errCode
+                + ", stateMachine=" + stateMachine
+                + ", localUid=" + localUid + ", peerUid=" + peerUid );
+        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+            return;
+        }
+
+        // 发送对端RTC掉线事件
+        Object leftParam = new Object[]{ (Integer)localUid, (Integer)peerUid, (Integer)errCode};
+        sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, 0, 0, leftParam, 0);
+    }
+
 
     /////////////////////////////////////////////////////////////////////////////
     //////////////////////////// RTC Engine异常相关处理 //////////////////////////
@@ -998,6 +1071,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return;
         }
 
+        // 不管什么状态，总是停止设备上线定时器
+        devOnlineTimeoutStop();
 
         // 如果当前正在主叫状态，则回调对端应答
         if (stateMachine == CALLKIT_STATE_DIALING) {
@@ -1012,7 +1087,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             // 回调对端应答
             CallbackPeerAnswer(ErrCode.XOK, mPeerDevice);
         }
-
 
         if ((mPeerVidew != null) && (mTalkEngine != null)) {
             mTalkEngine.setRemoteVideoView(mPeerVidew);
@@ -1287,5 +1361,4 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return defVal;
         }
     }
-
 }

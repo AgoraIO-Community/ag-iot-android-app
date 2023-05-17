@@ -892,7 +892,12 @@ public class AgoraLowService {
                 outSharer.mCreateTime = parseJsonLongValue(deviceObj,"createTime", -1);
                 outSharer.mUpdateTime = parseJsonLongValue(deviceObj,"updateTime", -1);
 
-                queryResult.mOutSharerList.add(outSharer);
+                // Fix BUG: IOT-465 filter the outSharer by device mac
+                if ((outSharer.mDeviceID != null) && (deviceId != null) &&
+                        (deviceId.compareToIgnoreCase(outSharer.mDeviceID) == 0)) {
+                    queryResult.mOutSharerList.add(outSharer);
+                }
+
             }
 
         } catch (JSONException e) {

@@ -102,7 +102,7 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
         getBinding().tvUserMobile.post(() -> {
             String accountName = ThirdAccountMgr.getInstance().getLoginAccountName();
             String accountId = ThirdAccountMgr.getInstance().getLoginAccountId();
-            String txtName = accountName; // + "\n (" + accountId + ")";
+            String txtName = accountName + "\n (" + accountId + ")";
             getBinding().tvUserMobile.setText(txtName);
 
             int count = DevicesListManager.deviceSize;

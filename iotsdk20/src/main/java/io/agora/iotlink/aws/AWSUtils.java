@@ -43,9 +43,8 @@ public class AWSUtils {
     private int mTopicSum = 0;
     private int mMqttState = STATE_DISCONNECTED;    ///< 当前AWS是否已经联接
 
-    private long mLastRtcUpdateVerNumber = 0;
-    private long mLastRtcGetVerNumber = 0;
-    private long mLastDevIncomeNumber = 0;
+    private long mLastRtc2GetVerNumber = 0;
+    private long mLastRtc2UpdateVerNumber = 0;
 
 
     private AWSUtils() {
@@ -80,7 +79,8 @@ public class AWSUtils {
                 @Override
                 public void onStatusChanged(final AWSIotMqttClientStatus status,
                                             final Throwable throwable) {
-                    ALog.getInstance().d(TAG, "Status = " + String.valueOf(status));
+                    ALog.getInstance().d(TAG, "<connect.onStatusChanged> Status=" + String.valueOf(status)
+                                    + ", trowable=" + throwable);
                     //连接成功订阅所需topic
                     if (String.valueOf(status).equals("Connected")) {
                         subscribe(mClientId, mUserInventThingName);
@@ -101,7 +101,8 @@ public class AWSUtils {
                 }
             });
         } catch (final Exception e) {
-            Log.e(TAG, "Connection error.", e);
+            ALog.getInstance().e(TAG, "<connect.onStatusChanged> [EXCEPTION] exp=" + e);
+
             //通知连接失败事件
             if (awsListener != null) {
                 awsListener.onConnectFail(e.getMessage());
@@ -129,7 +130,7 @@ public class AWSUtils {
     /* 订阅所需的MQTT topic */
     private void subscribe(String clientId, String inventDevciceName) {
         final String topic1 = "$aws/things/+/shadow/get/+";         //获取设备影子内容
-        final String topic2 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc/update/accepted";   //APP影子更新通知
+        final String topic2 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc2/get/accepted";   //APP影子更新通知
         final String topic3 = "granwin/" + clientId + "/message";   //服务通知，包含设备上下线，设备上报信息、绑定列表刷新信息
         final String topic4 = "$aws/things/" + inventDevciceName + "/shadow/name/rtc2/update/delta";  // 1.5版本中来电通知
         try {
@@ -203,67 +204,50 @@ public class AWSUtils {
                 //通知收到设备状态更新事件
                 awsListener.onReceiveShadow(things_name, reportedObj);
 
-            } else if (topic.contains("/shadow/name/rtc/update/accepted")) {
-                //只关注APP端影子的期望值
-                if (jsonMessage.getJSONObject("state").has("desired")
-                    && !jsonMessage.getJSONObject("state").isNull("desired")) {
-                    JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("desired");
-
-                    //去除topic前后内容，获取设备唯一标志
-                    String things_name = topic.replaceAll("\\$aws/things/", "");
-                    things_name = things_name.replaceAll("/shadow/name/rtc/update/accepted", "");
-                    //通知收到APP端控制事件
-                    if (things_name.equals(mUserInventThingName)) {
-                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
-                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
-                        if (versionNumber > mLastRtcUpdateVerNumber) {
-                            mLastRtcUpdateVerNumber = versionNumber;
-                            awsListener.onUpdateRtcStatus(desiredObject, timestamp);
-                        } else {
-                            ALog.getInstance().e(TAG, "<handleMessage> old update version number"
-                                    + ", versionNumber=" + versionNumber
-                                    + ", mLastRtcUpdateVerNumber=" + mLastRtcUpdateVerNumber);
-                        }
-                    }
+            } else if (topic.contains("/shadow/name/rtc2/get/accepted")) {
+                long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
+                long msgTimestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
+                long tokenTimestamp = parseTokenTimeFromGetMeta(jsonMessage, -1);
+                JSONObject stateJsonObj = parseJsonObjectValue(jsonMessage, "state", null);
+                if ((versionNumber < 0) || (msgTimestamp < 0) || (tokenTimestamp < 0) ||
+                        (stateJsonObj == null))
+                {
+                    ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/get/accepted] loss some fields");
+                    return;
+                }
+                if (versionNumber < mLastRtc2GetVerNumber) {
+                    ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/get/accepted] old version number"
+                            + ", versionNumber=" + versionNumber
+                            + ", mLastRtc2GetVerNumber=" + mLastRtc2GetVerNumber);
+                    return;
                 }
 
-            } else if (topic.contains("/shadow/name/rtc/get/accepted")) {
-                //只关注APP端影子的期望值
-                if (jsonMessage.getJSONObject("state").has("desired")
-                    && !jsonMessage.getJSONObject("state").isNull("desired")) {
-                    JSONObject desiredObject = jsonMessage.getJSONObject("state").getJSONObject("desired");
-                    //去除topic前后内容，获取设备唯一标志
-                    String things_name = topic.replaceAll("\\$aws/things/", "");
-                    things_name = things_name.replaceAll("/shadow/name/rtc/get/accepted", "");
-                    //通知收到APP端控制事件
-                    if (things_name.equals(mUserInventThingName)) {
-                        long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
-                        long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
-                        if (versionNumber > mLastRtcGetVerNumber) {
-                            mLastRtcGetVerNumber = versionNumber;
-                            awsListener.onUpdateRtcStatus(desiredObject, timestamp);
-                        } else {
-                            ALog.getInstance().e(TAG, "<handleMessage> old get version number"
-                                    + ", versionNumber=" + versionNumber
-                                    + ", mLastRtcGetVerNumber=" + mLastRtcGetVerNumber);
-                        }
-                    }
-                }
+                JSONObject desiredObj = parseJsonObjectValue(stateJsonObj, "desired", null);
+                mLastRtc2GetVerNumber = versionNumber;
+                awsListener.onDevIncoming(desiredObj, msgTimestamp, tokenTimestamp);
+
 
             } else if (topic.contains("shadow/name/rtc2/update/delta")) {
                 long versionNumber = parseJsonLongValue(jsonMessage, "version", -1);
-                long timestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
+                long msgTimestamp = parseJsonLongValue(jsonMessage, "timestamp", -1);
+                long tokenTimestamp = parseTokenTimeFromUpdateMeta(jsonMessage, -1);
                 JSONObject stateJsonObj = parseJsonObjectValue(jsonMessage, "state", null);
-                if (stateJsonObj != null) {
-                    if (versionNumber > mLastDevIncomeNumber) {
-                        mLastDevIncomeNumber = versionNumber;
-                        awsListener.onDevIncoming(stateJsonObj, timestamp);
-                    } else {
-                        ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/update/delta] old get version number"
-                                + ", versionNumber=" + versionNumber
-                                + ", mLastDevIncomeNumber=" + mLastDevIncomeNumber);
-                    }
+                if ((versionNumber < 0) || (msgTimestamp < 0) || (tokenTimestamp < 0) ||
+                        (stateJsonObj == null))
+                {
+                    ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/update/delta] loss some fields");
+                    return;
                 }
+                if (versionNumber < mLastRtc2UpdateVerNumber) {
+                    ALog.getInstance().e(TAG, "<handleMessage> [shadow/name/rtc2/update/delta] old version number"
+                            + ", versionNumber=" + versionNumber
+                            + ", mLastRtc2UpdateVerNumber=" + mLastRtc2UpdateVerNumber);
+                    return;
+                }
+
+                mLastRtc2UpdateVerNumber = versionNumber;
+                awsListener.onDevIncoming(stateJsonObj, msgTimestamp, tokenTimestamp);
+
 
             }  else if (topic.contains("granwin/")) {
                 // 服务消息通知
@@ -393,9 +377,9 @@ public class AWSUtils {
      * 主动查询APP影子的状态
      */
     public void getRtcStatus() {
-        String topic = "$aws/things/" + mUserInventThingName + "/shadow/name/rtc/get";
+        String topic = "$aws/things/" + mUserInventThingName + "/shadow/name/rtc2/get";
         try {
-            //主动查询设备影子，结果会反馈到"$aws/things/+/shadow/name/rtc/get/+"订阅topic中
+            //主动查询设备影子，结果会反馈到"$aws/things/+/shadow/name/rtc2/get/+"订阅topic中
             mqttManager.publishString("", topic, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Publish error.", e);
@@ -406,7 +390,6 @@ public class AWSUtils {
     public void getRtmStatus() {
         String topic = "$aws/things/" + mUserInventThingName + "/shadow/name/rtm/get";
         try {
-            //主动查询设备影子，结果会反馈到"$aws/things/+/shadow/name/rtc/get/+"订阅topic中
             mqttManager.publishString("", topic, AWSIotMqttQos.QOS1);
         } catch (Exception e) {
             Log.e(TAG, "Publish error.", e);
@@ -522,6 +505,41 @@ public class AWSUtils {
         }
     }
 
+    long parseTokenTimeFromGetMeta(JSONObject jsonState, long defVal) {
+        JSONObject metadataObj = parseJsonObjectValue(jsonState, "metadata", null);
+        if (metadataObj == null) {
+            ALog.getInstance().e(TAG, "<parseTokenTimeFromGetMeta> no metadata field");
+            return defVal;
+        }
+        JSONObject desiredObj = parseJsonObjectValue(metadataObj, "desired", null);
+        if (desiredObj == null) {
+            ALog.getInstance().e(TAG, "<parseTokenTimeFromGetMeta> no desired field");
+            return defVal;
+        }
+        JSONObject tokenObj = parseJsonObjectValue(desiredObj, "token", null);
+        if (tokenObj == null) {
+            ALog.getInstance().e(TAG, "<parseTokenTimeFromGetMeta> no token field");
+            return defVal;
+        }
+        long tokenTimestamp = parseJsonLongValue(tokenObj, "timestamp", 0);
+        return tokenTimestamp;
+    }
+
+    long parseTokenTimeFromUpdateMeta(JSONObject jsonState, long defVal) {
+        JSONObject metadataObj = parseJsonObjectValue(jsonState, "metadata", null);
+        if (metadataObj == null) {
+            ALog.getInstance().e(TAG, "<parseTokenTimeFromUpdateMeta> no metadata field");
+            return defVal;
+        }
+        JSONObject tokenObj = parseJsonObjectValue(metadataObj, "token", null);
+        if (tokenObj == null) {
+            ALog.getInstance().e(TAG, "<parseTokenTimeFromUpdateMeta> no token field");
+            return defVal;
+        }
+        long tokenTimestamp = parseJsonLongValue(tokenObj, "timestamp", 0);
+        return tokenTimestamp;
+    }
+
 
 
     /**
@@ -544,7 +562,7 @@ public class AWSUtils {
         void onUpdateRtcStatus(JSONObject jsonObject, long timestamp);  //APP状态控制事件
         void onDevOnlineChanged(String deviceMac, String deviceId, boolean online);  // 设备上下线事件
         void onDevActionUpdated(String deviceMac, String actionType);    // 绑定设备列表刷新
-        void onDevIncoming(JSONObject jsonObject, long timestamp);       // 设备来电事件
+        void onDevIncoming(JSONObject jsonObject, long msgTimestamp, long tokenTimestamp);       // 设备来电事件
 
         // 设备属性更新
         void onDevPropertyUpdated(String deviceMac, String deviceId, Map<String, Object> properties);

@@ -253,9 +253,9 @@ public class AccountMgr implements IAccountMgr {
             return ErrCode.XERR_BAD_STATE;
         }
 
-        CallkitImpl callkitImpl = (CallkitImpl)mSdkInstance.getCallkitMgr();
-        if (callkitImpl != null) {
-            int callkitState = callkitImpl.getStateMachine();
+        CallkitMgr callkitMgr = (CallkitMgr)mSdkInstance.getCallkitMgr();
+        if (callkitMgr != null) {
+            int callkitState = callkitMgr.getStateMachine();
             if (callkitState != ICallkitMgr.CALLKIT_STATE_IDLE) {  // 当前通话正在进行中，不能登出
                 ALog.getInstance().e(TAG, "<logout> bad state, callkit is ongoing, callkitState=" + callkitState);
                 return ErrCode.XERR_CALLKIT_LOCAL_BUSY;
@@ -368,15 +368,6 @@ public class AccountMgr implements IAccountMgr {
             mLocalAccount.mAgoraAccessToken = loginParam.mLsAccessToken;
             mLocalAccount.mAgoraRefreshToken = loginParam.mLsRefreshToken;
             mLocalAccount.mAgoraExpriesIn = loginParam.mLsExpiresIn;
-        }
-
-        //
-        // 发送重置请求
-        //
-        int errCode = AgoraService.getInstance().accountReset(loginParam.mLsAccessToken,
-                initParam.mRtcAppId, mLocalAccount.mInventDeviceName);
-        if (errCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<DoAccountLogin> fail to reset, errCode=" + errCode);
         }
 
         synchronized (mDataLock) {
