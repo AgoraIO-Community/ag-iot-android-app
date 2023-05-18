@@ -11,8 +11,8 @@ android {
         applicationId "io.agora.iotlinkdemo"
         minSdkVersion rootProject.ext.android.minSdkVersion
         targetSdkVersion rootProject.ext.android.targetSdkVersion
-        versionCode 49
-        versionName "1.5.0.7"
+        versionCode 50
+        versionName "1.5.0.8"
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
