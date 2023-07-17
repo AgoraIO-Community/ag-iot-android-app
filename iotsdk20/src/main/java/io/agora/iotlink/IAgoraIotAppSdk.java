@@ -107,8 +107,8 @@ public interface IAgoraIotAppSdk  {
     IRtcPlayer getRtcPlayer();
 
     /**
-     * @brief 返回当前AWS的MQTT状态是否就绪
+     * @brief 返回当前MQTT状态是否就绪
      */
-    boolean isAwsMqttReady();
+    boolean isMqttReady();
 
 }

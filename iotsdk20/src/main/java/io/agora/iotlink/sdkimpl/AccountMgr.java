@@ -315,11 +315,11 @@ public class AccountMgr implements IAccountMgr {
 
     @Override
     public int setPublicKey(final String lsAccessToken,
-                            final String inventDeviceName, final String publickKey) {
-        Object setParams = new Object[]{lsAccessToken, inventDeviceName, publickKey};
+                            final String inventDeviceName, final String publicKey) {
+        Object setParams = new Object[]{lsAccessToken, inventDeviceName, publicKey};
         sendMessage(MSGID_SET_PUBLIC_KEY, 0, 0, setParams);
         ALog.getInstance().d(TAG, "<setPublicKey> lsAccessToken=" + lsAccessToken
-                    + ", inventDeviceName=" + inventDeviceName + ", publickKey=" + publickKey);
+                    + ", inventDeviceName=" + inventDeviceName + ", publicKey=" + publicKey);
         return ErrCode.XOK;
     }
 

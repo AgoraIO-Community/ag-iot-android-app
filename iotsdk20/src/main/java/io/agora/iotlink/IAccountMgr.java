@@ -198,8 +198,8 @@ public interface IAccountMgr  {
      * @brief 上传公钥到服务器，这个接口可以在任意时刻调用 （即使没有调用 login()之前也可以调用）
      * @param lsAccessToken : 同 LoginParam.mLsAccessToken
      * @param inventDeviceName : 同 LoginParam.mInventDeviceName
-     * @param publickKey : 要设置的公钥
+     * @param publicKey : 要设置的公钥
      */
-    int setPublicKey(final String lsAccessToken, final String inventDeviceName, final String publickKey);
+    int setPublicKey(final String lsAccessToken, final String inventDeviceName, final String publicKey);
 
 }

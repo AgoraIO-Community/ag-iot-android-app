@@ -353,7 +353,7 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     }
 
     @Override
-    public boolean isAwsMqttReady() {
+    public boolean isMqttReady() {
         synchronized (mDataLock) {
             if (mMqttState == IAccountMgr.MQTT_STATE_CONNECTED) {
                 return true;
