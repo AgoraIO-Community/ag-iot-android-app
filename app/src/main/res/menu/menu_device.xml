@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/m_device_add"
+        android:icon="@drawable/btn_home_index_selector"
+        android:title="添加设备" />
+
+    <item
+        android:id="@+id/m_device_remove"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="删除设备" />
+
+
+</menu>

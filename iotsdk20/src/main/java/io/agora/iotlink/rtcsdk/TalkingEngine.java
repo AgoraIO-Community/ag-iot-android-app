@@ -13,38 +13,35 @@
 package io.agora.iotlink.rtcsdk;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.media.AudioFormat;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.os.Build;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Message;
 import android.util.Log;
-import android.view.SurfaceView;
+import android.view.View;
 
-import androidx.annotation.RequiresApi;
 
 import io.agora.avmodule.AvAudioFrame;
 import io.agora.avmodule.AvCapability;
 import io.agora.avmodule.AvFrameQueue;
 import io.agora.avmodule.AvMediaRecorder;
 import io.agora.avmodule.AvRecorderParam;
-import io.agora.avmodule.AvUtility;
 import io.agora.avmodule.AvVideoFrame;
 import io.agora.avmodule.IAvRecorderCallback;
+import io.agora.base.internal.CalledByNative;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.ICallkitMgr;
+import io.agora.iotlink.callkit.SessionCtx;
 import io.agora.iotlink.logger.ALog;
 import io.agora.iotlink.utils.ImageConvert;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.Locale;
+import java.util.UUID;
 
 import io.agora.base.VideoFrame;
-import io.agora.base.internal.CalledByNative;
 import io.agora.rtc2.ChannelMediaOptions;
 import io.agora.rtc2.Constants;
 import io.agora.rtc2.IAudioFrameObserver;
@@ -53,7 +50,6 @@ import io.agora.rtc2.RtcConnection;
 import io.agora.rtc2.RtcEngine;
 import io.agora.rtc2.RtcEngineEx;
 import io.agora.rtc2.audio.AudioParams;
-import io.agora.rtc2.video.EncodedVideoFrameInfo;
 import io.agora.rtc2.video.IVideoFrameObserver;
 import io.agora.rtc2.video.VideoCanvas;
 import io.agora.rtc2.video.VideoEncoderConfiguration;
@@ -72,51 +68,47 @@ public class TalkingEngine implements AGEventHandler,
      */
     public interface ICallback {
 
+
+
+        /////////////////////////////////////////////////////////////////////////////
+        //////////////////// TalkingEngine.ICallback 回调处理 ////////////////////////
+        /////////////////////////////////////////////////////////////////////////////
         /**
          * @brief 本地加入频道成功
          */
-        default void onTalkingJoinDone(String channel, int localUid) { }
+        default void onTalkingJoinDone(final UUID sessionId, final String channel, int uid) { }
 
         /**
          * @brief 本地离开频道成功
          */
-        default void onTalkingLeftDone() {  }
-
-        /**
-         * @brief 通话过程中错误
-         */
-        default void onTalkingError(int localUid, int peerUid, int errCode) {  }
-
-        /**
-         * @brief 通话对端RTC上线
-         */
-        default void onTalkingPeerJoined(int localUid, int peerUid) {  }
-
-        /**
-         * @brief 通话对端RTC下线
-         */
-        default void onTalkingPeerLeft(int localUid, int peerUid, int reason) {  }
-
-        /**
-         * @brief 对端首帧出图
-         */
-        default void onPeerFirstVideoDecoded(int peerUid, int videoWidth, int videoHeight) { }
-
+        default void onTalkingLeftDone(final UUID sessionId) {  }
 
         /**
          * @brief 用户上线
          */
-        default void onUserOnline(int uid) {  }
+        default void onUserOnline(final UUID sessionId, int uid, int elapsed) {  }
 
         /**
          * @brief 用户下线
          */
-        default void onUserOffline(int uid) {  }
+        default void onUserOffline(final UUID sessionId, int uid, int reason) {  }
+
+        /**
+         * @brief 对端首帧出图
+         */
+        default void onPeerFirstVideoDecoded(final UUID sessionId, int uid,
+                                             int videoWidth, int videoHeight) { }
+
+        /**
+         * @brief 截图完成回调
+         */
+        default void onSnapshotTaken(final UUID sessionId, int uid,
+                                     final String filePath, int width, int height, int errCode) { }
 
         /**
          * @brief 录像时产生错误
          */
-        default void onRecordingError(int errCode) {  }
+        default void onRecordingError(final UUID sessionId, int errCode) {  }
     }
 
 
@@ -124,12 +116,10 @@ public class TalkingEngine implements AGEventHandler,
     ///////////////////// Constant Definition /////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     private final String TAG = "IOTSDK/TalkingEngine";
-    private static final int WAIT_OPT_TIMEOUT = 3000;
     private static final String RECORD_VIDEO_CODEC = MediaFormat.MIMETYPE_VIDEO_AVC;
     private static final String RECORD_AUDIO_CODEC = MediaFormat.MIMETYPE_AUDIO_AAC;
     private static final int RECORD_TARGET_WIDTH = 1280;
     private static final int RECORD_TARGET_HEIGHT = 720;
-
     private static final int RECORD_AUDIO_SAMPLERATE = 44100;
     private static final int RECORD_AUDIO_CHANNELS = 2;
 
@@ -145,10 +135,6 @@ public class TalkingEngine implements AGEventHandler,
         public Context mContext;
         public String mAppId;
         public ICallback mCallback;
-        public boolean mPublishAudio = true;        ///< 通话时是否推流本地音频
-        public boolean mPublishVideo = true;        ///< 通话时是否推流本地视频
-        public boolean mSubscribeAudio = true;      ///< 通话时是否订阅对端音频
-        public boolean mSubscribeVideo = true;      ///< 通话时是否订阅对端视频
     }
 
 
@@ -156,18 +142,14 @@ public class TalkingEngine implements AGEventHandler,
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////// Variable Definition /////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-
-
     private InitParam mInitParam;           ///< TalkingEngine初始化参数
     private EngineConfig mRtcEngCfg;        ///< RtcEngine相关配置参数
     private MyEngineEventHandler mRtcEngEventHandler;   ///< RtcEngine事件处理器
     private RtcEngineEx mRtcEngine;         ///< RtcEngine实例对象
-    private int mLocalUid = 0;              ///< 本地端加入频道时的Uid
-    private int mPeerUid = 0;               ///< 对端通话的Uid
-    private boolean mMuteLocalVideo = true;
-    private boolean mMuteLocalAudio = true;
+
     private final ICallkitMgr.RtcNetworkStatus mRtcStatus = new ICallkitMgr.RtcNetworkStatus();
     private long mRtcInitTime;
+    private int mVoiceChanger = Constants.AUDIO_EFFECT_OFF;
 
     private final Object mVideoDataLock = new Object();
     private byte[] mInVideoYData;           ///< 订阅的视频帧YUV数据
@@ -197,7 +179,10 @@ public class TalkingEngine implements AGEventHandler,
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////// Public Methods ///////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    public synchronized boolean initialize(InitParam initParam) {
+    /**
+     * @brief 初始化 RtcSDK
+     */
+    public boolean initialize(InitParam initParam) {
         mInitParam = initParam;
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
@@ -229,8 +214,8 @@ public class TalkingEngine implements AGEventHandler,
         // 创建 RtcEngine实例对象
         //
         try {
-            mRtcEngine = (RtcEngineEx) RtcEngine.create(mInitParam.mContext, mInitParam.mAppId,
-                    mRtcEngEventHandler.mRtcEventHandler);
+            String appId = mInitParam.mAppId;
+            mRtcEngine = (RtcEngineEx) RtcEngine.create(mInitParam.mContext, appId, mRtcEngEventHandler.mRtcEventHandler);
             ALog.getInstance().d(TAG, "<initialize> mAppId=" + mInitParam.mAppId);
         } catch (Exception e) {
             e.printStackTrace();
@@ -245,7 +230,7 @@ public class TalkingEngine implements AGEventHandler,
                 + File.separator + mInitParam.mContext.getPackageName() + "/log/agora-rtc.log";
         mRtcEngine.setLogFile(log_file_path);
         // Warning: only enable dual stream mode if there will be more than one broadcaster in the channel
-        mRtcEngine.enableDualStreamMode(false);
+        //mRtcEngine.enableDualStreamMode(false);
 
         // 设置视频编码参数
         mRtcEngine.setVideoEncoderConfiguration(
@@ -259,18 +244,20 @@ public class TalkingEngine implements AGEventHandler,
 
         // 设置私参： 默认G711U格式。 音频G722编码--9;  音频G711U--0;  音频G711A--8
         String codecParam = "{\"che.audio.custom_payload_type\":0}";
-        codecParam = String.format("{\"che.audio.custom_payload_type\":%d}", SET_AUD_CODEC);
         int ret = mRtcEngine.setParameters(codecParam);
         if (ret != 0) {
             ALog.getInstance().e(TAG, "<initialize> fail to set audio codec, ret=" + ret);
+        } else {
+            ALog.getInstance().w(TAG, "<initialize> set audio codec successful, codecParam=" + codecParam);
         }
 
         // 设置私参：采样率，G711U是 8kHz
         String smplRate = "{\"che.audio.input_sample_rate\":8000}";
-        smplRate = String.format("{\"che.audio.input_sample_rate\":%d}", SET_AUD_SAMPLERATE);
         ret = mRtcEngine.setParameters(smplRate);
         if (ret != 0) {
             ALog.getInstance().e(TAG, "<initialize> fail to set sample rate, ret=" + ret);
+        } else {
+            ALog.getInstance().w(TAG, "<initialize> set sample rate successful, smplRate=" + smplRate);
         }
 
         // 设置私参：使用硬件解码
@@ -294,7 +281,10 @@ public class TalkingEngine implements AGEventHandler,
         return true;
     }
 
-    public synchronized void release()
+    /**
+     * @brief 释放 RtcSDK
+     */
+    public void release()
     {
         if (mRtcEngine != null) {
             mRtcEngine.leaveChannel();
@@ -307,12 +297,19 @@ public class TalkingEngine implements AGEventHandler,
             mRtcEngEventHandler = null;
             ALog.getInstance().d(TAG, "<release> done");
         }
-
-        mLocalUid = 0;
-        mPeerUid = 0;
     }
 
-    public synchronized int setParameters(String param) {
+    /**
+     * @brief 判断RtcSDK是否创建就绪
+     */
+    public boolean isReady() {
+        return (mRtcEngine != null);
+    }
+
+    /**
+     * @brief 私参设置
+     */
+    public int setParameters(String param) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<setParameters> bad state");
             return Constants.ERR_NOT_READY;
@@ -322,24 +319,10 @@ public class TalkingEngine implements AGEventHandler,
         return ret;
     }
 
-    public synchronized int getVideoWidth() {
-        return mRtcEngCfg.mVideoDimension.width;
-    }
-
-    public synchronized int getVideoHeight() {
-        return mRtcEngCfg.mVideoDimension.height;
-    }
-
-    public synchronized int getFrameRate() {
-        return 15;
-    }
-
-    public synchronized int getBitrate() {
-        return 1000;
-    }
-
-
-    public synchronized ICallkitMgr.RtcNetworkStatus getNetworkStatus() {
+    /**
+     * @brief 获取当前RTC网络状态
+     */
+    public ICallkitMgr.RtcNetworkStatus getNetworkStatus() {
         ICallkitMgr.RtcNetworkStatus retStatus = new ICallkitMgr.RtcNetworkStatus();
         synchronized (mRtcStatus) {
             retStatus.totalDuration = mRtcStatus.totalDuration;
@@ -370,69 +353,111 @@ public class TalkingEngine implements AGEventHandler,
         return retStatus;
     }
 
-    public synchronized boolean joinChannel(String channel, String token,
-                                            int localUid   ) {
+    /**
+     * @brief 根据会话信息，加入指定的频道
+     */
+    public boolean joinChannel(final SessionCtx sessionCtx) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<joinChannel> bad state");
             return false;
         }
-        ALog.getInstance().d(TAG, "<joinChannel> Enter, channel=" + channel
-                + ", token=" + token + ", localUid=" + localUid);
-        mLocalUid = localUid;
-
-        mMuteLocalVideo = (!mInitParam.mPublishVideo);
-        mMuteLocalAudio = (!mInitParam.mPublishAudio);
+        ALog.getInstance().d(TAG, "<joinChannel> Enter, sessionCtx=" + sessionCtx.toString());
 
         // 加入频道
         ChannelMediaOptions options = new ChannelMediaOptions();
         options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
         options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = false;
-        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
-        options.publishCameraTrack = mInitParam.mPublishVideo;
-        options.publishMicrophoneTrack = mInitParam.mPublishAudio;
-        int ret = mRtcEngine.joinChannel(token, channel, mLocalUid, options);
+        options.autoSubscribeAudio = false;     // 不自动订阅音频
+        options.autoSubscribeVideo = false;     // 不自动订阅视频
+        options.publishCameraTrack = false;
+        options.publishMicrophoneTrack = sessionCtx.mPubLocalAudio;
+
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
+
+        RtcChnlEventHandler eventHandler = new RtcChnlEventHandler(this, sessionCtx.mSessionId);
+        int ret = mRtcEngine.joinChannelEx(sessionCtx.mRtcToken, rtcConnection, options, eventHandler);
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<joinChannel> Exit with error, ret=" + ret);
             return false;
         }
 
-        int[] whiteUidList = new int[1];
-        whiteUidList[0] = mPeerUid;
-        ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
-        if (ret != Constants.ERR_OK) {
-            ALog.getInstance().e(TAG, "<joinChannel> setSubscribeAudioWhitelist() error, ret=" + ret);
+        // 设置私参： 默认G711U格式。 音频G722编码--9;  音频G711U--0;  音频G711A--8
+        String codecParam = "{\"che.audio.custom_payload_type\":0}";
+        ret = mRtcEngine.setParameters(codecParam);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<joinChannel> fail to set audio codec, ret=" + ret);
+        } else {
+            ALog.getInstance().w(TAG, "<joinChannel> set audio codec successful, codecParam=" + codecParam);
         }
 
-        ret = mRtcEngine.muteLocalVideoStream(mMuteLocalAudio);
+        // 设置私参：采样率，G711U是 8kHz
+        String smplRate = "{\"che.audio.input_sample_rate\":8000}";
+        ret = mRtcEngine.setParameters(smplRate);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<joinChannel> fail to set sample rate, ret=" + ret);
+        } else {
+            ALog.getInstance().w(TAG, "<joinChannel> set sample rate successful, smplRate=" + smplRate);
+        }
+
+        // 设置私参：使用硬件解码
+        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
+        ret = mRtcEngine.setParameters(hwDecoder);
+        if (ret != 0) {
+            ALog.getInstance().e(TAG, "<joinChannel> fail to set HW decoder, ret=" + ret);
+        }
+
+        // APP端永远不推视频流
+        ret = mRtcEngine.muteLocalVideoStreamEx(true, rtcConnection);
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<joinChannel> muteLocalVideoStream() error, ret=" + ret);
         }
 
-        ret = mRtcEngine.muteLocalAudioStream(!mInitParam.mPublishAudio);
+        // APP端根据参数，决定是否推音频流
+        boolean muteLocalAudio = (!sessionCtx.mPubLocalAudio);
+        ret = mRtcEngine.muteLocalAudioStreamEx(muteLocalAudio, rtcConnection);
         if (ret != Constants.ERR_OK) {
-            ALog.getInstance().e(TAG, "<joinChannel> muteLocalAudioStream() error, ret=" + ret);
+            ALog.getInstance().e(TAG, "<joinChannel> muteLocalAudioStream() error, ret=" + ret
+                    + ", muteLocalAudio=" + muteLocalAudio);
+        }
+
+        // APP端根据参数，决定是否订阅设备端视频流
+        boolean muteRemoteVideo = (!sessionCtx.mSubDevVideo);
+        ret = mRtcEngine.muteRemoteVideoStreamEx(sessionCtx.mPeerUid, muteRemoteVideo, rtcConnection);
+        if (ret != Constants.ERR_OK) {
+            ALog.getInstance().e(TAG, "<joinChannel> muteRemoteVideoStreamEx() error, ret=" + ret
+                    + ", muteRemoteVideo=" + muteRemoteVideo);
+        }
+
+        // APP端根据参数，决定是否订阅设备端音频流
+        boolean muteRemoteAudio = (!sessionCtx.mSubDevAudio);
+        ret = mRtcEngine.muteRemoteAudioStreamEx(sessionCtx.mPeerUid, muteRemoteAudio, rtcConnection);
+        if (ret != Constants.ERR_OK) {
+            ALog.getInstance().e(TAG, "<joinChannel> muteRemoteAudioStreamEx() error, ret=" + ret
+                    + ", muteRemoteAudio=" + muteRemoteAudio);
         }
 
         ALog.getInstance().d(TAG, "<joinChannel> Exit");
         return true;
     }
 
-    public synchronized boolean leaveChannel()
-    {
+    /**
+     * @brief 根据会话信息，退出指定的频道
+     */
+    public boolean leaveChannel(final SessionCtx sessionCtx)   {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<leaveChannel> bad state");
             return false;
         }
-        if (mLocalUid == 0 && mPeerUid == 0) {   // 已经离开频道了
-            return true;
-        }
-        ALog.getInstance().d(TAG, "<leaveChannel> Enter");
+
+        ALog.getInstance().d(TAG, "<leaveChannel> Enter, sessionCtx=" + sessionCtx.toString());
 
         // 退出频道
-        mLocalUid = 0;
-        mPeerUid = 0;
-        int ret = mRtcEngine.leaveChannel();
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
+        int ret = mRtcEngine.leaveChannelEx(rtcConnection);
         if (ret != Constants.ERR_OK) {
             ALog.getInstance().e(TAG, "<leaveChannel> Exit with error, ret=" + ret);
             return false;
@@ -442,230 +467,162 @@ public class TalkingEngine implements AGEventHandler,
         return true;
     }
 
-    public synchronized boolean isInChannel()
-    {
-        return (mRtcEngine != null);
-    }
-
-    public synchronized boolean setLocalVideoView(SurfaceView localView, int localUid)
-    {
-        if (mRtcEngine == null) {
-            ALog.getInstance().e(TAG, "<setLocalVideoView> bad state");
-            return false;
-        }
-
-        if (localView != null) {
-            VideoCanvas videoCanvas = new VideoCanvas(localView, VideoCanvas.RENDER_MODE_FIT, localUid);
-            mRtcEngine.setupLocalVideo(videoCanvas);
-            mRtcEngine.startPreview();
-            ALog.getInstance().d(TAG, "<setLocalVideoView> localView=" + localView + ", localUid=" + localUid);
-
-        } else {
-            mRtcEngine.stopPreview();
-            ALog.getInstance().d(TAG, "<setLocalVideoView> stop preview");
-        }
-
-        return true;
-    }
-
-    public synchronized void setPeerUid(int peerUid) {
-        if (mRtcEngine == null) {
-            ALog.getInstance().e(TAG, "<setPeerUid> bad state");
-            return;
-        }
-        mPeerUid = peerUid;
-        ALog.getInstance().d(TAG, "<setPeerUid> peerUid=" + peerUid);
-    }
-
-    public synchronized boolean setRemoteVideoView(SurfaceView remoteView)
+    /**
+     * @brief 根据会话信息，设置设备端视频帧显示控件
+     */
+    public boolean setRemoteVideoView(final SessionCtx sessionCtx, final View remoteView)
     {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<setRemoteVideoView> bad state");
             return false;
         }
-        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_FIT, mPeerUid);
-        int ret = mRtcEngine.setupRemoteVideo(videoCanvas);
-        ALog.getInstance().d(TAG, "<setRemoteVideoView> remoteView=" + remoteView
-                + ", mPeerUid=" + mPeerUid + ", ret=" + ret);
-        return true;
-    }
 
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
 
-    public synchronized boolean muteLocalVideoStream(boolean mute) {
-        if (mRtcEngine == null) {
-            ALog.getInstance().e(TAG, "<muteLocalVideoStream> bad state");
-            return false;
-        }
-
-        mMuteLocalVideo = mute;
-
-        ChannelMediaOptions options = new ChannelMediaOptions();
-        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
-        options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = false;
-        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
-        options.publishCameraTrack = (!mMuteLocalVideo);
-        options.publishMicrophoneTrack = (!mMuteLocalAudio);
-        int ret1 = mRtcEngine.updateChannelMediaOptions(options);
-
-        int ret = mRtcEngine.muteLocalVideoStream(mute);
-        ALog.getInstance().d(TAG, "<muteLocalVideoStream> mute=" + mute
-                    + ", ret1=" + ret1 + ", ret=" + ret);
+        VideoCanvas videoCanvas = new VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_FIT, sessionCtx.mPeerUid);
+        int ret = mRtcEngine.setupRemoteVideoEx(videoCanvas, rtcConnection);
+        ALog.getInstance().d(TAG, "<setRemoteVideoView> done, remoteView=" + remoteView
+                + ", sessionCtx=" + sessionCtx.toString() + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
-    public synchronized boolean muteLocalAudioStream(boolean mute) {
-        long t1 = System.currentTimeMillis();
-        if (mRtcEngine == null) {
-            ALog.getInstance().e(TAG, "<muteLocalAudioStream> bad state");
-            return false;
-        }
-
-        mMuteLocalAudio = mute;
-
-        ChannelMediaOptions options = new ChannelMediaOptions();
-        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
-        options.clientRoleType = mRtcEngCfg.mClientRole;
-        options.autoSubscribeAudio = false;
-        options.autoSubscribeVideo = mInitParam.mSubscribeVideo;
-        options.publishCameraTrack = (!mMuteLocalVideo);
-        options.publishMicrophoneTrack = (!mMuteLocalAudio);
-        int ret1 = mRtcEngine.updateChannelMediaOptions(options);
-
-        int ret = mRtcEngine.muteLocalAudioStream(mute);
-        long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<muteLocalAudioStream> mute=" + mute
-                + ", ret1=" + ret1 + ", ret=" + ret + ", costTime=" + (t2-t1));
-        return (ret == Constants.ERR_OK);
-    }
-
-    public synchronized boolean mutePeerVideoStream(boolean mute) {
-        long t1 = System.currentTimeMillis();
+    /**
+     * @brief 设置指定频道的设备端，是否推送视频流
+     */
+    public boolean mutePeerVideoStream(final SessionCtx sessionCtx) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<mutePeerVideoStream> bad state");
             return false;
         }
-        int ret = mRtcEngine.muteAllRemoteVideoStreams(mute);
-        long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<mutePeerVideoStream> mute=" + mute
-                + ", ret=" + ret + ", costTime=" + (t2-t1));
+
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
+
+        boolean mutePeerVideo = (!sessionCtx.mSubDevVideo);
+        int ret = mRtcEngine.muteRemoteVideoStreamEx(sessionCtx.mPeerUid, mutePeerVideo, rtcConnection);
+        ALog.getInstance().d(TAG, "<mutePeerVideoStream> sessionCtx=" + sessionCtx
+                    + ", mutePeerVideo=" + mutePeerVideo + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
-    public synchronized boolean mutePeerAudioStream(boolean mute) {
-        long t1 = System.currentTimeMillis();
-        int ret;
+    /**
+     * @brief 设置指定频道的设备端，是否推送音频流
+     */
+    public boolean mutePeerAudioStream(final SessionCtx sessionCtx) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<mutePeerAudioStream> bad state");
             return false;
         }
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
 
-        int[] whiteUidList = new int[1];
-        if (!mute) {
-            whiteUidList[0] = mPeerUid;
-            ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
-            if (ret != Constants.ERR_OK) {
-                ALog.getInstance().e(TAG, "<mutePeerAudioStream> setSubscribeAudioWhitelist() error, ret=" + ret);
-            }
-
-        } else {
-            ret = mRtcEngine.setSubscribeAudioWhitelist(whiteUidList);
-            if (ret != Constants.ERR_OK) {
-                ALog.getInstance().e(TAG, "<mutePeerAudioStream> setSubscribeAudioWhitelist() error, ret=" + ret);
-            }
-            ret = mRtcEngine.muteRemoteAudioStream(mPeerUid, mute);
-        }
-
-        long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<mutePeerAudioStream> mute=" + mute
-                + ", ret=" + ret + ", costTime=" + (t2-t1));
+        boolean mutePeerAudio = (!sessionCtx.mSubDevAudio);
+        int ret = mRtcEngine.muteRemoteAudioStreamEx(sessionCtx.mPeerUid, mutePeerAudio, rtcConnection);
+        ALog.getInstance().d(TAG, "<mutePeerAudioStream> sessionCtx=" + sessionCtx
+                + ", mutePeerAudio=" + mutePeerAudio + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
-    public synchronized boolean setAudioEffect(int voice_changer) {
+    /**
+     * @brief 设置指定频道内设备端视频帧截屏
+     */
+    public boolean takeSnapshot(final SessionCtx sessionCtx, final String saveFilePath)
+    {
+        long t1 = System.currentTimeMillis();
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> bad state");
+            return false;
+        }
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
+        int ret = mRtcEngine.takeSnapshotEx(rtcConnection, sessionCtx.mPeerUid, saveFilePath);
+        long t2 = System.currentTimeMillis();
+
+        ALog.getInstance().d(TAG, "<takeSnapshot> sessionCtx=" + sessionCtx + ", ret=" + ret
+                + ", saveFilePath=" + saveFilePath + ", costTime=" + (t2-t1) );
+        return (ret == Constants.ERR_OK);
+    }
+
+    /**
+     * @brief 设置本地端是否推送音频流
+     */
+    public boolean muteLocalAudioStream(final SessionCtx sessionCtx) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<muteLocalAudioStream> bad state");
+            return false;
+        }
+        long t1 = System.currentTimeMillis();
+        int ret, retLocalAud, retDevVideo, retDevAudio;
+
+        ChannelMediaOptions options = new ChannelMediaOptions();
+        options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
+        options.clientRoleType = mRtcEngCfg.mClientRole;
+        options.autoSubscribeAudio = false;  // 不自动订阅音频
+        options.autoSubscribeVideo = false;  // 不自动订阅视频
+        options.publishCameraTrack = false;
+        options.publishMicrophoneTrack = sessionCtx.mPubLocalAudio;
+
+        RtcConnection rtcConnection = new RtcConnection();
+        rtcConnection.channelId = sessionCtx.mChnlName;
+        rtcConnection.localUid = sessionCtx.mLocalUid;
+
+        boolean muteLocalAudio = (!sessionCtx.mPubLocalAudio);
+        ret = mRtcEngine.updateChannelMediaOptionsEx(options, rtcConnection);
+        retLocalAud = mRtcEngine.muteLocalAudioStreamEx(muteLocalAudio, rtcConnection);
+
+        boolean mutePeerAudio = (!sessionCtx.mSubDevAudio);
+        retDevAudio = mRtcEngine.muteRemoteAudioStreamEx(sessionCtx.mPeerUid, mutePeerAudio, rtcConnection);
+        ALog.getInstance().d(TAG, "<muteLocalAudioStream> mutePeerAudio=" + mutePeerAudio
+                + ", retDevAudio=" + retDevAudio);
+
+        boolean mutePeerVideo = (!sessionCtx.mSubDevVideo);
+        retDevVideo = mRtcEngine.muteRemoteVideoStreamEx(sessionCtx.mPeerUid, mutePeerVideo, rtcConnection);
+        ALog.getInstance().d(TAG, "<muteLocalAudioStream> mutePeerVideo=" + mutePeerVideo
+                + ", retDevVideo=" + retDevVideo);
+
+
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<muteLocalAudioStream> muteLocalAudio=" + muteLocalAudio
+                + ", retLocalAud=" + retLocalAud + ", ret=" + ret + ", costTime=" + (t2-t1));
+        return (ret == Constants.ERR_OK);
+    }
+
+    /**
+     * @brief 设置指定频道的设备端，是否推送音频流
+     */
+    public boolean setAudioEffect(int voice_changer) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<setAudioEffect> bad state");
             return false;
         }
+        mVoiceChanger = voice_changer;
         int ret = mRtcEngine.setAudioEffectPreset(voice_changer);
         ALog.getInstance().d(TAG, "<setAudioEffect> voice_changer=" + voice_changer + ", ret=" + ret);
         return (ret == Constants.ERR_OK);
     }
 
-    public synchronized Bitmap capturePeerVideoFrame()
-    {
-        long t1 = System.currentTimeMillis();
-        if (mRtcEngine == null) {
-            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> bad state");
-            return null;
-        }
-
-
-        boolean oldCacheFlag;
-        synchronized (mVideoDataLock) {
-            oldCacheFlag = mCacheVideoFrame;  // 保存原先帧缓存状态
-            mCacheVideoFrame = true;          // 此时一定要做帧缓存
-        }
-        ThreadSleep(200);
-
-        int width, height, rotation;
-        byte[] yBytes;
-        byte[] uBytes;
-        byte[] vBytes;
-
-        // 拷贝缓存的视频帧数据需要加锁
-        synchronized (mVideoDataLock) {
-            if ((mInVideoYData == null) || (mInVideoWidth <= 0) || (mInVideoHeight <= 0)) {
-                ALog.getInstance().e(TAG, "<capturePeerVideoFrame> invalid video frame");
-                synchronized (mVideoDataLock) {
-                    mCacheVideoFrame = oldCacheFlag; // 恢复原先帧缓存状态
-                }
-                return null;
-            }
-            width = mInVideoWidth;
-            height = mInVideoHeight;
-            rotation = mInVideoRotation;
-
-            int yDataSize = mInVideoYData.length;
-            int uDataSize = mInVideoUData.length;
-            int vDataSize = mInVideoVData.length;
-
-            yBytes = new byte[yDataSize];
-            System.arraycopy(mInVideoYData, 0, yBytes, 0,  yDataSize);
-
-            uBytes = new byte[uDataSize];
-            System.arraycopy(mInVideoUData, 0, uBytes, 0, uDataSize);
-
-            vBytes = new byte[vDataSize];
-            System.arraycopy(mInVideoVData, 0, vBytes, 0, vDataSize);
-        }
-
-        // 将 YUV数据转换成 Bitmap 对象
-        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        int ret = ImageConvert.getInstance().I420ToRgba(yBytes, uBytes, vBytes, width, height, bmp);
-        if (ret != 0) {
-            bmp.recycle();
-            synchronized (mVideoDataLock) {
-                mCacheVideoFrame = oldCacheFlag;  // 恢复原先帧缓存状态
-            }
-            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> fail to I420ToRgba(), ret=" + ret);
-            return null;
-        }
-
-        Bitmap capturedBmp = bmp;
-        if (rotation > 0) {
-            capturedBmp = ImageConvert.rotateBmp(bmp, rotation);
-        }
-        synchronized (mVideoDataLock) {
-            mCacheVideoFrame = oldCacheFlag;  // 恢复原先帧缓存状态
-        }
-
-        long t2 = System.currentTimeMillis();
-
-        ALog.getInstance().d(TAG, "<capturePeerVideoFrame> width=" + width + ", height=" + height
-                + ", rotation=" + rotation + ", costTime=" + (t2-t1) );
-        return capturedBmp;
+    public int getAudioEffect() {
+        return mVoiceChanger;
     }
+
+    /**
+     * @brief 设置播放音量
+     */
+    public boolean setPlaybackVolume(int volume) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setPlaybackVolume> bad state");
+            return false;
+        }
+        int ret = mRtcEngine.adjustPlaybackSignalVolume(volume);
+        ALog.getInstance().d(TAG, "<setPlaybackVolume> volume=" + volume + ", ret=" + ret);
+        return (ret == Constants.ERR_OK);
+    }
+
 
     /**
      * @brief 开始频道内录像
@@ -673,7 +630,7 @@ public class TalkingEngine implements AGEventHandler,
      * @return 返回错误码
      */
     //@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public synchronized int recordingStart(final String outputFile) {
+    public int recordingStart(final SessionCtx sessionCtx, final String outputFile) {
         if (mRecorder != null) {
             ALog.getInstance().e(TAG, "<recordingStart> recording is ongoing!");
             return ErrCode.XERR_BAD_STATE;
@@ -790,7 +747,7 @@ public class TalkingEngine implements AGEventHandler,
      * @brief 停止频道内录像
      * @return 返回错误码
      */
-    public synchronized int recordingStop() {
+    public int recordingStop(final SessionCtx sessionCtx) {
         if (mRecorder != null) {
             mRecorder.recordingStop();
             mRecorder.release();
@@ -809,7 +766,7 @@ public class TalkingEngine implements AGEventHandler,
      * @brief 判断当前是否在录像
      * @return true : 当前正在录制； false: 当前不再录制
      */
-    public synchronized boolean isRecording() {
+    public boolean isRecording(final SessionCtx sessionCtx) {
         return (mRecorder != null);
     }
 
@@ -856,9 +813,160 @@ public class TalkingEngine implements AGEventHandler,
         Log.e(TAG, "<onRecorderError> errCode=" + errCode);
 
         if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onRecordingError(errCode);
+            mInitParam.mCallback.onRecordingError(null, errCode);
         }
     }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////// Rtc Channel Event Handler Methods ////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    void onJoinChannelSuccess(final UUID sessionId, final String channel, int uid, int elapsed)  {
+        ALog.getInstance().d(TAG, "<onJoinChannelSuccess> sessionId=" + sessionId
+                + ", channel=" + channel  + ", uid=" + uid + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onTalkingJoinDone(sessionId, channel, uid);
+        }
+    }
+
+    public void onRejoinChannelSuccess(final UUID sessionId, String channel, int uid, int elapsed) {
+        ALog.getInstance().d(TAG, "<onRejoinChannelSuccess> sessionId=" + sessionId
+                + ", channel=" + channel  + ", uid=" + uid + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+    }
+
+    void onLeaveChannelSuccess(final UUID sessionId)  {
+        ALog.getInstance().d(TAG, "<onLeaveChannelSuccess> sessionId=" + sessionId);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onTalkingLeftDone(sessionId);
+        }
+    }
+
+    void onUserJoined(final UUID sessionId, int uid, int elapsed)  {
+        ALog.getInstance().d(TAG, "<onUserJoined> sessionId=" + sessionId
+                + ", uid=" + uid + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onUserOnline(sessionId, uid, elapsed);
+        }
+    }
+
+    void onUserOffline(final UUID sessionId, int uid, int reason)   {
+        ALog.getInstance().d(TAG, "<onUserOffline> sessionId=" + sessionId
+                + ", uid=" + uid + ", reason=" + reason);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onUserOffline(sessionId, uid, reason);
+        }
+    }
+
+    void onFirstLocalVideoFrame(final UUID sessionId, int width, int height, int elapsed)    {
+        ALog.getInstance().d(TAG, "<onFirstLocalVideoFrame> sessionId=" + sessionId
+                + ", width=" + width + ", height=" + height + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
+    }
+
+    void onFirstRemoteVideoFrame(final UUID sessionId, int uid, int width, int height, int elapsed) {
+        ALog.getInstance().d(TAG, "<onFirstRemoteVideoFrame> sessionId=" + sessionId
+                + ", uid=" + uid + ", width=" + width + ", height=" + height + ", elapsed=" + elapsed);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onPeerFirstVideoDecoded(sessionId, uid, width, height);
+        }
+    }
+
+    void onLastmileQuality(final UUID sessionId, int quality) {
+//        ALog.getInstance().d(TAG, "<onLastmileQuality> sessionId=" + sessionId + ", quality=" + quality);
+    }
+
+    void onNetworkQuality(final UUID sessionId, int uid, int txQuality, int rxQuality) {
+//        ALog.getInstance().d(TAG,"<onNetworkQuality> sessionId=" + sessionId
+//            + ", uid=" + uid + ", txQuality=" + txQuality + ", rxQuality=" + rxQuality);
+    }
+
+    void onRtcStats(final UUID sessionId, IRtcEngineEventHandler.RtcStats stats) {
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if ((System.currentTimeMillis()-mRtcInitTime) < 4000) {
+            if ((stats.rxVideoKBitRate <= 0) || (stats.rxAudioKBitRate <= 0)) {
+                return;
+            }
+        }
+
+        synchronized (mRtcStatus) {
+            mRtcStatus.totalDuration = stats.totalDuration;
+            mRtcStatus.txBytes = stats.txBytes;
+            mRtcStatus.rxBytes = stats.rxBytes;
+            mRtcStatus.txKBitRate = stats.txKBitRate;
+            mRtcStatus.rxKBitRate = stats.rxKBitRate;
+            mRtcStatus.txAudioBytes = stats.txAudioBytes;
+            mRtcStatus.rxAudioBytes = stats.rxAudioBytes;
+            mRtcStatus.txVideoBytes = stats.txVideoBytes;
+            mRtcStatus.rxVideoBytes = stats.rxVideoBytes;
+            mRtcStatus.txAudioKBitRate = stats.txAudioKBitRate;
+            mRtcStatus.rxAudioKBitRate = stats.rxAudioKBitRate;
+            mRtcStatus.txVideoKBitRate = stats.txVideoKBitRate;
+            mRtcStatus.rxVideoKBitRate = stats.rxVideoKBitRate;
+            mRtcStatus.txPacketLossRate = stats.txPacketLossRate;
+            mRtcStatus.rxPacketLossRate = stats.rxPacketLossRate;
+            mRtcStatus.lastmileDelay = stats.lastmileDelay;
+            mRtcStatus.connectTimeMs = stats.connectTimeMs;
+            mRtcStatus.cpuAppUsage = stats.cpuAppUsage;
+            mRtcStatus.cpuTotalUsage = stats.cpuTotalUsage;
+            mRtcStatus.users = stats.users;
+            mRtcStatus.memoryAppUsageRatio = stats.memoryAppUsageRatio;
+            mRtcStatus.memoryTotalUsageRatio = stats.memoryTotalUsageRatio;
+            mRtcStatus.memoryAppUsageInKbytes = stats.memoryAppUsageInKbytes;
+        }
+    }
+
+    void onLocalVideoStats(final UUID sessionId, Constants.VideoSourceType source,
+                                  IRtcEngineEventHandler.LocalVideoStats stats) {
+//        ALog.getInstance().d(TAG, "<onLocalVideoStats> sessionId=" + sessionId + ", stats=" + stats);
+    }
+
+    void onRemoteVideoStats(final UUID sessionId, IRtcEngineEventHandler.RemoteVideoStats stats) {
+//        ALog.getInstance().d(TAG, "<onRemoteVideoStats> sessionId=" + sessionId + ", stats=" + stats);
+    }
+
+    void onSnapshotTaken(final UUID sessionId, int uid, String filePath, int width, int height, int errCode) {
+        ALog.getInstance().d(TAG, "<onSnapshotTaken> sessionId=" + sessionId
+                + ", uid=" + uid + ", filePath=" + filePath
+                + ", width=" + width + ", height=" + height + ", errCode=" + errCode);
+        if (mRtcEngine == null) {
+            return;
+        }
+
+        if (mInitParam.mCallback != null) {
+            mInitParam.mCallback.onSnapshotTaken(sessionId, uid, filePath, width, height, errCode);
+        }
+    }
+
 
 
     ////////////////////////////////////////////////////////////////////////////
@@ -885,11 +993,6 @@ public class TalkingEngine implements AGEventHandler,
             return;
         }
 
-        if (uid == mPeerUid) {  // 对端首帧出图
-            if (mInitParam.mCallback != null) {
-                mInitParam.mCallback.onPeerFirstVideoDecoded(mPeerUid, width, height);
-            }
-        }
     }
 
     @Override
@@ -911,9 +1014,6 @@ public class TalkingEngine implements AGEventHandler,
             return;
         }
 
-        if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onTalkingJoinDone(channel, uid);
-        }
     }
 
     @Override
@@ -924,9 +1024,6 @@ public class TalkingEngine implements AGEventHandler,
             return;
         }
 
-        if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onTalkingLeftDone();
-        }
     }
 
     @Override
@@ -937,15 +1034,6 @@ public class TalkingEngine implements AGEventHandler,
             return;
         }
 
-        if (uid == mPeerUid) {  // 对端加入频道
-            if (mInitParam.mCallback != null) {
-                mInitParam.mCallback.onTalkingPeerJoined(mLocalUid, mPeerUid);
-            }
-        }
-
-        if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onUserOnline(uid);
-        }
     }
 
     @Override
@@ -956,15 +1044,6 @@ public class TalkingEngine implements AGEventHandler,
             return;
         }
 
-        if (uid == mPeerUid) {
-            if (mInitParam.mCallback != null) {
-                mInitParam.mCallback.onTalkingPeerLeft(mLocalUid, mPeerUid, reason);
-            }
-        }
-
-        if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onUserOffline(uid);
-        }
     }
 
     @Override
@@ -1032,30 +1111,18 @@ public class TalkingEngine implements AGEventHandler,
     public void onRecorderInfoUpdate(Object info)
     {  }
 
-    @Override
-    public void onRequestToken() {
-        ALog.getInstance().d(TAG, "<onRequestToken> ");
-        if (mRtcEngine == null) {
-            return;
-        }
-
-        if (mInitParam.mCallback != null) {
-            mInitParam.mCallback.onTalkingError(mLocalUid, mPeerUid, ErrCode.XERR_TOKEN_INVALID);
-        }
-    }
-
     ////////////////////////////////////////////////////////////////////////////
     //////////////////// Override Methods of IVideoFrameObserver ///////////////
     ////////////////////////////////////////////////////////////////////////////
     @Override
-    public boolean onCaptureVideoFrame(VideoFrame videoFrame)   {
+    public boolean onCaptureVideoFrame(int sourceType, VideoFrame videoFrame)   {
         return false;
     }
 
-    @Override
-    public boolean onScreenCaptureVideoFrame(VideoFrame videoFrame)  {
-        return false;
-    }
+//    @Override
+//    public boolean onScreenCaptureVideoFrame(VideoFrame videoFrame)  {
+//        return false;
+//    }
 
     @Override
     public boolean onMediaPlayerVideoFrame(VideoFrame videoFrame, int var2)  {
@@ -1112,13 +1179,13 @@ public class TalkingEngine implements AGEventHandler,
         return false;
     }
 
-    @Override
-    public boolean onPreEncodeScreenVideoFrame(VideoFrame videoFrame) {
-        return false;
-    }
+//    @Override
+//    public boolean onPreEncodeScreenVideoFrame(VideoFrame videoFrame) {
+//        return false;
+//    }
 
     @Override
-    public boolean onPreEncodeVideoFrame(VideoFrame videoFrame) {
+    public boolean onPreEncodeVideoFrame(int sourceType, VideoFrame videoFrame) {
         return false;
     }
 
@@ -1148,6 +1215,8 @@ public class TalkingEngine implements AGEventHandler,
     }
 
 
+
+
     ////////////////////////////////////////////////////////////////////////////
     //////////////////// Override Methods of IAudioFrameObserver ///////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1158,6 +1227,14 @@ public class TalkingEngine implements AGEventHandler,
 
         return false;
     }
+
+    @Override
+    public boolean onEarMonitoringAudioFrame(int type, int samplesPerChannel, int bytesPerSample,
+                                             int channels, int samplesPerSec, ByteBuffer buffer,
+                                             long renderTimeMs, int avsync_type) {
+        return false;
+    }
+
 
     @Override
     public boolean onPlaybackAudioFrame(String channelId, int type, int samplesPerChannel,
@@ -1260,6 +1337,13 @@ public class TalkingEngine implements AGEventHandler,
         return params;
     }
 
+    @Override
+    public AudioParams getEarMonitoringAudioParams() {
+        int samplesPerCall = (RECORD_AUDIO_SAMPLERATE * RECORD_AUDIO_CHANNELS * 30) / 1000;
+        AudioParams params = new AudioParams(RECORD_AUDIO_SAMPLERATE, RECORD_AUDIO_CHANNELS,
+                Constants.RAW_AUDIO_FRAME_OP_MODE_READ_ONLY, samplesPerCall );
+        return params;
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     //////////////////////////// Internal Methods //////////////////////////////

@@ -3,85 +3,80 @@
  * @brief This file define the SDK interface for Agora Iot AppSdk 2.0
  * @author xiaohua.lu
  * @email luxiaohua@agora.io
- * @version 1.0.0.1
- * @date 2022-01-26
+ * @version 2.0.0.1
+ * @date 2023-04-12
  * @license Copyright (C) 2021 AgoraIO Inc. All rights reserved.
  */
 package io.agora.iotlink.sdkimpl;
 
 
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 
+import java.util.UUID;
 
 import io.agora.iotlink.ErrCode;
-import io.agora.iotlink.IAccountMgr;
 import io.agora.iotlink.IAgoraIotAppSdk;
-import io.agora.iotlink.IAlarmMgr;
 import io.agora.iotlink.ICallkitMgr;
-import io.agora.iotlink.IDevMessageMgr;
-import io.agora.iotlink.IDeviceMgr;
-import io.agora.iotlink.IRtcPlayer;
-import io.agora.iotlink.IRtmMgr;
-import io.agora.iotlink.aws.AWSUtils;
-import io.agora.iotlink.callkit.AgoraService;
+import io.agora.iotlink.base.BaseThreadComp;
 import io.agora.iotlink.logger.ALog;
-import io.agora.iotlink.lowservice.AgoraLowService;
-import io.agora.iotlink.rtcsdk.TalkingEngine;
+import io.agora.iotlink.transport.HttpTransport;
+import io.agora.iotlink.transport.MqttTransport;
+import io.agora.iotlink.transport.TransPacket;
+import io.agora.iotlink.transport.TransPktQueue;
 
-import org.json.JSONObject;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 
 
 /**
  * @brief SDK引擎接口
  */
-public class AgoraIotAppSdk implements IAgoraIotAppSdk {
+public class AgoraIotAppSdk extends BaseThreadComp
+        implements IAgoraIotAppSdk, MqttTransport.ICallback {
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraIotAppSdk";
-    private static final int EXIT_WAIT_TIMEOUT = 3000;
-    private static final long INCOMING_TIMEOUT = 30;   ///< 早于SDK初始化30秒之前的来电消息，直接忽略
+    private static final int MQTT_TIMEOUT = 10000;
+    private static final int UNPREPARE_WAIT_TIMEOUT = 3500;
+
+
 
     //
-    // The mesage Id
+    // The message Id
     //
-    private static final int MSGID_WORK_EXIT = 0xFFFF;
-
+    private static final int MSGID_PREPARE_NODEACTIVE = 0x0001;
+    private static final int MSGID_PREPARE_INIT_DONE = 0x0002;
+    private static final int MSGID_MQTT_STATE_CHANGED = 0x0003;
+    private static final int MSGID_PACKET_SEND = 0x0004;
+    private static final int MSGID_PACKET_RECV = 0x0005;
+    private static final int MSGID_UNPREPARE = 0x0006;
 
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
+    private final Object mUnprepareEvent = new Object();
     private InitParam mInitParam;
-    private AccountMgr mAccountMgr;
     private CallkitMgr mCallkitMgr;
-    private DeviceMgr mDeviceMgr;
-    private AlarmMgr mAlarmMgr;
-    private DevMessageMgr mDevmsgMgr;
-    private RtmMgr mRtmMgr;
-    private RtcPlayer mRtcPlayer;
+
 
     public static final Object mDataLock = new Object();    ///< 同步访问锁,类中所有变量需要进行加锁处理
-    private HandlerThread mWorkThread;  ///< 呼叫系统和设备管理器的工作线程，在该线程中串行运行
-    private Handler mWorkHandler;       ///< 呼叫系统和设备管理器的工作线程处理器
-    private final Object mWorkExitEvent = new Object();
-    private ThreadPoolExecutor mThreadPool; ///< 设备消息和告警消息的工作线程池，支持并发执行
-
+    private LocalNode mLocalNode = new LocalNode();
     private volatile int mStateMachine = AgoraIotAppSdk.SDK_STATE_INVALID;     ///< 当前呼叫状态机
-    private volatile int mMqttState = IAccountMgr.MQTT_STATE_DISCONNECTED;
+
+    private PrepareParam mPrepareParam;
+    private OnPrepareListener mPrepareListener;
+    private MqttTransport mMqttTransport = new MqttTransport();
+
+    private String mMqttTopicSub;                                   ///< MQTT订阅的主题
+    private String mMqttTopicPub;                                   ///< MQTT发布的主题
+    private TransPktQueue mRecvPktQueue = new TransPktQueue();      ///< 接收数据包队列
+    private TransPktQueue mSendPktQueue = new TransPktQueue();      ///< 发送数据包队列
+
+
 
     ///////////////////////////////////////////////////////////////////////
     //////////////// Override Methods of IAgoraIotAppSdk //////////////////
@@ -89,11 +84,20 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
 
     @Override
     public int initialize(InitParam initParam) {
+        if (TextUtils.isEmpty(initParam.mAppId) ||
+            TextUtils.isEmpty(initParam.mServerUrl) ||
+            (initParam.mContext == null))      {
+            Log.e(TAG, "<initialize > [ERROR] invalid parameter");
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
         mInitParam = initParam;
 
-        //
+        synchronized (mDataLock) {
+            mLocalNode.mReady = false;
+        }
+
         // 初始化日志系统
-        //
         if ((initParam.mLogFilePath != null) && (!initParam.mLogFilePath.isEmpty())) {
             boolean logRet = ALog.getInstance().initialize(initParam.mLogFilePath);
             if (!logRet) {
@@ -101,211 +105,44 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
             }
         }
 
-        // 设置基本的BaseUrl
-        if (initParam.mSlaveServerUrl != null) {
-            AgoraService.getInstance().setBaseUrl(initParam.mSlaveServerUrl);
-        }
-        if (initParam.mMasterServerUrl != null) {
-            AgoraLowService.getInstance().setBaseUrl(initParam.mMasterServerUrl);
-        }
+        // 设置 HTTP服务器地址
+        HttpTransport.getInstance().setBaseUrl(initParam.mServerUrl);
 
-        //
-        // 启动工作线程
-        //
-        workThreadCreate();
+        // 启动组件线程
+        runStart(TAG);
+        mSendPktQueue.clear();
+        mRecvPktQueue.clear();
 
-        //
-        // 创建接口实例对象
-        //
-        mAccountMgr = new AccountMgr();
-        mAccountMgr.initialize(this);
-
-        mDeviceMgr = new DeviceMgr();
-        mDeviceMgr.initialize(this);
-
+        // 创建组件实例对象
         mCallkitMgr = new CallkitMgr();
         mCallkitMgr.initialize(this);
 
-        mAlarmMgr = new AlarmMgr();
-        mAlarmMgr.initialize(this);
+        // SDK初始化完成，状态机切换到 初始化完成状态
+        setStateMachine(SDK_STATE_INITIALIZED);
 
-        mDevmsgMgr = new DevMessageMgr();
-        mDevmsgMgr.initialize(this);
-
-        mRtmMgr = new RtmMgr();
-        mRtmMgr.initialize(this);
-
-        mRtcPlayer = new RtcPlayer();
-        mRtcPlayer.initialize(this);
-
-        //
-        // 设置AwsUtil的回调
-        //
-        AWSUtils.getInstance().setAWSListener(new AWSUtils.AWSListener() {
-            @Override
-            public void onConnectStatusChange(String status) {
-                ALog.getInstance().d(TAG, "<onConnectStatusChange> status=" + status);
-
-                onAwsConnectStatusChange(status);
-
-                // 账号管理系统会做 登录和登出处理
-                mAccountMgr.onAwsConnectStatusChange(status);
-
-                if (status.compareToIgnoreCase("Subscribed") == 0) {
-                    Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("appId", mInitParam.mRtcAppId);
-                    params.put("deviceAlias", mAccountMgr.getAccountInfo().mAccount);
-                    if ((mInitParam.mPusherId != null) && (mInitParam.mPusherId.length() > 0)) {
-                        params.put("pusherId", mInitParam.mPusherId);
-                    }
-                    params.put("localRecord", 0);
-                    params.put("disabledPush", false); // 使用离线推送
-
-                    AWSUtils.getInstance().updateRtcStatus(params);  // 这个要更新到 rtc
-                    AWSUtils.getInstance().getRtcStatus();  // 这个要从 rtc2 获取
-
-                    Map<String, Object> rtmParams = new HashMap<String, Object>();
-                    rtmParams.put("appId", mInitParam.mRtcAppId);
-                    AWSUtils.getInstance().updateRtmStatus(rtmParams);
-
-                    ALog.getInstance().e(TAG, "<onConnectStatusChange> update and get RTC status");
-                }
-            }
-
-            @Override
-            public void onConnectFail(String message) {
-                ALog.getInstance().e(TAG, "<onConnectFail> message=" + message);
-
-                // 账号管理系统会做 登录和登出处理
-                mAccountMgr.onAwsConnectFail(message);
-            }
-
-            @Override
-            public void onDevIncoming(JSONObject jsonObject, long msgTimestamp, long tokenTimestamp) {
-                ALog.getInstance().d(TAG, "<onDevIncome> msgTimestamp=" + msgTimestamp
-                        + ", msgDate=" + timestampToText(msgTimestamp*1000L)
-                        + ", tokenTimestamp=" + tokenTimestamp
-                        + ", tokenDate=" + timestampToText(tokenTimestamp*1000L)
-                        + ", jsonObject=" + jsonObject.toString());
-
-                if ((tokenTimestamp+INCOMING_TIMEOUT) < msgTimestamp) {
-                    // 早于SDK启动30秒之前的来电消息直接过滤
-                    ALog.getInstance().e(TAG, "<onDevIncome> Incoming too early, ignore it");
-                    return;
-                }
-
-                if (mCallkitMgr != null) {
-                    mCallkitMgr.onAwsEventIncoming(jsonObject, tokenTimestamp);
-                }
-            }
-
-            @Override
-            public void onReceiveShadow(String things_name, JSONObject jsonObject) {
-                ALog.getInstance().d(TAG, "<onReceiveShadow> things_name=" + things_name
-                        + ", jsonObject=" + jsonObject.toString());
-
-                if (mDeviceMgr != null) {
-                    mDeviceMgr.onReceiveShadow(things_name, jsonObject);
-                }
-            }
-
-            @Override
-            public void onUpdateRtcStatus(JSONObject jsonObject, long timestamp) {
-                ALog.getInstance().d(TAG, "<onUpdateRtcStatus> timestamp=" + timestamp
-                            + ", jsonObject=" + jsonObject.toString());
-
-                if (mCallkitMgr != null) {
-                    mCallkitMgr.onAwsUpdateClient(jsonObject, timestamp);
-                }
-            }
-
-            @Override
-            public void onDevOnlineChanged(String deviceMac, String deviceId, boolean online) {
-                ALog.getInstance().d(TAG, "<onDevOnlineChanged> deviceMac=" + deviceMac
-                    + ", deviceId=" + deviceId + ", online=" + online);
-                if (mDeviceMgr != null) {
-                    mDeviceMgr.onDevOnlineChanged(deviceMac, deviceId, online);
-                }
-            }
-
-            @Override
-            public void onDevActionUpdated(String deviceMac, String actionType) {
-                ALog.getInstance().d(TAG, "<onDevActionUpdated> deviceMac=" + deviceMac
-                        + ", actionType=" + actionType);
-                if (mDeviceMgr != null) {
-                    mDeviceMgr.onDevActionUpdated(deviceMac, actionType);
-                }
-            }
-
-            @Override
-            public void onDevPropertyUpdated(String deviceMac, String deviceId,
-                                             Map<String, Object> properties) {
-                ALog.getInstance().d(TAG, "<onDevPropertyUpdated> deviceMac=" + deviceMac
-                        + ", deviceId=" + deviceId + ", properties=" + properties);
-                if (mDeviceMgr != null) {
-                    mDeviceMgr.onDevPropertyUpdated(deviceMac, deviceId, properties);
-                }
-            }
-        });
-
-        //
-        // SDK初始化完成
-        //
-        synchronized (mDataLock) {
-            mStateMachine = SDK_STATE_READY;  // 状态机切换到 SDK就绪
-        }
         ALog.getInstance().d(TAG, "<initialize> done");
         return ErrCode.XOK;
     }
 
     @Override
     public void release() {
-        //
-        // 销毁工作线程
-        //
-        workThreadDestroy();
-
-        //
-        // 销毁接口实例对象
-        //
-        if (mAccountMgr != null) {
-            mAccountMgr.release();
-            mAccountMgr = null;
+        // 停止组件线程
+        runStop();
+        synchronized (mDataLock) {
+            mLocalNode.mReady = false;
         }
+        mSendPktQueue.clear();
+        mRecvPktQueue.clear();
 
+        // 销毁组件对象
         if (mCallkitMgr != null) {
             mCallkitMgr.release();
             mCallkitMgr = null;
         }
 
-        if (mDeviceMgr != null) {
-            mDeviceMgr.release();
-            mDeviceMgr = null;
-        }
+        // 状态机切换到 无效状态
+        setStateMachine(SDK_STATE_INVALID);
 
-        if (mAlarmMgr != null) {
-            mAlarmMgr.release();
-            mAlarmMgr = null;
-        }
-
-        if (mDevmsgMgr != null) {
-            mDevmsgMgr.release();
-            mDevmsgMgr = null;
-        }
-
-        if (mRtmMgr != null) {
-            mRtmMgr.release();
-            mRtmMgr = null;
-        }
-
-        if (mRtcPlayer != null) {
-            mRtcPlayer.release();
-            mRtcPlayer = null;
-        }
-
-        synchronized (mDataLock) {
-            mStateMachine = SDK_STATE_INVALID;  // 状态机切换到 无效状态
-        }
         ALog.getInstance().d(TAG, "<release> done");
         ALog.getInstance().release();
     }
@@ -317,9 +154,95 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
         }
     }
 
+    private void setStateMachine(int newState) {
+        synchronized (mDataLock) {
+            mStateMachine = newState;
+        }
+    }
+
+
     @Override
-    public IAccountMgr getAccountMgr() {
-        return mAccountMgr;
+    public int prepare(final PrepareParam prepareParam, final OnPrepareListener prepareListener) {
+        int state = getStateMachine();
+        if (state != SDK_STATE_INITIALIZED) {
+            ALog.getInstance().e(TAG, "<prepare> bad status, state=" + state);
+            return ErrCode.XERR_BAD_STATE;
+        }
+
+        setStateMachine(SDK_STATE_PREPARING);    // 设置状态机正在准备操作
+
+        // 回调状态机变化
+        CallbackStateChanged(SDK_STATE_INITIALIZED, SDK_STATE_PREPARING, SDK_REASON_NONE);
+
+        // 发送消息进行操作
+        synchronized (mDataLock) {
+            mPrepareParam = prepareParam;
+            mPrepareListener = prepareListener;
+
+            // 设置本地节点信息
+            mLocalNode.mReady = false;
+            mLocalNode.mUserId = prepareParam.mUserId;
+        }
+        sendSingleMessage(MSGID_PREPARE_NODEACTIVE, 0, 0, null, 0);
+
+        ALog.getInstance().d(TAG, "<prepare> prepareParam=" + prepareParam.toString());
+        return ErrCode.XOK;
+    }
+
+    @Override
+    public int unprepare() {
+        int state = getStateMachine();
+        if (state == SDK_STATE_INVALID) {
+            ALog.getInstance().e(TAG, "<unprepare> bad status, state=" + state);
+            return ErrCode.XERR_BAD_STATE;
+        }
+        if (state == SDK_STATE_INITIALIZED) {
+            ALog.getInstance().e(TAG, "<unprepare> already unprepared!");
+            return ErrCode.XOK;
+        }
+        ALog.getInstance().d(TAG, "<unprepare> ==>Enter");
+
+        // 设置状态机到 注销状态
+        setStateMachine(SDK_STATE_UNPREPARING);
+
+        // 回调状态机变化
+        CallbackStateChanged(state, SDK_STATE_UNPREPARING, SDK_REASON_NONE);
+
+
+        // 释放和重新初始化呼叫模块
+        mCallkitMgr.release();
+        mCallkitMgr.initialize(this);
+
+        // 删除队列中所有消息, 仅发送注销消息
+        removeAllMessages();
+        sendSingleMessage(MSGID_UNPREPARE, 0, 0, null, 0);
+
+        synchronized (mUnprepareEvent) {
+            try {
+                mUnprepareEvent.wait(UNPREPARE_WAIT_TIMEOUT);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                ALog.getInstance().e(TAG, "<unprepare> exception=" + e.getMessage());
+            }
+        }
+
+        synchronized (mDataLock) {
+            mLocalNode.mReady = false;
+            mLocalNode.mUserId = null;
+            mLocalNode.mNodeId = null;
+            mLocalNode.mRegion = null;
+            mLocalNode.mToken = null;
+        }
+        removeAllMessages();
+
+        // 设置状态机到 初始化完成
+        setStateMachine(SDK_STATE_INITIALIZED);
+
+        // 回调状态机变化
+        CallbackStateChanged(SDK_STATE_UNPREPARING, SDK_STATE_INITIALIZED, SDK_REASON_NONE);
+
+        ALog.getInstance().d(TAG, "<unprepare> <==Exit");
+        return ErrCode.XOK;
     }
 
     @Override
@@ -328,182 +251,455 @@ public class AgoraIotAppSdk implements IAgoraIotAppSdk {
     }
 
     @Override
-    public IDeviceMgr getDeviceMgr() {
-        return mDeviceMgr;
-    }
-
-    @Override
-    public IAlarmMgr getAlarmMgr() {
-        return mAlarmMgr;
-    }
-
-    @Override
-    public IDevMessageMgr getDevMessageMgr() {
-        return mDevmsgMgr;
-    }
-
-    @Override
-    public IRtmMgr getRtmMgr() {
-        return mRtmMgr;
-    }
-
-    @Override
-    public IRtcPlayer getRtcPlayer() {
-        return mRtcPlayer;
-    }
-
-    @Override
-    public boolean isMqttReady() {
+    public String getLocalUserId() {
         synchronized (mDataLock) {
-            if (mMqttState == IAccountMgr.MQTT_STATE_CONNECTED) {
-                return true;
-            }
-            return false;
+            return mLocalNode.mUserId;
+        }
+    }
+
+    @Override
+    public String getLocalNodeId() {
+        synchronized (mDataLock) {
+            return mLocalNode.mNodeId;
         }
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    //////////////////////// Methods for each sub-module ///////////////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    /*
-     * @brief SDK状态机设置，仅在 AccountMgr 模块中设置
+    /**
+     * @brief 获取SDK的初始化参数
      */
-    void setStateMachine(int newState) {
-        synchronized (mDataLock) {
-            mStateMachine = newState;
-        }
-    }
-
     IAgoraIotAppSdk.InitParam getInitParam() {
         return mInitParam;
     }
 
-    Handler getWorkHandler() {
-        return mWorkHandler;
-    }
-
-    ThreadPoolExecutor getThreadPool() {
-        return mThreadPool;
-    }
-
-    public AccountMgr.AccountInfo getAccountInfo() {
-        if (mAccountMgr == null) {
-            return null;
-        }
-        return mAccountMgr.getAccountInfo();
-    }
-
-    boolean isAccountReady() {
+    /**
+     * @brief 获取本地节点信息
+     */
+    LocalNode getLoalNode() {
         synchronized (mDataLock) {
-            if (mStateMachine == SDK_STATE_INVALID ||
-                mStateMachine == SDK_STATE_READY ||
-                mStateMachine == SDK_STATE_LOGINING ||
-                mStateMachine == SDK_STATE_LOGOUTING)   {
-                return false;
-            }
-          }
-
-        return true;
-    }
-
-    void onAwsConnectStatusChange(String status) {
-
-        if (status.compareToIgnoreCase("Connecting") == 0) {
-            synchronized (mDataLock) {
-                mMqttState = IAccountMgr.MQTT_STATE_CONNECTING;
-            };
-
-        } else if (status.compareToIgnoreCase("Connected") == 0) {
-            synchronized (mDataLock) {
-                mMqttState = IAccountMgr.MQTT_STATE_CONNECTED;
-            };
-
-        } else if (status.compareToIgnoreCase("Subscribed") == 0) {
-            synchronized (mDataLock) {
-                mMqttState = IAccountMgr.MQTT_STATE_CONNECTED;
-            };
-
-        } else if (status.compareToIgnoreCase("ConnectionLost") == 0) {
-            synchronized (mDataLock) {
-                mMqttState = IAccountMgr.MQTT_STATE_DISCONNECTED;
-            };
+            return mLocalNode;
         }
     }
+
+
+    /**
+     * @brief 发送数据包，被其他组件模块调用
+     */
+    int sendPacket(final TransPacket sendPacket) {
+        // 插入发送队列
+        mSendPktQueue.inqueue(sendPacket);
+
+        // 消息通知组件线程进行发送
+        sendSingleMessage(MSGID_PACKET_SEND, 0, 0, null, 0);
+
+        //ALog.getInstance().d(TAG, "<sendPacket> done, queueSize=" + mSendPktQueue.size());
+        return ErrCode.XOK;
+    }
+
+    /**
+     * @brief 根据 sessionId 从队列中删除要发送的数据包
+     * @param sessionId : 查找的sessionId
+     * @return 返回删除的 packet，如果没有对应sessionId的发送包则返回null
+     */
+    TransPacket removePacketBySessionId(final UUID sessionId) {
+        // 从发送队列中进行删除
+        TransPacket packet = mSendPktQueue.removeBySessionId(sessionId);
+        return packet;
+    }
+
+    /**
+     * @brief 获取MQTT订阅的主题
+     */
+    String getMqttSubscribedTopic() {
+        return mMqttTopicSub;
+    }
+
+    /**
+     * @brief 获取MQTT发布的主题
+     */
+    String getMqttPublishTopic() {
+        return mMqttTopicPub;
+    }
+
+
 
     ///////////////////////////////////////////////////////////////////////////
-    //////////////////////// Innternal Utility Methods ////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
-    void workThreadCreate() {
-        mWorkThread = new HandlerThread("AppSdk");
-        mWorkThread.start();
-        mWorkHandler = new Handler(mWorkThread.getLooper()) {
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                mAccountMgr.workThreadProcessMessage(msg);
-                mRtmMgr.workThreadProcessMessage(msg);
-                mRtcPlayer.workThreadProcessMessage(msg);
-                workThreadProcessMessage(msg);
-            }
-        };
-
-        mThreadPool = new ThreadPoolExecutor(4, 8, 8,
-                TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>(128));
-    }
-
-    void workThreadDestroy() {
-        if (mWorkHandler != null) {
-
-            // 清除所有消息队列中消息
-            mAccountMgr.workThreadClearMessage();
-
-            // 同步等待线程中所有任务处理完成后，才能正常退出线程
-            mWorkHandler.sendEmptyMessage(MSGID_WORK_EXIT);
-            synchronized (mWorkExitEvent) {
-                try {
-                    mWorkExitEvent.wait(EXIT_WAIT_TIMEOUT);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    ALog.getInstance().e(TAG, "<release> exception=" + e.getMessage());
-                }
-            }
-
-            mWorkHandler = null;
-        }
-
-        if (mWorkThread != null) {
-            mWorkThread.quit();
-            mWorkThread = null;
-        }
-
-        if (mThreadPool != null) {
-            mThreadPool.shutdown();
-            try {
-                mThreadPool.awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException interruptedExp) {
-                interruptedExp.printStackTrace();
-            }
-            mThreadPool = null;
-        }
-    }
-
-    void workThreadProcessMessage(Message msg) {
+    //////////////// Methods for Override BaseThreadComp ///////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    @Override
+    protected void processWorkMessage(Message msg)   {
         switch (msg.what) {
-            case MSGID_WORK_EXIT:  // 工作线程退出消息
-                synchronized (mWorkExitEvent) {
-                    mWorkExitEvent.notify();    // 事件通知
-                }
+            case MSGID_PREPARE_NODEACTIVE:
+                    onMessagePrepareNodeActive(msg);
+                break;
+
+            case MSGID_PREPARE_INIT_DONE:
+                    onMessageInitDone(msg);
+                break;
+
+            case MSGID_MQTT_STATE_CHANGED:
+                    onMessageMqttStateChanged(msg);
+                break;
+
+            case MSGID_PACKET_SEND:
+                    onMessagePacketSend(msg);
+                break;
+
+            case MSGID_PACKET_RECV:
+                    onMessagePacketRecv(msg);
+                break;
+
+            case MSGID_UNPREPARE:
+                    onMessageUnprepare(msg);
                 break;
         }
+
+         mMqttTransport.processWorkMessage(msg);
+    }
+
+    @Override
+    protected void removeAllMessages() {
+        synchronized (mMsgQueueLock) {
+            mWorkHandler.removeMessages(MSGID_PREPARE_NODEACTIVE);
+            mWorkHandler.removeMessages(MSGID_PREPARE_INIT_DONE);
+            mWorkHandler.removeMessages(MSGID_MQTT_STATE_CHANGED);
+            mWorkHandler.removeMessages(MSGID_PACKET_SEND);
+            mWorkHandler.removeMessages(MSGID_PACKET_RECV);
+            mWorkHandler.removeMessages(MSGID_UNPREPARE);
+        }
+
+        if (mMqttTransport != null) {
+            mMqttTransport.removeAllMessages();
+        }
+    }
+
+    @Override
+    protected void processTaskFinsh() {
+        if (mMqttTransport != null) {
+            mMqttTransport.release();
+        }
+        ALog.getInstance().d(TAG, "<processTaskFinsh> done!");
     }
 
 
-    String timestampToText(long timestamp) {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
-        String time = format.format(new Date(timestamp));
-        return time;
+    ///////////////////////////////////////////////////////////////////////////
+    //////////////// Methods for thread message handler ///////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    /**
+     * @brief 组件线程消息处理：Node节点激活
+     */
+    void onMessagePrepareNodeActive(Message msg) {
+        int sdkState = getStateMachine();
+        if (sdkState != SDK_STATE_PREPARING) {
+            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> bad state, sdkState=" + sdkState);
+            return;
+        }
+        removeMessage(MSGID_PREPARE_NODEACTIVE);
+
+        // 激活节点
+        PrepareParam prepareParam;
+        synchronized (mDataLock) {
+            prepareParam = mPrepareParam;
+        }
+
+        HttpTransport.NodeActiveResult result = HttpTransport.getInstance().nodeActive(mInitParam.mAppId, prepareParam);
+        if (result.mErrCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> fail to nodeActive, ret=" + result.mErrCode);
+            sendSingleMessage(MSGID_PREPARE_INIT_DONE, result.mErrCode, 0, null, 0);
+            return;
+        }
+        if (getStateMachine() != SDK_STATE_PREPARING) {
+            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> bad state2, sdkState=" + getStateMachine());
+            return;
+        }
+
+            // 更新本地节点信息
+        synchronized (mDataLock) {
+            mLocalNode.mReady = true;
+            mLocalNode.mUserId = prepareParam.mUserId;
+            mLocalNode.mNodeId = result.mNodeId;
+            mLocalNode.mRegion = result.mNodeRegion;
+            mLocalNode.mToken = result.mNodeToken;
+        }
+
+        // 设置 MQTT订阅和发布的主题
+        mMqttTopicSub = "$falcon/callkit/" + result.mNodeId + "/sub";
+        mMqttTopicPub = "$falcon/callkit/" + result.mNodeId + "/pub";
+
+
+        //
+        // 创建并初始化 Mqtt Transport
+        //
+        MqttTransport.InitParam mqttParam = new MqttTransport.InitParam();
+        mqttParam.mContext = mInitParam.mContext;
+        mqttParam.mThreadComp = this;
+        mqttParam.mCallback = this;
+        mqttParam.mClientId = result.mNodeId;
+        mqttParam.mServerUrl = String.format("ssl://%s:%d", result.mMqttServer, result.mMqttPort);
+        mqttParam.mUserName = result.mMqttUserName;
+        mqttParam.mPassword = result.mNodeId + "/" + result.mUserId + "/" + result.mMqttSalt;
+        mqttParam.mHasCaCertify = true;
+
+
+        mqttParam.mSubTopicArray = new String[1];
+        mqttParam.mSubTopicArray[0] = mMqttTopicSub;
+        mqttParam.mSubQosArray = new int[1];
+        mqttParam.mSubQosArray[0] = 2;
+
+        int ret = mMqttTransport.initialize(mqttParam);
+        if (ret != ErrCode.XOK) {
+            synchronized (mDataLock) {
+                mLocalNode.mReady = false;
+                mLocalNode.mUserId = null;
+                mLocalNode.mNodeId = null;
+            }
+            mMqttTransport.release();
+            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> fail to mqtt init, ret=" + ret);
+            sendSingleMessage(MSGID_PREPARE_INIT_DONE, ret, 0, null, 0);
+            return;
+        }
+
+        // 发送一个超时延时的事件，这样如果没有 MQTT初始化回调回来，也能继续后续处理
+        sendSingleMessage(MSGID_PREPARE_INIT_DONE, ErrCode.XERR_TIMEOUT, 0, null, MQTT_TIMEOUT);
+        ALog.getInstance().d(TAG, "<onMessagePrepareNodeActive> done");
     }
+
+
+    /**
+     * @brief 组件线程消息处理：MQTT初始化完成
+     */
+    void onMessageInitDone(Message msg) {
+        int sdkState = getStateMachine();
+        if (sdkState != SDK_STATE_PREPARING) {
+            ALog.getInstance().e(TAG, "<onMessageInitDone> bad state, sdkState=" + sdkState);
+            return;
+        }
+        removeMessage(MSGID_PREPARE_NODEACTIVE);
+        removeMessage(MSGID_PREPARE_INIT_DONE);
+
+        // 获取回调数据
+        PrepareParam prepareParam;
+        OnPrepareListener prepareListener;
+        synchronized (mDataLock) {
+            prepareParam = mPrepareParam;
+            prepareListener = mPrepareListener;
+        }
+
+        if (msg.arg1 != ErrCode.XOK) {  // prepare() 操作有错误
+            // 清除数据
+            synchronized (mDataLock) {
+                mLocalNode.mReady = false;
+                mLocalNode.mNodeId = prepareParam.mUserId;
+            }
+            if (mMqttTransport != null) {
+                mMqttTransport.release();
+            }
+            setStateMachine(SDK_STATE_INITIALIZED);  // 设置状态机到初始化状态
+
+            // 回调状态机变化
+            CallbackStateChanged(sdkState, SDK_STATE_INITIALIZED, SDK_REASON_PREPARE);
+
+        } else {
+            setStateMachine(SDK_STATE_RUNNING);  // 设置状态机到正常运行状态
+
+            // 回调状态机变化
+            CallbackStateChanged(sdkState, SDK_STATE_RUNNING, SDK_REASON_NONE);
+        }
+
+        ALog.getInstance().d(TAG, "<onMessageInitDone> done, errCode=" + msg.arg1);
+        prepareListener.onSdkPrepareDone(prepareParam, msg.arg1);
+    }
+
+    /**
+     * @brief 组件线程消息处理：MQTT状态发生变化
+     */
+    void onMessageMqttStateChanged(Message msg) {
+        int sdkState = getStateMachine();
+        if (sdkState == SDK_STATE_UNPREPARING || sdkState == SDK_STATE_INITIALIZED){
+            ALog.getInstance().e(TAG, "<onMessageMqttStateChanged> bad state");
+            return;
+        }
+        int newMqttState = msg.arg1;
+        ALog.getInstance().d(TAG, "<onMessageMqttStateChanged> newMqttState=" + newMqttState);
+
+        if (newMqttState == MqttTransport.MQTT_TRANS_STATE_CONNECTED) {
+            setStateMachine(SDK_STATE_RUNNING);
+            synchronized (mDataLock) {
+                mLocalNode.mReady = true;  // 更新当前本地节点就绪状态
+            }
+
+            // 回调状态机变化
+            CallbackStateChanged(sdkState, SDK_STATE_RUNNING, SDK_REASON_NONE);
+
+        } else if (newMqttState == MqttTransport.MQTT_TRANS_STATE_RECONNECTING) { // MQTT正在重连
+            setStateMachine(SDK_STATE_RECONNECTING);
+            synchronized (mDataLock) {
+                mLocalNode.mReady = false;  // 更新当前本地节点就绪状态
+            }
+
+            // 回调状态机变化
+            CallbackStateChanged(sdkState, SDK_STATE_RECONNECTING, SDK_REASON_NETWORK);
+
+        } else if (newMqttState == MqttTransport.MQTT_TRANS_STATE_ABORT) {  // MQTT被抢占了
+            ALog.getInstance().d(TAG, "<onMessageMqttStateChanged> release all");
+
+            // 释放和重新初始化呼叫模块
+            mCallkitMgr.release();
+            mCallkitMgr.initialize(this);
+
+            // 释放MQTT对象和所有MQTT数据包队列
+            if (mMqttTransport != null) {
+                mMqttTransport.release();
+            }
+            mRecvPktQueue.clear();
+            mSendPktQueue.clear();
+
+            // 删除队列中所有消息
+            removeAllMessages();
+
+            synchronized (mDataLock) {
+                mLocalNode.mReady = false;
+                mLocalNode.mUserId = null;
+                mLocalNode.mNodeId = null;
+                mLocalNode.mRegion = null;
+                mLocalNode.mToken = null;
+            }
+
+            // 设置状态机到 初始化完成
+            setStateMachine(SDK_STATE_INITIALIZED);
+
+            // 回调状态机变化
+            CallbackStateChanged(sdkState, SDK_STATE_INITIALIZED, SDK_REASON_ABORT);
+        }
+    }
+
+    /**
+     * @brief 组件线程消息处理：发送数据包
+     */
+    void onMessagePacketSend(Message msg) {
+        int sdkState = getStateMachine();
+        if (sdkState == SDK_STATE_INVALID) {
+            ALog.getInstance().e(TAG, "<onMessagePacketSend> INVALID state");
+            return;
+        }
+        if (sdkState != SDK_STATE_RUNNING) {
+            // 2秒后再处理
+            ALog.getInstance().e(TAG, "<onMessagePacketSend> bad state, sdkState=" + sdkState);
+            sendSingleMessage(MSGID_PACKET_SEND, 0, 0, null, 2000);
+            return;
+        }
+
+
+        //
+        // 将发送队列中的数据包依次发送出去
+        //
+        for (;;) {
+            TransPacket sendingPkt = mSendPktQueue.dequeue();
+            if (sendingPkt == null) {  // 发送队列为空，没有要发送的数据包了
+                break;
+            }
+
+            mMqttTransport.sendPacket(sendingPkt);
+        }
+
+    }
+
+    /**
+     * @brief 组件线程消息处理：处理接收到的数据包
+     */
+    void onMessagePacketRecv(Message msg) {
+        int sdkState = getStateMachine();
+        if (sdkState == SDK_STATE_INVALID) {
+            ALog.getInstance().e(TAG, "<onMessagePacketRecv> invalid state");
+            return;
+        }
+        if (sdkState != SDK_STATE_RUNNING) {
+            // 2秒后再处理
+            ALog.getInstance().e(TAG, "<onMessagePacketRecv> bad state, sdkState=" + sdkState);
+            sendSingleMessage(MSGID_PACKET_SEND, 0, 0, null, 2000);
+            return;
+        }
+
+        //
+        // 处理队列中接收包
+        //
+        for (;;) {
+            TransPacket recvedPkt = mRecvPktQueue.dequeue();
+            if (recvedPkt == null) {
+                break;
+            }
+
+            // TODO: 根据数据包不同的topic进行分发处理，当前全部都是呼叫系统的数据包
+            mCallkitMgr.inqueueRecvPkt(recvedPkt);
+        }
+    }
+
+
+    /**
+     * @brief 组件线程消息处理：unprepare操作
+     */
+    void onMessageUnprepare(Message msg) {
+        ALog.getInstance().d(TAG, "<onMessageUnprepare> BEGIN");
+        if (mMqttTransport != null) {
+            mMqttTransport.release();
+        }
+        mRecvPktQueue.clear();
+        mSendPktQueue.clear();
+        ALog.getInstance().d(TAG, "<onMessageUnprepare> END");
+
+        synchronized (mUnprepareEvent) {
+            mUnprepareEvent.notify();    // 事件通知
+        }
+    }
+
+    /**
+     * @brief 回调SDK状态机变化
+     */
+    void CallbackStateChanged(int oldState, int newState, int reason) {
+        ALog.getInstance().d(TAG, "<CallbackStateChanged> oldState=" + oldState
+                    + ", newState=" + newState + ", reason=" + reason );
+        if (oldState == newState) {
+            return;
+        }
+        synchronized (mDataLock) {
+            if (mInitParam.mStateListener == null) {
+                return;
+            }
+            mInitParam.mStateListener.onSdkStateChanged(oldState, newState, reason);
+        }
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    //////////// Methods for Override MqttTransport.ICallback ////////////////
+    //////////////////////////////////////////////////////////////////////////
+    public void onMqttTransInitDone(int errCode) {
+        int sdkState = getStateMachine();
+        if (sdkState != SDK_STATE_PREPARING) {
+            ALog.getInstance().d(TAG, "<onMqttTransInitDone> bad state, sdkState=" + sdkState);
+            return;
+        }
+
+        removeMessage(MSGID_PREPARE_INIT_DONE);  // 移除已有的超时消息
+        sendSingleMessage(MSGID_PREPARE_INIT_DONE, errCode, 0, null, 0);
+    }
+
+    public void onMqttTransStateChanged(int newState) {
+        sendSingleMessage(MSGID_MQTT_STATE_CHANGED, newState, 0, null, 0);
+    }
+
+    public void onMqttTransReceived(final TransPacket transPacket) {
+        // 插入数据包到接收队列中
+        mRecvPktQueue.inqueue(transPacket);
+
+        // 消息通知组件线程进行接收包分发处理
+        sendSingleMessage(MSGID_PACKET_RECV, 0, 0, null, 0);
+    }
+
+    public void onMqttTransError(int errCode) {
+        ALog.getInstance().e(TAG, "<onMqttTransError> errCode=" + errCode);
+    }
+
+
 
 }

@@ -10,8 +10,6 @@
 package io.agora.iotlink;
 
 
-import android.content.Context;
-import android.os.Bundle;
 import io.agora.iotlink.sdkimpl.AgoraIotAppSdk;
 
 

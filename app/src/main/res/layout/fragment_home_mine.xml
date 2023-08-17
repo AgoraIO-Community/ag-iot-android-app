@@ -10,7 +10,7 @@
         android:id="@+id/ivUserAvatar"
         android:layout_width="60dp"
         android:layout_height="60dp"
-        android:layout_marginStart="35dp"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="50dp"
         android:src="@mipmap/userimage"
         app:layout_constraintStart_toStartOf="parent"
@@ -20,10 +20,10 @@
         android:id="@+id/tvUserMobile"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="18dp"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="6dp"
         android:textColor="@color/def_text_color"
-        android:textSize="18sp"
+        android:textSize="16sp"
         app:layout_constraintStart_toEndOf="@id/ivUserAvatar"
         app:layout_constraintTop_toTopOf="@id/ivUserAvatar" />
 
@@ -70,23 +70,13 @@
         app:layout_constraintTop_toBottomOf="@id/ivUserAvatar">
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvMsgCenter"
+            android:id="@+id/tvAccountSecrutiy"
             style="@style/tv_mine_style"
-            android:text="@string/message_center"
+            android:layout_marginTop="1dp"
+            android:text="@string/account_security"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="MissingConstraints" />
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/ivNewMsg"
-            android:layout_width="8dp"
-            android:layout_height="8dp"
-            android:layout_marginEnd="60dp"
-            android:src="@drawable/bg_red_round"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="@id/tvMsgCenter"
-            app:layout_constraintEnd_toEndOf="@id/tvMsgCenter"
-            app:layout_constraintTop_toTopOf="@id/tvMsgCenter" />
-
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
@@ -94,14 +84,14 @@
             android:background="@color/grey_ee"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvMsgCenter" />
+            app:layout_constraintTop_toBottomOf="@id/tvAccountSecrutiy" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvGeneralSettings"
+            android:id="@+id/tvClearAppData"
             style="@style/tv_mine_style"
             android:layout_marginTop="1dp"
-            android:text="@string/general_settings"
-            app:layout_constraintTop_toBottomOf="@id/tvMsgCenter"
+            android:text="清除应用配置"
+            app:layout_constraintTop_toBottomOf="@+id/tvAccountSecrutiy"
             tools:ignore="MissingConstraints" />
 
         <View
@@ -111,69 +101,17 @@
             android:background="@color/grey_ee"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvGeneralSettings" />
+            app:layout_constraintTop_toBottomOf="@id/tvClearAppData" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tvAbout"
             style="@style/tv_mine_style"
             android:layout_marginTop="1dp"
             android:text="@string/about"
-            app:layout_constraintTop_toBottomOf="@id/tvGeneralSettings"
+            app:layout_constraintTop_toBottomOf="@id/tvClearAppData"
             tools:ignore="MissingConstraints" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnStartStop"
-        style="@style/def_btn_full"
-        android:layout_width="140dp"
-        android:layout_height="56dp"
-        android:visibility="invisible"
-        android:layout_centerHorizontal="true"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="350dp"
-        android:layout_marginStart="30dp"
-        android:text="Start" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnPauseResume"
-        style="@style/def_btn_full"
-        android:layout_width="140dp"
-        android:layout_height="56dp"
-        android:visibility="invisible"
-        android:layout_centerHorizontal="true"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="350dp"
-        android:layout_marginStart="200dp"
-        android:text="Pause" />
-
-    <ProgressBar
-        android:id="@+id/pbDownloading"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="350dp"
-        android:layout_height="14dp"
-        android:visibility="invisible"
-        android:max="1000"
-        android:progress="0"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="430dp"
-        android:layout_marginStart="20dp" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvProgress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="invisible"
-        android:text="00:00:00 / 00:00:00"
-        android:textColor="@color/grey_d5"
-        android:textSize="20sp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="460dp"
-        android:layout_marginStart="100dp"    />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

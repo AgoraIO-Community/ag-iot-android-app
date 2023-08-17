@@ -1,41 +1,39 @@
 /**
  * @file AccountMgr.java
  * @brief This file implement the call kit and RTC management
+ *
  * @author xiaohua.lu
  * @email luxiaohua@agora.io
  * @version 1.0.0.1
- * @date 2022-01-26
+ * @date 2023-05-19
  * @license Copyright (C) 2021 AgoraIO Inc. All rights reserved.
  */
 package io.agora.iotlink.sdkimpl;
 
 
-import android.graphics.Bitmap;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Message;
 import android.text.TextUtils;
-import android.view.SurfaceView;
+import android.view.View;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.ICallkitMgr;
-import io.agora.iotlink.IotDevice;
-import io.agora.iotlink.aws.AWSUtils;
 import io.agora.iotlink.base.BaseThreadComp;
-import io.agora.iotlink.callkit.AgoraService;
-import io.agora.iotlink.callkit.CallkitContext;
-import io.agora.iotlink.callkit.CallkitScheduler;
+import io.agora.iotlink.callkit.DisplayViewMgr;
+import io.agora.iotlink.callkit.SessionCtx;
+import io.agora.iotlink.callkit.SessionMgr;
 import io.agora.iotlink.logger.ALog;
 import io.agora.iotlink.rtcsdk.TalkingEngine;
-import io.agora.iotlink.transport.HttpReqScheduler;
+import io.agora.iotlink.transport.TransPacket;
+import io.agora.iotlink.transport.TransPktQueue;
+import io.agora.iotlink.utils.JsonUtils;
 import io.agora.rtc2.Constants;
 
 /*
@@ -48,29 +46,31 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/CallkitMgr";
-    private static final int DIAL_WAIT_TIMEOUT = 30000;         ///< 呼叫超时请求 30秒
-    private static final int ANSWER_WAIT_TIMEOUT = 30000;       ///< 接听处理超时 30秒
-    private static final int DEVONLINE_WAIT_TIMEOUT = 15000;    ///< 来电时设备上线超时 15秒
-    private static final int HANGUP_WAIT_TIMEOUT = 1000;
+    private static final long TIMER_INTERVAL = 2000;             ///< 定时器间隔 2秒
+    private static final long DIAL_WAIT_TIMEOUT = 30000;          ///< 呼叫超时请求 30秒
+    private static final long ANSWER_WAIT_TIMEOUT = 30000;        ///< 接听处理超时 30秒
+    private static final long DEVONLINE_WAIT_TIMEOUT = 15000;    ///< 来电时设备上线超时15秒
     private static final int DEFAULT_DEV_UID = 10;               ///< 设备端uid，固定为10
+
+    //
+    // The method of all callkit
+    //
+    private static final String METHOD_USER_START_CALL = "user-start-call";
+    private static final String METHOD_DEVICE_START_CALL = "device-start-call";
+
 
 
     //
     // The mesage Id
     //
     private static final int MSGID_CALL_BASE = 0x3000;
-    private static final int MSGID_CALL_AWSEVENT_INCOMING = 0x3001; ///< 处理AWS端的事件
-    private static final int MSGID_CALL_RESP_DIAL = 0x3002;          ///< 发送拨号请求
-    private static final int MSGID_CALL_REQ_ANSWER = 0x3003;        ///< 发送接听请求
-    private static final int MSGID_CALL_REQ_HANGUP = 0x3004;        ///< 发送挂断请求
-    private static final int MSGID_CALL_RTC_PEER_ONLINE = 0x3005;   ///< 对端RTC上线
-    private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3006;  ///< 对端RTC掉线
-    private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3007;  ///< 对端RTC首帧出图
-    private static final int MSGID_CALL_DIAL_TIMEOUT = 0x3008;      ///< 呼叫超时定时器
-    private static final int MSGID_CALL_ANSWER_TIMEOUT = 0x3009;    ///< 接听超时定时器
-    private static final int MSGID_CALL_DEVONLINE_TIMEOUT = 0x3010; ///< 设备上线超时定时器
-    private static final int MSGID_RECORDING_ERROR = 0x3011;        ///< 录像出现错误
-
+    private static final int MSGID_CALL_RECV_PKT = 0x3001;          ///< 处理数据包接收
+    private static final int MSGID_CALL_RTC_PEER_ONLINE = 0x3002;   ///< 对端RTC上线
+    private static final int MSGID_CALL_RTC_PEER_OFFLINE = 0x3003;  ///< 对端RTC掉线
+    private static final int MSGID_CALL_RTC_PEER_FIRSTVIDEO = 0x3004;  ///< 对端RTC首帧出图
+    private static final int MSGID_CLL_RTC_SHOTTAKEN = 0x3005;      ///< 截图完成回调
+    private static final int MSGID_RECORDING_ERROR = 0x3009;        ///< 录像出现错误
+    private static final int MSGID_CALL_TIMER = 0x30FF;             ///< 线程中的定时器
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -78,77 +78,46 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     ////////////////////////////////////////////////////////////////////////
     private ArrayList<ICallkitMgr.ICallback> mCallbackList = new ArrayList<>();
     private AgoraIotAppSdk mSdkInstance;    ///< 由外部输入的
-
-    private static final Object mDataLock = new Object();       ///< 同步访问锁,类中所有变量需要进行加锁处理
-    private final Object mReqHangupEvent = new Object();
-    private volatile int mReqHangupErrCode = ErrCode.XOK;
-
-    private volatile int mStateMachine = CALLKIT_STATE_IDLE;    ///< 当前呼叫状态机
+    private TransPktQueue mRecvPktQueue = new TransPktQueue();  ///< 接收数据包队列
     private String mAppId;
-    private CallkitContext mCallkitCtx;             ///< 当前呼叫的上下文数据
-    private IotDevice mPeerDevice;                  ///< 通信的对端设备
 
-    private TalkingEngine mTalkEngine;              ///< 通话引擎
-    private SurfaceView mPeerVidew;                 ///< 对端视频帧显示控件
-    private boolean mMuteLocalVideo;
-    private boolean mMuteLocalAudio;
-    private boolean mMutePeerVideo;
-    private boolean mMutePeerAudio;
-    private int mAudioEffect = Constants.AUDIO_EFFECT_OFF;
-    private volatile int mOnlineUserCount = 0;               ///< 在线的用户数量（不包括设备端）
-
-    private HttpReqScheduler mScheduler = new HttpReqScheduler();
+    private DisplayViewMgr mViewMgr = new DisplayViewMgr();
+    private SessionMgr mSessionMgr = new SessionMgr();
+    private TalkingEngine mTalkEngine = new TalkingEngine();   ///< 通话引擎
+    private static final Object mTalkEngLock = new Object();   ///< 通话引擎同步访问锁
 
 
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////// Public Methods  ////////////////////////////
     ///////////////////////////////////////////////////////////////////////
     int initialize(AgoraIotAppSdk sdkInstance) {
+        ALog.getInstance().d(TAG, "<initialize> ==>Enter");
         mSdkInstance = sdkInstance;
-        mStateMachine = CALLKIT_STATE_IDLE;
 
         IAgoraIotAppSdk.InitParam sdkInitParam = sdkInstance.getInitParam();
-        mAppId = sdkInitParam.mRtcAppId;
+        mAppId = sdkInitParam.mAppId;
 
-        // 初始化通话引擎参数
-        mPeerVidew = null;
-        mMuteLocalVideo = true;
-        mMuteLocalAudio = true;
-        mMutePeerVideo = false;
-        mMutePeerAudio = false;
-        mAudioEffect = Constants.AUDIO_EFFECT_OFF;
-
-        // 初始化调度器，在登录登出的时候要停止操作
-        mScheduler.initialize(sdkInstance);
+        mSessionMgr.clear();
+        mViewMgr.clear();
+        mRecvPktQueue.clear();
 
         // 启动呼叫系统的工作线程
         runStart(TAG);
 
+        sendSingleMessage(MSGID_CALL_TIMER, 0, 0, null,0);
+        ALog.getInstance().d(TAG, "<initialize> <==Exit");
         return ErrCode.XOK;
     }
 
     void release() {
-
-        // 释放调度器
-        mScheduler.release();
-
+        ALog.getInstance().d(TAG, "<release> ==>Enter");
         runStop();
 
-    }
+        mSessionMgr.clear();
+        mViewMgr.clear();
+        mRecvPktQueue.clear();
+        ALog.getInstance().d(TAG, "<release> <==Exit");
 
-    /*
-     * @brief 在AWS事件中被调用，来电消息
-     */
-    void onAwsEventIncoming(JSONObject jsonState, long timestamp) {
-        if (mWorkHandler != null) {
-            Message msg = new Message();
-            msg.what = MSGID_CALL_AWSEVENT_INCOMING;
-            msg.obj = jsonState;
-            mWorkHandler.sendMessage(msg);   // 所有事件都不要遗漏，全部发送
-        }
-    }
-
-    void onAwsUpdateClient(JSONObject jsonState, long timestamp) {
     }
 
 
@@ -159,27 +128,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     @Override
     public void processWorkMessage(Message msg) {
         switch (msg.what) {
-            case MSGID_CALL_AWSEVENT_INCOMING:
-                DoAwsEventIncoming(msg);
-                break;
-            case MSGID_CALL_DEVONLINE_TIMEOUT:
-                DoDevonlineTimeout(msg);
-                break;
-            case MSGID_CALL_ANSWER_TIMEOUT:
-                DoAnswerTimeout(msg);
-                break;
-            case MSGID_CALL_REQ_ANSWER:
-                DoRequestAnswer(msg);
-                break;
-
-            case MSGID_CALL_RESP_DIAL:
-                DoDialResponse(msg);
-                break;
-            case MSGID_CALL_DIAL_TIMEOUT:
-                DoDialTimeout(msg);
-                break;
-            case MSGID_CALL_REQ_HANGUP:
-                DoRequestHangup(msg);
+            case MSGID_CALL_RECV_PKT:
+                DoMqttRecvPacket(msg);
                 break;
 
             case MSGID_CALL_RTC_PEER_ONLINE:
@@ -191,9 +141,16 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             case MSGID_CALL_RTC_PEER_FIRSTVIDEO:
                 DoRtcPeerFirstVideo(msg);
                 break;
+            case MSGID_CLL_RTC_SHOTTAKEN:
+                onRtcSnapshotTaken(msg);
+                break;
 
             case MSGID_RECORDING_ERROR:
                 DoRecordingError(msg);
+                break;
+
+            case MSGID_CALL_TIMER:
+                DoTimer(msg);
                 break;
         }
     }
@@ -201,28 +158,27 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     @Override
     protected void removeAllMessages() {
         synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
-            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
-            mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
-            mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_REQ_HANGUP);
+            mWorkHandler.removeMessages(MSGID_CALL_RECV_PKT);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
             mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
+            mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_FIRSTVIDEO);
+            mWorkHandler.removeMessages(MSGID_CLL_RTC_SHOTTAKEN);
             mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
+            mWorkHandler.removeMessages(MSGID_CALL_TIMER);
         }
     }
 
     @Override
     protected void processTaskFinsh() {
 
-        // 销毁通话引擎
-        talkingStop();
+        // 退出所有频道，释放通话引擎
+        talkingRelease();
 
         synchronized (mCallbackList) {
             mCallbackList.clear();
         }
+
+        ALog.getInstance().d(TAG, "<processTaskFinsh> done");
     }
 
 
@@ -230,13 +186,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     ///////////////////////////////////////////////////////////////////////
     /////////////////// Override Methods of ICallkitMgr //////////////////
     ///////////////////////////////////////////////////////////////////////
-    @Override
-    public int getStateMachine() {
-        synchronized (mDataLock) {
-            return mStateMachine;
-        }
-    }
-
     @Override
     public int registerListener(ICallkitMgr.ICallback callback) {
         synchronized (mCallbackList) {
@@ -254,308 +203,301 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     @Override
-    public int callDial(IotDevice iotDevice, String attachMsg) {
-        long t1 = System.currentTimeMillis();
-        if (!mSdkInstance.isAccountReady()) {
-            ALog.getInstance().e(TAG, "<callDial> bad state, sdkState="
-                    + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_ACCOUNT_LOGIN;
+    public SessionInfo getSessionInfo(final UUID sessionId) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<getSessionInfo> not found session, sessionId=" + sessionId);
+            return null;
         }
-        int currState = getStateMachine();
-        if (currState != CALLKIT_STATE_IDLE) {
-            ALog.getInstance().e(TAG, "<callDial> bad state, currState=" + currState);
-            return ErrCode.XERR_BAD_STATE;
+
+        LocalNode localNode = mSdkInstance.getLoalNode();
+        SessionInfo sessionInfo = new SessionInfo();
+        sessionInfo.mSessionId = sessionId;
+        sessionInfo.mLocalUserId = localNode.mUserId;
+        sessionInfo.mLocalNodeId = localNode.mNodeId;
+        sessionInfo.mPeerNodeId = sessionCtx.mDevNodeId;
+        sessionInfo.mState = sessionCtx.mState;
+        sessionInfo.mType = sessionCtx.mType;
+        sessionInfo.mUserCount = sessionCtx.mUserCount;
+
+        ALog.getInstance().d(TAG, "<getSessionInfo> sessionInfo=" + sessionInfo);
+        return sessionInfo;
+    }
+
+
+    @Override
+    public DialResult callDial(final DialParam dialParam)   {
+        long t1 = System.currentTimeMillis();
+        DialResult result = new DialResult();
+        LocalNode loalNode = mSdkInstance.getLoalNode();
+        int sdkState = mSdkInstance.getStateMachine();
+
+        // SDK状态检测
+        if (sdkState != IAgoraIotAppSdk.SDK_STATE_RUNNING) {
+            ALog.getInstance().e(TAG, "<callDial> bad state, SDK not running"
+                + ", sdkState=" + sdkState);
+            result.mErrCode = ErrCode.XERR_NETWORK;
+            return result;
+        }
+        SessionCtx sessionCtx = mSessionMgr.findSessionByDevNodeId(dialParam.mPeerNodeId);
+        if (sessionCtx != null) {
+            ALog.getInstance().e(TAG, "<callDial> bad state, already in session");
+            result.mErrCode = ErrCode.XERR_BAD_STATE;
+            return result;
         }
 
         // 发送请求消息
-        ALog.getInstance().d(TAG, "<callDial> ==> BEGIN, attachMsg=" + attachMsg);
-        setStateMachine(CALLKIT_STATE_DIAL_REQING);  // 呼叫请求中
+        ALog.getInstance().d(TAG, "<callDial> ==> BEGIN, dialParam=" + dialParam);
+        UUID sessionId = UUID.randomUUID();
+        long traceId = System.currentTimeMillis();
 
-        synchronized (mDataLock) {
-            mPeerDevice = iotDevice;
+        // body内容
+        JSONObject body = new JSONObject();
+        try {
+            JSONObject header = new JSONObject();
+            header.put("traceId", traceId );
+            header.put("timestamp", System.currentTimeMillis());
+            header.put("nodeToken", loalNode.mToken);
+            header.put("method", METHOD_USER_START_CALL);
+            body.put("header", header);
+
+            JSONObject payloadObj = new JSONObject();
+            payloadObj.put("appId", mAppId);
+            payloadObj.put("deviceId", dialParam.mPeerNodeId);
+            payloadObj.put("extraMsg", dialParam.mAttachMsg);
+            body.put("payload", payloadObj);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            ALog.getInstance().e(TAG, "<callDial>> [Exit] failure with JSON exp!");
+            result.mErrCode = ErrCode.XERR_JSON_WRITE;
+            return result;
         }
 
-        // 停止所有超时计时器
-        allTimeoutStop();
 
-        // 启动呼叫超时定时器
-        dialTimeoutStart();
+        SessionCtx newSession = new SessionCtx();
+        newSession.mSessionId = sessionId;
+        newSession.mLocalNodeId = loalNode.mNodeId;
+        newSession.mDevNodeId = dialParam.mPeerNodeId;
+        newSession.mPeerUid = DEFAULT_DEV_UID;
+        newSession.mAttachMsg = dialParam.mAttachMsg;
+        newSession.mTimestamp = System.currentTimeMillis();
+        newSession.mState = SESSION_STATE_DIAL_REQING;        // 会话状态机: 呼叫请求中
+        newSession.mType = SESSION_TYPE_DIAL;                 // 主叫
+        newSession.mPubLocalAudio = dialParam.mPubLocalAudio; // 接通后是否本地推流
+        newSession.mSubDevAudio = true;     // 订阅设备端音音频频流
+        newSession.mSubDevVideo = true;     // 订阅设备端视频流
+        newSession.mTraceId = traceId;
 
-        // 在调度器中执行 呼叫HTTP请求
-        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-        mScheduler.dial(accountInfo.mAgoraAccessToken, mAppId,
-                accountInfo.mInventDeviceName, iotDevice.mDeviceID, attachMsg, new HttpReqScheduler.IAsyncDialCallback() {
-                    @Override
-                    public void onAsyncDialDone(AgoraService.CallReqResult dialResult) {
-                        ALog.getInstance().d(TAG, "<onAsyncDialDone> dialResult=" + dialResult.toString()
-                                + ", mStateMachine=" + getStateMachine());
-                        dialTimeoutStop();  // 停止呼叫超时定时器
+        // 添加到会话管理器中
+        mSessionMgr.addSession(newSession);
 
-                        if (getStateMachine() == CALLKIT_STATE_DIAL_REQING) { // 当前还在呼叫请求中
-                            Object callParams = new Object[]{iotDevice, attachMsg, dialResult};
-                            sendSingleMessage(MSGID_CALL_RESP_DIAL, 0, 0, callParams,0);
-                        }
-                    }
-                });
+        // 发送主叫的 MQTT呼叫请求数据包
+        TransPacket transPacket = new TransPacket();
+        transPacket.mTopic = mSdkInstance.getMqttPublishTopic();
+        transPacket.mContent = body.toString();
+        transPacket.mSessionId = sessionId;
+        mSdkInstance.sendPacket(transPacket);
 
         long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<callDial> <==End done"
-                + ", iotDevice=" + iotDevice.toString()
-                + ", attachMsg=" + attachMsg + ", costTime=" + (t2-t1));
-        return ErrCode.XOK;
+        ALog.getInstance().d(TAG, "<callDial> <==End done" + ", costTime=" + (t2-t1));
+        result.mSessionId = newSession.mSessionId;
+        result.mErrCode = ErrCode.XOK;
+        return result;
     }
 
-
-
     @Override
-    public int callHangup() {
+    public int callHangup(final UUID sessionId) {
         long t1 = System.currentTimeMillis();
-        if (!mSdkInstance.isAccountReady()) {
-            ALog.getInstance().e(TAG, "<callHangup> bad state, sdkState="
-                    + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_ACCOUNT_LOGIN;
-        }
-        int currState = getStateMachine();
+        ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
 
-        if ((currState == CALLKIT_STATE_IDLE) || (currState == CALLKIT_STATE_HANGUP_REQING)) {
-            ALog.getInstance().e(TAG, "<callHangup> already hangup, currState=" + currState);
+        // 在MQTT发送队列中删除主叫呼叫请求
+        mSdkInstance.removePacketBySessionId(sessionId);
+
+        // 会话管理器中直接删除该会话
+        SessionCtx sessionCtx = mSessionMgr.removeSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<callHangup> <==END, already hangup, not found");
             return ErrCode.XOK;
         }
 
-        // 停止所有超时计时器
-        allTimeoutStop();
+        // 离开通话频道
+        talkingStop(sessionCtx);
 
-        // 发送请求消息，同步等待执行完成
-        ALog.getInstance().d(TAG, "<callHangup> ==> BEGIN");
-        setStateMachine(CALLKIT_STATE_HANGUP_REQING);  // 挂断请求中
-
-        // 在调度器中执行 挂断HTTP请求
-        mScheduler.hangup();
-
-        if (mWorkHandler != null) {  // 移除所有中间的消息
-            mWorkHandler.removeMessages(MSGID_CALL_AWSEVENT_INCOMING);
-            mWorkHandler.removeMessages(MSGID_CALL_RESP_DIAL);
-            mWorkHandler.removeMessages(MSGID_CALL_REQ_ANSWER);
-            mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_ONLINE);
-            mWorkHandler.removeMessages(MSGID_CALL_RTC_PEER_OFFLINE);
-            mWorkHandler.removeMessages(MSGID_RECORDING_ERROR);
-        }
-        sendSingleMessage(MSGID_CALL_REQ_HANGUP, 0, 0, null, 0);  // 发送挂断请求
-
-        synchronized (mReqHangupEvent) {
-            try {
-                mReqHangupEvent.wait(HANGUP_WAIT_TIMEOUT);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                ALog.getInstance().e(TAG, "<callHangup> exception=" + e.getMessage());
-            }
-        }
-
-        setStateMachine(CALLKIT_STATE_IDLE);
         long t2 = System.currentTimeMillis();
-        ALog.getInstance().d(TAG, "<callHangup> <==END done, errCode=" + mReqHangupErrCode
-                + ", costTime=" + (t2-t1));
-        return mReqHangupErrCode;
+        ALog.getInstance().d(TAG, "<callHangup> <==END, costTime=" + (t2-t1));
+        return ErrCode.XOK;
     }
 
     @Override
-    public int callAnswer() {
-        if (!mSdkInstance.isAccountReady()) {
-            ALog.getInstance().e(TAG, "<callAnswer> bad state, sdkState="
-                    + mSdkInstance.getStateMachine());
-            return ErrCode.XERR_ACCOUNT_LOGIN;
+    public int callAnswer(final UUID sessionId, boolean pubLocalAudio) {
+        long t1 = System.currentTimeMillis();
+
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<callAnswer> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
         }
-        int currState = getStateMachine();
-        if (currState != CALLKIT_STATE_INCOMING) {
-            ALog.getInstance().e(TAG, "<callAnswer> bad state, currState=" + currState);
+        if (sessionCtx.mState != SESSION_STATE_INCOMING) {
+            ALog.getInstance().e(TAG, "<callAnswer> not incoming state, state=" + sessionCtx.mState);
             return ErrCode.XERR_BAD_STATE;
         }
 
-        // 停止呼叫和接听计时器
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
+        // 更新 sessionCtx内容
+        sessionCtx.mPubLocalAudio = pubLocalAudio;
+        mSessionMgr.updateSession(sessionCtx);
+
+        // 进入通话操作
+        talkingStart(sessionCtx);
+
+        // 更新会话状态机
+        sessionCtx.mState = SESSION_STATE_TALKING;
+        mSessionMgr.updateSession(sessionCtx);
+
+        long t2 = System.currentTimeMillis();
+        ALog.getInstance().d(TAG, "<callAnswer> done, costTime=" + (t2-t1));
+        return ErrCode.XOK;
+    }
+
+
+    @Override
+    public int setPeerVideoView(final UUID sessionId, final View peerView) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<setPeerVideoView> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
         }
 
-        // 发送请求消息，同步等待执行完成
-        setStateMachine(CALLKIT_STATE_ANSWER_REQING);  // 接听请求中
-        sendSingleMessage(MSGID_CALL_REQ_ANSWER, 0, 0, null, 0);
-
-        ALog.getInstance().d(TAG, "<callAnswer> done");
-        return ErrCode.XOK;
-    }
-
-
-    @Override
-    public int setLocalVideoView(SurfaceView localView) {
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int setPeerVideoView(SurfaceView peerView) {
-        mPeerVidew = peerView;
-        if (mTalkEngine != null) {
-            mTalkEngine.setRemoteVideoView(mPeerVidew);
-        }
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int muteLocalVideo(boolean mute) {
-        mMuteLocalVideo = mute;
-
-        if (mTalkEngine != null) {
-            boolean ret = mTalkEngine.muteLocalVideoStream(mute);
-            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
-        }
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int muteLocalAudio(boolean mute) {
-        mMuteLocalAudio = mute;
-
-        if (mTalkEngine != null) {
-            boolean ret = mTalkEngine.muteLocalAudioStream(mute);
-            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
-        }
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int mutePeerVideo(boolean mute) {
-        mMutePeerVideo = mute;
-
-        if (mTalkEngine != null) {
-            boolean ret = mTalkEngine.mutePeerVideoStream(mute);
-            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
-        }
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int mutePeerAudio(boolean mute) {
-        mMutePeerAudio = mute;
-
-        if (mTalkEngine != null) {
-            boolean ret = mTalkEngine.mutePeerAudioStream(mute);
-            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
-        }
-        return ErrCode.XOK;
-    }
-
-    @Override
-    public int setVolume(int volumeLevel) {
-        return ErrCode.XERR_UNSUPPORTED;
-    }
-
-    @Override
-    public int setAudioEffect(AudioEffectId effectId) {
-        synchronized (mDataLock) {
-            mAudioEffect = Constants.AUDIO_EFFECT_OFF;
-            switch (effectId) {
-                case OLDMAN:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
-                    break;
-
-                case BABYBOY:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_BOY;
-                    break;
-
-                case BABYGIRL:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_GIRL;
-                    break;
-
-                case ZHUBAJIE:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_PIGKING;
-                    break;
-
-                case ETHEREAL:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_SISTER;
-                    break;
-
-                case HULK:
-                    mAudioEffect = Constants.VOICE_CHANGER_EFFECT_HULK;
-                    break;
+        boolean ret = true;
+        if (sessionCtx != null) {  // 当前有相应的会话，直接更新设备显示控件
+            synchronized (mTalkEngLock) {
+                if (mTalkEngine.isReady()) {
+                    ret = mTalkEngine.setRemoteVideoView(sessionCtx, peerView);
+                }
             }
         }
 
-        if (mTalkEngine != null) {
-            boolean ret = mTalkEngine.setAudioEffect(mAudioEffect);
-            return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
-        }
+        // 设置设备映射控件
+        mViewMgr.setDisplayView(sessionCtx.mDevNodeId, peerView);
 
-        return ErrCode.XOK;
+        ALog.getInstance().d(TAG, "<setPeerVideoView> done, ret=" + ret);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
     }
 
     @Override
-    public AudioEffectId getAudioEffect() {
-        AudioEffectId effectId = AudioEffectId.NORMAL;
-
-        synchronized (mDataLock) {
-            switch (mAudioEffect) {
-                case Constants.VOICE_CHANGER_EFFECT_OLDMAN:
-                    effectId = AudioEffectId.OLDMAN;
-                    break;
-
-                case Constants.VOICE_CHANGER_EFFECT_BOY:
-                    effectId = AudioEffectId.BABYBOY;
-                    break;
-
-                case Constants.VOICE_CHANGER_EFFECT_GIRL:
-                    effectId = AudioEffectId.BABYGIRL;
-                    break;
-
-                case Constants.VOICE_CHANGER_EFFECT_PIGKING:
-                    effectId = AudioEffectId.ZHUBAJIE;
-                    break;
-
-                case Constants.VOICE_CHANGER_EFFECT_SISTER:
-                    effectId = AudioEffectId.ETHEREAL;
-                    break;
-
-                case Constants.VOICE_CHANGER_EFFECT_HULK:
-                    effectId = AudioEffectId.HULK;
-                    break;
-
-                default:
-                    effectId = AudioEffectId.NORMAL;
-                    break;
-            }
+    public int muteLocalAudio(final UUID sessionId, boolean mute) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<muteLocalAudio> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
         }
 
-        ALog.getInstance().d(TAG, "<getAudioEffect> effectId=" + effectId);
-        return effectId;
+        // 更新 sessionCtx 内容
+        sessionCtx.mPubLocalAudio = (!mute);
+        mSessionMgr.updateSession(sessionCtx);
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.muteLocalAudioStream(sessionCtx);
+        }
+
+        ALog.getInstance().d(TAG, "<muteLocalAudio> done, ret=" + ret);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
     }
 
     @Override
-    public int talkingRecordStart(final String outFilePath) {
-        if (mTalkEngine == null) {
-            ALog.getInstance().e(TAG, "<talkingRecordStart> talk engine NOT running");
-            return ErrCode.XERR_BAD_STATE;
+    public int mutePeerVideo(final UUID sessionId, boolean mute) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<mutePeerVideo> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
         }
 
-        int ret = mTalkEngine.recordingStart(outFilePath);
+        // 更新 sessionCtx 内容
+        sessionCtx.mSubDevVideo = (!mute);
+        mSessionMgr.updateSession(sessionCtx);
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.mutePeerVideoStream(sessionCtx);
+        }
+
+        ALog.getInstance().d(TAG, "<mutePeerVideo> done, ret=" + ret);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
+    public int mutePeerAudio(final UUID sessionId, boolean mute) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<mutePeerAudio> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
+        // 更新 sessionCtx 内容
+        sessionCtx.mSubDevAudio = (!mute);
+        mSessionMgr.updateSession(sessionCtx);
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.mutePeerAudioStream(sessionCtx);
+        }
+
+        ALog.getInstance().d(TAG, "<mutePeerAudio> done, ret=" + ret);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
+    public int capturePeerVideoFrame(final UUID sessionId, final String saveFilePath) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.takeSnapshot(sessionCtx, saveFilePath);
+        }
+
+        ALog.getInstance().d(TAG, "<capturePeerVideoFrame> done, ret=" + ret
+                + ", saveFilePath=" + saveFilePath);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
+    public int talkingRecordStart(final UUID sessionId, final String outFilePath) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<talkingRecordStart> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
+        int ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.recordingStart(sessionCtx, outFilePath);
+        }
+
+        ALog.getInstance().d(TAG, "<talkingRecordStart> done, ret=" + ret
+                + ", outFilePath=" + outFilePath);
         return ret;
     }
 
     @Override
-    public int talkingRecordStop() {
-        if (mTalkEngine == null) {
-            ALog.getInstance().e(TAG, "<talkingRecordStop> talk engine NOT running");
-            return ErrCode.XERR_BAD_STATE;
+    public int talkingRecordStop(final UUID sessionId) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<talkingRecordStop> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
         }
 
-        int ret = mTalkEngine.recordingStop();
+        int ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.recordingStop(sessionCtx);
+        }
+
+        ALog.getInstance().d(TAG, "<talkingRecordStop> done, ret=" + ret);
         return ret;
-    }
-
-    @Override
-    public void onRecordingError(int errCode) {
-        ALog.getInstance().e(TAG, "<onRecordingError> errCode=" + errCode);
-
-        // 发送录像错误回调消息
-        sendSingleMessage(MSGID_RECORDING_ERROR, errCode, 0, null, 0);
     }
 
     /**
@@ -563,11 +505,20 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
      * @return true 表示正在本地录制频道； false: 不在录制
      */
     @Override
-    public boolean isTalkingRecording() {
-        if (mTalkEngine == null) {
+    public boolean isTalkingRecording(final UUID sessionId) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<isTalkingRecording> not found session, sessionId=" + sessionId);
             return false;
         }
-        return mTalkEngine.isRecording();
+
+        boolean recording;
+        synchronized (mTalkEngLock) {
+            recording = mTalkEngine.isRecording(sessionCtx);
+        }
+
+        ALog.getInstance().d(TAG, "<isTalkingRecording> done, recording=" + recording);
+        return recording;
     }
 
     @Override
@@ -577,19 +528,97 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return null;
         }
 
+        // 这里不用加锁
         RtcNetworkStatus networkStatus = mTalkEngine.getNetworkStatus();
         return networkStatus;
     }
 
     @Override
-    public Bitmap capturePeerVideoFrame() {
-        if (mTalkEngine == null) {
-            ALog.getInstance().e(TAG, "<capturePeerVideoFrame> bad status");
-            return null;
+    public int setPlaybackVolume(int volumeLevel) {
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.setPlaybackVolume(volumeLevel);
         }
 
-        Bitmap capturedBmp = mTalkEngine.capturePeerVideoFrame();
-        return capturedBmp;
+        ALog.getInstance().d(TAG, "<setPlaybackVolume> done, ret=" + ret
+                + ", volumeLevel=" + volumeLevel);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
+    public int setAudioEffect(AudioEffectId effectId) {
+        int voice_changer = Constants.AUDIO_EFFECT_OFF;
+        switch (effectId) {
+            case OLDMAN:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
+                break;
+
+            case BABYBOY:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_BOY;
+                break;
+
+            case BABYGIRL:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_GIRL;
+                break;
+
+            case ZHUBAJIE:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_PIGKING;
+                break;
+
+            case ETHEREAL:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_SISTER;
+                break;
+
+            case HULK:
+                voice_changer = Constants.VOICE_CHANGER_EFFECT_HULK;
+                break;
+        }
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.setAudioEffect(voice_changer);
+        }
+
+        ALog.getInstance().d(TAG, "<setAudioEffect> done, ret=" + ret
+                + ", voice_changer=" + voice_changer);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
+    public AudioEffectId getAudioEffect() {
+        int voice_changer;
+        synchronized (mTalkEngLock) {
+            voice_changer = mTalkEngine.getAudioEffect();
+        }
+
+        AudioEffectId effectId = AudioEffectId.NORMAL;
+        switch (voice_changer) {
+            case Constants.VOICE_CHANGER_EFFECT_OLDMAN:
+                effectId = AudioEffectId.OLDMAN;
+                break;
+
+            case Constants.VOICE_CHANGER_EFFECT_BOY:
+                effectId = AudioEffectId.BABYBOY;
+                break;
+
+            case Constants.VOICE_CHANGER_EFFECT_GIRL:
+                effectId = AudioEffectId.BABYGIRL;
+                break;
+
+            case Constants.VOICE_CHANGER_EFFECT_PIGKING:
+                effectId = AudioEffectId.ZHUBAJIE;
+                break;
+
+            case Constants.VOICE_CHANGER_EFFECT_SISTER:
+                effectId = AudioEffectId.ETHEREAL;
+                break;
+
+            case Constants.VOICE_CHANGER_EFFECT_HULK:
+                effectId = AudioEffectId.HULK;
+                break;
+        }
+
+        return effectId;
     }
 
     @Override
@@ -599,525 +628,370 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             return ErrCode.XERR_BAD_STATE;
         }
 
-        int ret = mTalkEngine.setParameters(privateParam);
-        return (ret == Constants.ERR_OK) ? ErrCode.XOK : ErrCode.XERR_INVALID_PARAM;
+        int ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.setParameters(privateParam);
+        }
+        return (ret == Constants.ERR_OK) ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED;
     }
 
-    @Override
-    public int getOnlineUserCount() {
-        synchronized (mDataLock) {
-            return mOnlineUserCount;
-        }
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////// APP端发送RESTful请求到服务器 //////////////////////
-    /////////////////////////////////////////////////////////////////////////////
-    /**
-     * @brief 工作线程中运行，处理AWS要求切换到被叫状态事件
-     */
-    void DoAwsEventIncoming(Message msg) {
-        int stateMachine = getStateMachine();
-
-        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> hangup ongoing, do nothing");
-            return;
-        }
-        if (stateMachine != CALLKIT_STATE_IDLE) {    // 不是在空闲状态中来电，呼叫状态有问题
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> bad state machine, ignore it, stateMachine=" + stateMachine);
-            return;
-        }
-
-        JSONObject jsonState = (JSONObject)(msg.obj);
-        ALog.getInstance().d(TAG, "<DoAwsEventIncoming> jsonState=" + jsonState + ", Peer incoming call...");
-
-        // 解析来电数据包
-        String traceId = parseJsonStringValue(jsonState, "traceId", null);
-        String rtcToken = parseJsonStringValue(jsonState, "token", null);
-        int localUid = parseJsonIntValue(jsonState, "uid", 0);
-        String chnlName = parseJsonStringValue(jsonState, "cname", null);
-        String extraMsg = parseJsonStringValue(jsonState, "extraMsg", null);
-        String deviceId = parseJsonStringValue(jsonState, "peerId", null);
-        if (TextUtils.isEmpty(chnlName) || TextUtils.isEmpty(deviceId)) {
-            ALog.getInstance().e(TAG, "<DoAwsEventToIncoming> parse parameter error, ignore it");
-            return;
-        }
-
-        AccountMgr.AccountInfo accountInfo = mSdkInstance.getAccountInfo();
-        IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
-
-        synchronized (mDataLock) {
-            mStateMachine = CALLKIT_STATE_INCOMING;      // 切换当前状态机到来电
-
-            mCallkitCtx = new CallkitContext();
-            mCallkitCtx.appId = sdkInitParam.mRtcAppId;
-            mCallkitCtx.callerId = deviceId;
-            mCallkitCtx.calleeId = accountInfo.mInventDeviceName;
-            mCallkitCtx.channelName = chnlName;
-            mCallkitCtx.rtcToken = rtcToken;
-            mCallkitCtx.attachMsg = extraMsg;
-            mCallkitCtx.mLocalUid = localUid;
-            mCallkitCtx.mPeerUid = DEFAULT_DEV_UID;
-            mCallkitCtx.callStatus = 3;
-
-            // 这里需要从已有的绑定设备列表中，找到相应的绑定设备
-            DeviceMgr deviceMgr = (DeviceMgr)(mSdkInstance.getDeviceMgr());
-            IotDevice iotDevice = deviceMgr.findBindDeviceByDevMac(mCallkitCtx.callerId);
-            if (iotDevice == null) {
-                mPeerDevice = new IotDevice();
-                mPeerDevice.mDeviceName = mCallkitCtx.callerId;
-                mPeerDevice.mDeviceID = mCallkitCtx.callerId;
-                ALog.getInstance().e(TAG, "<DoAwsEventIncoming> cannot found incoming device"
-                        + ", callerId=" + mCallkitCtx.callerId);
-            } else {
-                mPeerDevice = iotDevice;
-            }
-        }
-
-        allTimeoutStop();   // 停止所有超时计时器
-
-        // 启动设备上线超时
-        devOnlineTimeoutStart();
-
-        // 进入频道，准备被叫通话
-        talkingPrepare(chnlName, rtcToken, localUid, DEFAULT_DEV_UID);
-
-
-        // 启动接听超时定时器
-        answerTimeoutStart();
-
-        // 回调对端来电
-        CallbackPeerIncoming(mPeerDevice, mCallkitCtx.attachMsg);
-    }
-
-    /**
-     * @brief 工作线程中运行，接听处理
-     */
-    void DoRequestAnswer(Message msg) {
-        if (getStateMachine() != CALLKIT_STATE_ANSWER_REQING) {
-            ALog.getInstance().e(TAG, "<DoRequestAnswer> failure, bad status, state=" + getStateMachine());
-            return;
-        }
-
-        // 在频道内推送音频流，开始通话
-        talkingStart();
-
-        // 切换到 正在通话中状态
-        setStateMachine(CALLKIT_STATE_TALKING);
-
-        ALog.getInstance().d(TAG, "<DoRequestAnswer> done");
-    }
-
-    /**
-     * @brief 工作线程中运行，处理设备上线超时
-     */
-    void DoDevonlineTimeout(Message msg) {
-        int currState = getStateMachine();
-        if ((currState != CALLKIT_STATE_INCOMING) &&
-                (currState != CALLKIT_STATE_ANSWER_REQING) &&
-                (currState != CALLKIT_STATE_TALKING))
-        {
-            ALog.getInstance().e(TAG, "<DoDevonlineTimeout> bad state, currState=" + currState);
-            return;
-        }
-        IotDevice callbackDev = mPeerDevice;
-
-        // 停止所有超时计时器
-        allTimeoutStop();
-
-        // 结束通话
-        talkingStop();
-
-        ALog.getInstance().d(TAG, "<DoDevonlineTimeout> done");
-
-        CallbackPeerHangup(callbackDev);   // 回调对端挂断，这里主动做一个回调
-    }
-
-    /**
-     * @brief 工作线程中运行，处理接听超时
-     */
-    void DoAnswerTimeout(Message msg) {
-        int currState = getStateMachine();
-        if (currState != CALLKIT_STATE_INCOMING) {
-            ALog.getInstance().e(TAG, "<DoAnswerTimeout> bad state, currState=" + currState);
-            return;
-        }
-        IotDevice callbackDev = mPeerDevice;
-
-        // 停止所有超时计时器
-        allTimeoutStop();
-
-        // 结束通话
-        talkingStop();
-
-        ALog.getInstance().d(TAG, "<DoAnswerTimeout> done");
-
-        CallbackPeerHangup(callbackDev);   // 回调对端挂断，这里主动做一个回调
-    }
-
-
-    /**
-     * @brief 工作线程中运行，HTTP请求有响应
-     */
-    void DoDialResponse(Message msg) {
-        int currState = getStateMachine();
-        if (currState != CALLKIT_STATE_DIAL_REQING) {
-            ALog.getInstance().e(TAG, "<DoDialResponse> failure, bad status, state=" + getStateMachine());
-            return;
-        }
-        ALog.getInstance().d(TAG, "<DoDialResponse> Enter");
-        Object[] callParams = (Object[]) (msg.obj);
-        IotDevice iotDevice = (IotDevice)(callParams[0]);
-        String attachMsg = (String)(callParams[1]);
-        AgoraService.CallReqResult dialResult = (AgoraService.CallReqResult)(callParams[2]);
-
-        // Token过期统一处理
-        processTokenErrCode(dialResult.mErrCode);
-
-        if (dialResult.mErrCode != ErrCode.XOK)   {  // 呼叫失败
-            ALog.getInstance().d(TAG, "<DoDialResponse> Exit with failure, errCode=" + dialResult.mErrCode);
-            allTimeoutStop();   // 停止所有超时计时器
-            talkingStop();      // 此时应该还没有进入频道，复位状态
-            CallbackCallDialDone(dialResult.mErrCode, iotDevice); // 回调主叫拨号失败
-            return;
-        }
-
-        // 更新呼叫上下文数据
-        synchronized (mDataLock) {
-            mCallkitCtx = dialResult.mCallkitCtx;
-        }
-
-        // 切换到 正在呼叫中
-        setStateMachine(CALLKIT_STATE_DIALING);
-
-        // 重新启动呼叫超时定时器
-        dialTimeoutStart();
-
-        // 进入频道，准备主叫通话
-        talkingPrepare(dialResult.mCallkitCtx.channelName, dialResult.mCallkitCtx.rtcToken,
-                        dialResult.mCallkitCtx.mLocalUid, dialResult.mCallkitCtx.mPeerUid);
-
-        ALog.getInstance().d(TAG, "<DoDialResponse> Exit, mCallkitCtx=" + mCallkitCtx.toString());
-
-        // 回调主叫拨号成功
-        CallbackCallDialDone(ErrCode.XOK, mPeerDevice);
-    }
-
-    /**
-     * @brief 工作线程中运行，呼叫超时事件（APP主叫后设备端一直未上线）
-     */
-    void DoDialTimeout(Message msg) {
-        int currState = getStateMachine();
-        if( (currState != CALLKIT_STATE_DIALING) && (currState != CALLKIT_STATE_DIAL_REQING)) {  // AWS事件 Idle-->Dial已经过来了
-            ALog.getInstance().e(TAG, "<DoDialTimeout> bad state, currState=" + currState);
-            return;
-        }
-
-        allTimeoutStop();   // 停止所有超时计时器
-
-        // 结束通话
-        IotDevice iotDevice = mPeerDevice;
-        talkingStop();
-
-        // 回调呼叫失败
-        CallbackPeerTimeout(iotDevice);
-
-        ALog.getInstance().d(TAG, "<DoDialTimeout> done");
-    }
-
-    /*
-     * @brief 工作线程中运行，进行挂断退出频道处理
-     */
-    void DoRequestHangup(Message msg) {
-        ALog.getInstance().d(TAG, "<DoRequestHangup> Enter");
-
-        allTimeoutStop();   // 停止所有超时计时器
-
-        // 结束通话，清除信息，设置状态到空闲，
-        talkingStop();
-
-        ALog.getInstance().d(TAG, "<DoRequestHangup> Exit");
-        synchronized (mReqHangupEvent) {
-            mReqHangupEvent.notify();    // 事件通知
-        }
-    }
-
-
-
-    ///////////////////////////////////////////////////////////////////////
-    ///////////////////////////// 通话处理方法 /////////////////////////////
-    ///////////////////////////////////////////////////////////////////////
-    /*
-     * @brief 主叫或者被叫时准备通话，本地不推流，订阅对端音视频流
-     */
-    void talkingPrepare(final String channelName, final String rtcToken,
-                        int localUid, int peerUid) {
-
-        if (mTalkEngine == null) {  // RTC引擎未创建
-
-            // 根据SDK初始化参数创建 RTC通话引擎
-            IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
-            mTalkEngine = new TalkingEngine();
-            TalkingEngine.InitParam talkInitParam = mTalkEngine.new InitParam();
-            talkInitParam.mContext = sdkInitParam.mContext;
-            talkInitParam.mAppId = sdkInitParam.mRtcAppId;
-            talkInitParam.mCallback = this;
-            talkInitParam.mPublishVideo = sdkInitParam.mPublishVideo;
-            talkInitParam.mPublishAudio = sdkInitParam.mPublishAudio;
-            talkInitParam.mSubscribeAudio = sdkInitParam.mSubscribeAudio;
-            talkInitParam.mSubscribeVideo = sdkInitParam.mSubscribeVideo;
-            mTalkEngine.initialize(talkInitParam);
-
-            mMuteLocalVideo = (!sdkInitParam.mPublishVideo);
-            mMuteLocalAudio = (!sdkInitParam.mPublishAudio);
-
-            // 设置RTC初始参数
-            mTalkEngine.setPeerUid(peerUid);
-            mTalkEngine.joinChannel(channelName, rtcToken, localUid);
-            mTalkEngine.muteLocalVideoStream(mMuteLocalVideo);     // 本地不推视频流
-            mTalkEngine.muteLocalAudioStream(mMuteLocalAudio);     // 本地不推音频流
-            mTalkEngine.mutePeerVideoStream(mMutePeerVideo);     // 订阅对端视频流
-            mTalkEngine.mutePeerAudioStream(mMutePeerAudio);     // 订阅对端音频流
-            mTalkEngine.setAudioEffect(mAudioEffect);       // 设置音频效果
-
-            synchronized (mDataLock) {  // 至少有一个在线用户了
-                mOnlineUserCount = 1;
-                mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
-            }
-        }
-    }
-
-    /*
-     * @brief 应答对方或者对方应答后，奔溃开始推音频流，通话
-     */
-    void talkingStart() {
-        synchronized (mDataLock) {
-            mStateMachine = CALLKIT_STATE_TALKING;  // 切换到 通话状态机
-        }
-
-        if (mTalkEngine.isInChannel()) {   // 已经在频道内进行处理
-            mTalkEngine.muteLocalAudioStream(mMuteLocalAudio);    // 本地推送音频流
-        } else {
-            ALog.getInstance().e(TAG, "<talkingStart> NOT in a channel");
-        }
-    }
-
-    /*
-     * @brief 停止通话，状态机切换到空闲，清除对端设备和peerUid
-     */
-    void talkingStop() {
-        if (mTalkEngine != null) {  // 释放RTC通话引擎SDK
-            mTalkEngine.leaveChannel();     // 离开频道，结束通话
-            mTalkEngine.release();
-            mTalkEngine = null;
-        }
-
-        synchronized (mDataLock) {      // 清除当前呼叫上下文数据，恢复状态
-            mStateMachine = CALLKIT_STATE_IDLE;
-            mCallkitCtx = null;
-            mOnlineUserCount = 0;
-            mAudioEffect = Constants.AUDIO_EFFECT_OFF;  // 默认无变声
-        }
-    }
-
-
-    /*
-     * @brief 异常情况下的处理
-     *          主动挂断，停止通话，状态机切换到空闲，清除对端设备和peerUid
-     */
-    void exceptionProcess() {
-        allTimeoutStop();   // 停止所有超时计时器
-        talkingStop();  // 挂断通话
-
-        ALog.getInstance().d(TAG, "<exceptionProcess> done");
-    }
-
-    /**
-     * @brief 启动呼叫超时定时器
-     */
-    void dialTimeoutStart() {
-        sendSingleMessage(MSGID_CALL_DIAL_TIMEOUT, 0, 0, null, DIAL_WAIT_TIMEOUT);
-    }
-
-    /**
-     * @brief 停止呼叫超时定时器
-     */
-    void dialTimeoutStop() {
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
-        }
-    }
-
-    /**
-     * @brief 启动接听超时定时器
-     */
-    void answerTimeoutStart() {
-        sendSingleMessage(MSGID_CALL_ANSWER_TIMEOUT, 0, 0, null, ANSWER_WAIT_TIMEOUT);
-    }
-
-    /**
-     * @brief 停止接听超时定时器
-     */
-    void answerTimeoutStop() {
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
-        }
-    }
-
-    /**
-     * @brief 启动设备上线超时定时器
-     */
-    void devOnlineTimeoutStart() {
-        sendSingleMessage(MSGID_CALL_DEVONLINE_TIMEOUT, 0, 0, null, DEVONLINE_WAIT_TIMEOUT);
-    }
-
-    /**
-     * @brief 停止设备上线超时定时器
-     */
-    void devOnlineTimeoutStop() {
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
-        }
-    }
-
-    /**
-     * @brief 停止所有超时定时器
-     */
-    void allTimeoutStop() {
-        synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_CALL_DIAL_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_ANSWER_TIMEOUT);
-            mWorkHandler.removeMessages(MSGID_CALL_DEVONLINE_TIMEOUT);
-        }
-    }
 
     /////////////////////////////////////////////////////////////////////////////
     //////////////////// TalkingEngine.ICallback 回调处理 ////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     @Override
-    public void onTalkingPeerJoined(int localUid, int peerUid) {
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onTalkingPeerJoined> localUid=" + localUid
-                + ", peerUid=" + peerUid
-                + ", stateMachine=" + stateMachine);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
-            return;
-        }
-
-        // 发送对端RTC上线事件
-        sendSingleMessage(MSGID_CALL_RTC_PEER_ONLINE, localUid, peerUid, null, 0);
+    public void onTalkingJoinDone(final UUID sessionId, final String channel, int uid) {
     }
 
     @Override
-    public void onTalkingPeerLeft(int localUid, int peerUid, int reason) {
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onTalkingPeerLeft> localUid=" + localUid
-                + ", peerUid=" + peerUid + ", reason=" + reason
-                + ", stateMachine=" + stateMachine);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
-            return;
-        }
-
-        // 发送对端RTC掉线事件
-        Object leftParam = new Object[]{ (Integer)localUid, (Integer)peerUid, (Integer)reason};
-        sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, 0, 0, leftParam, 0);
+    public void onTalkingLeftDone(final UUID sessionId) {
     }
 
     @Override
-    public void onPeerFirstVideoDecoded(int peerUid, int videoWidth, int videoHeight) {
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onPeerFirstVideoDecoded> peerUid=" + peerUid
-                + ", videoWidth=" + videoWidth
-                + ", videoHeight=" + videoHeight);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+    public void onUserOnline(final UUID sessionId, int uid, int elapsed) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<onUserOnline> session removed, sessionId=" + sessionId
+                    + ", uid=" + uid);
             return;
         }
+        ALog.getInstance().d(TAG, "<onUserOnline> uid=" + uid + ", sessionCtx=" + sessionCtx);
+
+        if (uid == sessionCtx.mPeerUid) {  // 对端设备加入频道
+            // 发送对端设备TC上线事件
+            sendSingleMessage(MSGID_CALL_RTC_PEER_ONLINE, 0, 0, sessionId, 0);
+            return;
+        }
+
+        // 回调其他用户上线事件
+        if (uid != sessionCtx.mLocalUid) {
+            // 更新session上下文中 用户数量
+            sessionCtx.mUserCount++;
+            mSessionMgr.updateSession(sessionCtx);
+
+            ALog.getInstance().d(TAG, "<onUserOnline> callback online event");
+            CallbackOtherUserOnline(sessionCtx, uid);
+        }
+    }
+
+    @Override
+    public void onUserOffline(final UUID sessionId, int uid, int reason) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<onUserOffline> session removed, sessionId=" + sessionId
+                    + ", uid=" + uid + ", reason=" + reason);
+            return;
+        }
+        ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid
+                + ", reason=" + reason + ", sessionCtx=" + sessionCtx);
+
+        if (uid == sessionCtx.mPeerUid) {  // 对端设备退出频道
+            // 发送对端设备TC掉线事件
+            sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, 0, 0, sessionId, 0);
+            return;
+        }
+
+        // 回调其他用户上线事件
+        if (uid != sessionCtx.mLocalUid) {
+            // 更新session上下文中 用户数量
+            sessionCtx.mUserCount--;
+            mSessionMgr.updateSession(sessionCtx);
+
+            ALog.getInstance().d(TAG, "<onUserOffline> callback online event");
+            CallbackOtherUserOffline(sessionCtx, uid);
+        }
+    }
+
+    @Override
+    public void onPeerFirstVideoDecoded(final UUID sessionId, int peerUid, int videoWidth, int videoHeight) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().d(TAG, "<onPeerFirstVideoDecoded> session removed"
+                    + ", peerUid=" + peerUid + ", width=" + videoWidth + ", height=" + videoHeight );
+            return;
+        }
+        ALog.getInstance().d(TAG, "<onPeerFirstVideoDecoded> sessionCtx=" + sessionCtx
+                + ", peerUid=" + peerUid + ", width=" + videoWidth + ", height=" + videoHeight );
 
         // 发送对端RTC首帧出图事件
-        sendSingleMessage(MSGID_CALL_RTC_PEER_FIRSTVIDEO, videoWidth, videoHeight, null, 0);
+        sendSingleMessage(MSGID_CALL_RTC_PEER_FIRSTVIDEO, videoWidth, videoHeight, sessionId, 0);
     }
 
     @Override
-    public void onTalkingError(int localUid, int peerUid, int errCode) {
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<onTalkingError> errCode=" + errCode
-                + ", stateMachine=" + stateMachine
-                + ", localUid=" + localUid + ", peerUid=" + peerUid );
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+    public void onSnapshotTaken(final UUID sessionId, int uid,
+                                final String filePath, int width, int height, int errCode) {
+        // 再处理设备通话的会话
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().d(TAG, "<onSnapshotTaken> session removed"
+                    + ", uid=" + uid + ", filePath=" + filePath
+                    + ", width=" + width + ", height=" + height + ", errCode=" + errCode );
             return;
         }
+        ALog.getInstance().d(TAG, "<onSnapshotTaken> sessionCtx=" + sessionCtx
+                + ", uid=" + uid + ", filePath=" + filePath
+                + ", width=" + width + ", height=" + height + ", errCode=" + errCode );
 
-        // 发送对端RTC掉线事件
-        Object leftParam = new Object[]{ (Integer)localUid, (Integer)peerUid, (Integer)errCode};
-        sendSingleMessage(MSGID_CALL_RTC_PEER_OFFLINE, 0, 0, leftParam, 0);
+        // 发送截图完成回调事件
+        Object[] params = { sessionId, filePath, width, height, errCode};
+        sendSingleMessage(MSGID_CLL_RTC_SHOTTAKEN, 0, 0, params, 0);
+
+    }
+
+    @Override
+    public void onRecordingError(final UUID sessionId, int errCode) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().d(TAG, "<onRecordingError> session removed"
+                    + ", sessionId=" + sessionId + ", errCode=" + errCode);
+            return;
+        }
+        ALog.getInstance().d(TAG, "<onRecordingError> sessionCtx=" + sessionCtx
+                + ", errCode=" + errCode);
+
+        // 发送录像错误回调消息
+        sendSingleMessage(MSGID_RECORDING_ERROR, errCode, 0, sessionId, 0);
     }
 
 
     /////////////////////////////////////////////////////////////////////////////
-    //////////////////////////// RTC Engine异常相关处理 //////////////////////////
+    /////////////////////////// 工作线程中各种消息处理 /////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
-    /*
+    /**
+     * @brief 工作线程中运行，处理接收MQTT订阅数据包
+     */
+    void DoMqttRecvPacket(Message msg) {
+        TransPacket recvedPkt = mRecvPktQueue.dequeue();
+        if (recvedPkt == null) {  // 接收队列为空，没有要接收到的数据包要分发了
+            return;
+        }
+
+        DoMqttParsePacket(recvedPkt);
+
+        // 队列中还有数据包，放到下次消息中处理
+        if (mRecvPktQueue.size() > 0) {
+            sendSingleMessage(MSGID_CALL_RECV_PKT, 0, 0, null, 0);
+        }
+    }
+
+    void DoMqttParsePacket(final TransPacket recvedPkt) {
+
+        JSONObject recvJsonObj = JsonUtils.generateJsonObject(recvedPkt.mContent);
+        if (recvJsonObj == null) {
+            ALog.getInstance().e(TAG, "<DoMqttParsePacket> Invalid json=" + recvedPkt.mContent);
+            return;
+        }
+
+        JSONObject headJsonObj = JsonUtils.parseJsonObject(recvJsonObj, "header", null);
+        JSONObject payloadJsonObj = JsonUtils.parseJsonObject(recvJsonObj,"payload", null);
+        int respCode = JsonUtils.parseJsonIntValue(recvJsonObj, "code", 0);
+
+        // 解析 Header 头信息
+        if (headJsonObj == null) {
+            ALog.getInstance().e(TAG, "<DoMqttParsePacket> NO header json obj");
+            return;
+        }
+        String headerMethod = JsonUtils.parseJsonStringValue(headJsonObj, "method", null);
+        if (TextUtils.isEmpty(headerMethod)) {
+            ALog.getInstance().e(TAG, "<DoMqttParsePacket> NO method field in header");
+            return;
+        }
+        long traceId = JsonUtils.parseJsonLongValue(headJsonObj, "traceId", -1);
+        if (traceId < 0) {
+            ALog.getInstance().e(TAG, "<DoMqttParsePacket> NO traceId field in header");
+            return;
+        }
+
+        if (headerMethod.compareToIgnoreCase(METHOD_USER_START_CALL) == 0) {
+            // APP主叫设备回应数据包
+            SessionCtx sessionCtx = mSessionMgr.findSessionByTraceId(traceId);
+            if (sessionCtx == null) {  // 主叫会话已经不存在了，丢弃该包
+                ALog.getInstance().e(TAG, "<DoMqttParsePacket> [DIALING] session NOT found, drop packet!");
+                return;
+            }
+            if (sessionCtx.mState != SESSION_STATE_DIAL_REQING) { // 主叫会话状态不对，丢弃改包
+                ALog.getInstance().e(TAG, "<DoMqttParsePacket> [DIALING] state not right"
+                        + ", mState=" + sessionCtx.mState + ", drop packet!");
+                return;
+            }
+
+            if (respCode == ErrCode.XOK) {
+                sessionCtx.mRtcToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "token", null);
+                sessionCtx.mChnlName = JsonUtils.parseJsonStringValue(payloadJsonObj, "cname", null);
+                sessionCtx.mLocalUid = JsonUtils.parseJsonIntValue(payloadJsonObj, "uid", -1);
+            }
+
+            // 处理主叫服务器回应完成
+            DoDialResponse(sessionCtx, respCode);
+
+        } else if (headerMethod.compareToIgnoreCase(METHOD_DEVICE_START_CALL) == 0) {
+            // 设备来电数据包
+            if (respCode != ErrCode.XOK) {
+                ALog.getInstance().d(TAG, "<DoMqttParsePacket> [INCOMING] response error, respCode=" + respCode);
+                return;
+            }
+
+            // 判断参数字段，注意: 协议包中这里 peerNodeId 是 APP账号的 NodeId，不是设备的NodeId
+            //  这里 peerNodeId 就用不到了，判断哪个设备直接用 cname 来判断
+            String rtcToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "token", null);
+            String chnlName = JsonUtils.parseJsonStringValue(payloadJsonObj, "cname", null);
+            String peerNodeId = JsonUtils.parseJsonStringValue(payloadJsonObj, "peerId", null);
+            String attachMsg = JsonUtils.parseJsonStringValue(payloadJsonObj, "extraMsg", null);
+            int localUid = JsonUtils.parseJsonIntValue(payloadJsonObj, "uid", -1);
+            long timestamp = JsonUtils.parseJsonLongValue(payloadJsonObj, "timestamp", -1);
+            long version = JsonUtils.parseJsonLongValue(payloadJsonObj, "version", -1);
+            if (TextUtils.isEmpty(rtcToken) || TextUtils.isEmpty(chnlName) || TextUtils.isEmpty(peerNodeId)) {
+                ALog.getInstance().d(TAG, "<DoMqttParsePacket> [INCOMING] invalid parameter, drop packet");
+                return;
+            }
+
+            // 通过频道名判断该设备是否已经在通话
+            SessionCtx sessionCtx = mSessionMgr.findSessionByChannelName(chnlName);
+            if (sessionCtx != null) {
+                ALog.getInstance().e(TAG, "<DoMqttParsePacket> [INCOMING] session already exist, drop packet!");
+                return;
+            }
+
+            // 处理MQTT来电消息
+            DoMqttEventIncoming(traceId, attachMsg, chnlName, rtcToken, localUid);
+        }
+    }
+
+
+    /**
+     * @brief 工作线程中运行，处理来电事件
+     */
+    void DoMqttEventIncoming(long traceId, final String attachMsg, final String chnlName, final String rtcToken, int localUid) {
+        ALog.getInstance().d(TAG, "<DoMqttEventIncoming> Enter, traceId=" + traceId
+                    + ", attachMsg=" + attachMsg + ", chnlName=" + chnlName + ", localUid=" + localUid );
+
+        LocalNode loalNode = mSdkInstance.getLoalNode();
+        IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
+
+        // 添加新会话 到会话管理器中
+        SessionCtx newSession = new SessionCtx();
+        newSession.mChnlName = chnlName;
+        newSession.mRtcToken = rtcToken;
+        newSession.mLocalNodeId = loalNode.mNodeId;
+        newSession.mDevNodeId = chnlName;  // 这里使用cname作为设备端的 nodeId
+        newSession.mAttachMsg = attachMsg;
+        newSession.mType = SESSION_TYPE_INCOMING;       // 被叫
+        newSession.mState = SESSION_STATE_INCOMING;     // 会话状态机: 来电中
+        newSession.mLocalUid = localUid;
+        newSession.mPeerUid = DEFAULT_DEV_UID;
+        newSession.mTimestamp = System.currentTimeMillis();
+        newSession.mTraceId = traceId;
+        newSession.mPubLocalAudio = false;  // 不推送本地音频流
+        newSession.mSubDevAudio = true;     // 订阅设备音频流
+        newSession.mSubDevVideo = true;     // 订阅设备视频流
+        mSessionMgr.addSession(newSession);
+        ALog.getInstance().w(TAG, "<DoMqttEventIncoming> sessionCtx=" + newSession);
+
+        // 进入频道，准备被叫通话
+        talkingPrepare(newSession);
+
+        ALog.getInstance().d(TAG, "<DoMqttEventIncoming> Exit");
+
+        // 回调对端来电
+        CallbackPeerIncoming(newSession);
+    }
+
+    /**
+     * @brief 工作线程中运行，处理主叫回应数据包
+     */
+    void DoDialResponse(final SessionCtx sessionCtx, int respCode) {
+        ALog.getInstance().d(TAG, "<DoDialResponse> Enter");
+        SessionCtx tempSession = mSessionMgr.findSessionBySessionId(sessionCtx.mSessionId);
+        if (tempSession == null) {  // 该会话已经挂断删除，不做任何处理
+            ALog.getInstance().e(TAG, "<DoDialResponse> session already removed, do nothing!");
+            return;
+        }
+
+        if (respCode != ErrCode.XOK) {  // 服务器返回错误码
+            ALog.getInstance().d(TAG, "<DoDialResponse> Exit with error respose, respCode=" + respCode);
+            mSessionMgr.removeSession(sessionCtx.mSessionId);   // 删除当前会话
+            CallbackCallDialDone(sessionCtx, ErrCode.XERR_HTTP_RESP_CODE); // 回调主叫拨号失败
+            return;
+        }
+
+        if (TextUtils.isEmpty(sessionCtx.mRtcToken) || TextUtils.isEmpty(sessionCtx.mChnlName)) {
+            ALog.getInstance().d(TAG, "<DoDialResponse> Exit with failure, token or chnlName is empty!");
+            mSessionMgr.removeSession(sessionCtx.mSessionId);   // 删除当前会话
+            CallbackCallDialDone(sessionCtx, ErrCode.XERR_INVALID_PARAM); // 回调主叫拨号失败
+            return;
+        }
+
+        // 更新会话上下文信息
+        sessionCtx.mState = SESSION_STATE_DIALING;    // 切换状态机到 呼叫中
+        sessionCtx.mTimestamp = System.currentTimeMillis();  // 更新会话时间戳
+        mSessionMgr.updateSession(sessionCtx);
+
+
+        // 进入频道，准备主叫通话
+        int errCode = talkingPrepare(sessionCtx);
+        if (errCode != ErrCode.XOK) {
+            ALog.getInstance().e(TAG, "<DoDialResponse> failure to join channel, errCode=" + errCode
+                    + ", mDevNodeId=" + sessionCtx.mDevNodeId);
+            mSessionMgr.removeSession(sessionCtx.mSessionId);   // 删除当前会话
+            CallbackCallDialDone(sessionCtx, errCode); // 回调主叫拨号失败
+            return;
+        }
+
+        ALog.getInstance().d(TAG, "<DoDialResponse> Exit, sessionCtx=" + sessionCtx.toString());
+
+        // 回调主叫拨号成功
+        CallbackCallDialDone(sessionCtx, ErrCode.XOK);
+    }
+
+
+    /**
      * @brief 工作线程中运行，对端RTC上线
      */
     void DoRtcPeerOnline(Message msg) {
-        int localUid = msg.arg1;
-        int peerUid = msg.arg2;
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<DoRtcPeerOnline> localUid=" + localUid
-                + ", peerUid=" + peerUid
-                + ", stateMachine=" + stateMachine);
-        if (stateMachine == CALLKIT_STATE_HANGUP_REQING) {
+        UUID sessionId = (UUID)(msg.obj);
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<DoRtcPeerOnline> session removed, sessionId=" + sessionId);
             return;
         }
+        ALog.getInstance().d(TAG, "<DoRtcPeerOnline> sessionCtx=" + sessionCtx);
 
-        // 不管什么状态，总是停止设备上线定时器
-        devOnlineTimeoutStop();
+        // 更新设备上线状态
+        sessionCtx.mDevOnline = true;
+        mSessionMgr.updateSession(sessionCtx);
 
         // 如果当前正在主叫状态，则回调对端应答
-        if (stateMachine == CALLKIT_STATE_DIALING) {
+        if (sessionCtx.mState == SESSION_STATE_DIALING) {
             ALog.getInstance().d(TAG, "<DoRtcPeerOnline> Peer answer, enter talking...");
 
-            // 停止所有超时定时器
-            allTimeoutStop();
+            // 更新会话的状态机
+            sessionCtx.mState = SESSION_STATE_TALKING;
+            sessionCtx.mTimestamp = System.currentTimeMillis();
+            sessionCtx.mDevOnline = true;
+            mSessionMgr.updateSession(sessionCtx);
 
-            // 进入通话状态
-            setStateMachine(CALLKIT_STATE_TALKING);
-
-            // 回调对端应答
-            CallbackPeerAnswer(ErrCode.XOK, mPeerDevice);
-        }
-
-        if ((mPeerVidew != null) && (mTalkEngine != null)) {
-            mTalkEngine.setRemoteVideoView(mPeerVidew);
+            // 回调对端设备接听
+            CallbackPeerAnswer(sessionCtx);
         }
     }
 
-    /*
+    /**
      * @brief 工作线程中运行，对端RTC下线
      */
     void DoRtcPeerOffline(Message msg) {
-        Object[] offlineParam = (Object[])(msg.obj);
-        int localUid = (Integer)(offlineParam[0]);
-        int peerUid = (Integer)(offlineParam[1]);
-        int reason = (Integer)(offlineParam[2]);
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<DoRtcPeerOffline> localUid=" + localUid
-                + ", peerUid=" + peerUid + ", reason=" + reason
-                + ", stateMachine=" + stateMachine);
-
-
-        if (stateMachine == CALLKIT_STATE_INCOMING ||
-            stateMachine == CALLKIT_STATE_DIALING ||
-            stateMachine == CALLKIT_STATE_INCOMING ||
-            stateMachine == CALLKIT_STATE_TALKING)
-        {
-            IotDevice callbackDev = mPeerDevice;
-            allTimeoutStop();   // 停止所有超时计时器
-            talkingStop();   // 结束通话
-
-            CallbackPeerHangup(callbackDev);   // 回调对端挂断
+        UUID sessionId = (UUID)(msg.obj);
+        SessionCtx sessionCtx = mSessionMgr.removeSession(sessionId);  // 会话列表中删除会话
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<DoRtcPeerOffline> session removed, sessionId=" + sessionId);
+            return;
         }
+        ALog.getInstance().d(TAG, "<DoRtcPeerOffline> sessionCtx=" + sessionCtx);
+
+        // 结束通话
+        talkingStop(sessionCtx);
+
+        // 回调对端设备挂断
+        CallbackPeerHangup(sessionCtx);
     }
 
     /**
@@ -1126,239 +1000,320 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     void DoRtcPeerFirstVideo(Message msg) {
         int width = msg.arg1;
         int height = msg.arg2;
-        int stateMachine = getStateMachine();
-        ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> width=" + width
-                + ", height=" + height);
+        UUID sessionId = (UUID)(msg.obj);
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<DoRtcPeerFirstVideo> session removed, sessionId=" + sessionId);
+            return;
+        }
+        ALog.getInstance().d(TAG, "<DoRtcPeerFirstVideo> sessionCtx=" + sessionCtx
+                    + ", width=" + width + ", height=" + height);
 
-        if ((stateMachine != CALLKIT_STATE_IDLE) && (stateMachine != CALLKIT_STATE_HANGUP_REQING)) {
-            IotDevice callbackDev = mPeerDevice;
-
+        if (sessionCtx.mState != SESSION_STATE_IDLE) {
             // 回调对端首帧出图
-            synchronized (mCallbackList) {
-                for (ICallkitMgr.ICallback listener : mCallbackList) {
-                    listener.onPeerFirstVideo(callbackDev, width, height);
-                }
-            }
+            CallbackPeerFirstVideo(sessionCtx, width, height);
         }
     }
 
-    @Override
-    public void onUserOnline(int uid) {
-        boolean eventReport = false;
-        synchronized (mDataLock) {
-            if (uid != mCallkitCtx.mPeerUid) {  // 不是设备端
-                mOnlineUserCount++;
-                eventReport = true;
-            }
-        }
-        ALog.getInstance().d(TAG, "<onUserOnline> uid=" + uid
-                + ", mOnlineUserCount=" + mOnlineUserCount);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
+
+    /**
+     * @brief 工作线程中运行，截图完成
+     */
+    void onRtcSnapshotTaken(Message msg) {
+        Object[] params = (Object[])msg.obj;
+        UUID sessionId = (UUID)(params[0]);
+        String filePath = (String) (params[1]);
+        Integer width = (Integer) (params[2]);
+        Integer height = (Integer) (params[3]);
+        Integer errCode = (Integer) (params[4]);
+
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<onRtcSnapshotTaken> session removed, sessionId=" + sessionId);
             return;
         }
+        ALog.getInstance().d(TAG, "<onRtcSnapshotTaken> sessionCtx=" + sessionCtx
+                + ", width=" + width + ", height=" + height
+                + ", filePath=" + filePath + ", errCode=" + errCode);
 
-        if (eventReport) {  // 回调用户上线事件
-            ALog.getInstance().d(TAG, "<onUserOnline> callback online event");
-            synchronized (mCallbackList) {
-                for (ICallkitMgr.ICallback listener : mCallbackList) {
-                    listener.onUserOnline(uid, mOnlineUserCount);
-                }
+        if (sessionCtx.mState == SESSION_STATE_TALKING || sessionCtx.mState == SESSION_STATE_INCOMING) {
+            // 回调截图完成
+            int respCode = ErrCode.XOK;
+            if (errCode == -1) { // 文件写入失败
+                respCode = ErrCode.XERR_FILE_WRITE;
+            } else if (errCode == -2) { // 没有收到指定的适配帧
+                respCode = ErrCode.XERR_FILE_WRITE;
+            } else if (errCode == -3) { // 调用太频繁
+                respCode = ErrCode.XERR_INVOKE_TOO_OFTEN;
+
+            } else if (errCode != 0) {
+                respCode = ErrCode.XERR_UNKNOWN;
             }
+            CallbackShotTakeDone(sessionCtx, respCode, filePath, width, height);
         }
     }
-
-    @Override
-    public void onUserOffline(int uid) {
-        boolean eventReport = false;
-        synchronized (mDataLock) {
-            if (uid != mCallkitCtx.mPeerUid) {  // 不是设备端
-                mOnlineUserCount--;
-                eventReport = true;
-            }
-        }
-        ALog.getInstance().d(TAG, "<onUserOffline> uid=" + uid
-                + ", mOnlineUserCount=" + mOnlineUserCount);
-        if (getStateMachine() == CALLKIT_STATE_HANGUP_REQING) {
-            return;
-        }
-
-        if (eventReport) {  // 回调用户下线事件
-            ALog.getInstance().d(TAG, "<onUserOffline> callback offline event");
-            synchronized (mCallbackList) {
-                for (ICallkitMgr.ICallback listener : mCallbackList) {
-                    listener.onUserOffline(uid, mOnlineUserCount);
-                }
-            }
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////// 录像的处理 //////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////
 
     /*
      * @brief 工作线程中运行，发送HTTP呼叫请求
      */
     void DoRecordingError(Message msg) {
         int errCode = msg.arg1;
-        ALog.getInstance().e(TAG, "<DoRecordingError> errCode=" + errCode);
-
-        synchronized (mCallbackList) {
-            for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onRecordingError(errCode);
-            }
+        UUID sessionId = (UUID)(msg.obj);
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().w(TAG, "<DoRecordingError> session removed, sessionId=" + sessionId
+                                + ", errCode=" + errCode);
+            return;
         }
+        ALog.getInstance().d(TAG, "<DoRecordingError> sessionCtx=" + sessionCtx + ", errCode=" + errCode);
+
+        // 回调录像失败
+        CallbackRecordingError(sessionCtx, errCode);
     }
+
+    /**
+     * @brief 工作线程中运行，定时器
+     */
+    void DoTimer(Message msg) {
+        SessionMgr.QueryTimeoutResult queryTimeoutResult = mSessionMgr.queryTimeoutSessionList(
+                DIAL_WAIT_TIMEOUT, ANSWER_WAIT_TIMEOUT, DEVONLINE_WAIT_TIMEOUT);
+
+        //
+        // 处理主叫呼叫超时
+        //
+        for(SessionCtx dialSessionCtx : queryTimeoutResult.mDialTimeoutList) {
+            talkingStop(dialSessionCtx);    // 退出通话
+            mSessionMgr.removeSession(dialSessionCtx.mSessionId);   // 从会话管理器中删除本次会话
+
+            // 回调呼叫超时失败
+            ALog.getInstance().d(TAG, "<DoTimer> callback peer timeout, sessionCtx=" + dialSessionCtx);
+            CallbackPeerTimeout(dialSessionCtx);
+        }
+
+        //
+        // 处理来电后，本地接听超时
+        //
+        for(SessionCtx answerSessionCtx : queryTimeoutResult.mAnswerTimeoutList) {
+            talkingStop(answerSessionCtx);    // 退出通话
+            mSessionMgr.removeSession(answerSessionCtx.mSessionId);   // 从会话管理器中删除本次会话
+
+            // 回调对端设备挂断
+            ALog.getInstance().d(TAG, "<DoTimer> answer timeout, answerSessionCtx=" + answerSessionCtx);
+            CallbackPeerHangup(answerSessionCtx);
+        }
+
+        //
+        // 处理来电后，设备上线超时
+        //
+        for(SessionCtx devOnlineSessionCtx : queryTimeoutResult.mDevOnlineTimeoutList) {
+            talkingStop(devOnlineSessionCtx);    // 退出通话
+            mSessionMgr.removeSession(devOnlineSessionCtx.mSessionId);   // 从会话管理器中删除本次会话
+
+            // 回调对端设备挂断
+            ALog.getInstance().d(TAG, "<DoTimer> dev online timeout, devOnlineSessionCtx=" + devOnlineSessionCtx);
+            CallbackPeerHangup(devOnlineSessionCtx);
+        }
+
+        sendSingleMessage(MSGID_CALL_TIMER, 0, 0, null, TIMER_INTERVAL);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////// 录像的处理 //////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+
+
 
 
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// 所有的对上层回调处理 //////////////////////////
     /////////////////////////////////////////////////////////////////////////////
-    void CallbackCallDialDone(int errCode, IotDevice iotDevice) {
+    void CallbackPeerIncoming(final SessionCtx sessionCtx) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onDialDone(errCode, iotDevice);
+                listener.onPeerIncoming(sessionCtx.mSessionId, sessionCtx.mDevNodeId, sessionCtx.mAttachMsg);
             }
         }
     }
 
-    void CallbackPeerIncoming(IotDevice iotDevice, String attachMsg) {
+    void CallbackCallDialDone(final SessionCtx sessionCtx, int errCode) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onPeerIncoming(iotDevice, attachMsg);
+                listener.onDialDone(sessionCtx.mSessionId, sessionCtx.mDevNodeId, errCode);
             }
         }
     }
 
-    void CallbackPeerAnswer(int errCode, IotDevice iotDevice) {
+    void CallbackPeerAnswer(final SessionCtx sessionCtx) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onPeerAnswer(iotDevice);
+                listener.onPeerAnswer(sessionCtx.mSessionId, sessionCtx.mDevNodeId);
             }
         }
     }
 
-    void CallbackPeerHangup(IotDevice iotDevice) {
+    void CallbackPeerFirstVideo(final SessionCtx sessionCtx, int width, int height) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onPeerHangup(iotDevice);
+                listener.onPeerFirstVideo(sessionCtx.mSessionId, width, height);
             }
         }
     }
 
-    void CallbackPeerTimeout(IotDevice iotDevice) {
+    void CallbackPeerHangup(final SessionCtx sessionCtx) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onPeerTimeout(iotDevice);
+                listener.onPeerHangup(sessionCtx.mSessionId, sessionCtx.mDevNodeId);
             }
         }
     }
 
-    void CallbackError(int errCode) {
+    void CallbackPeerTimeout(final SessionCtx sessionCtx) {
         synchronized (mCallbackList) {
             for (ICallkitMgr.ICallback listener : mCallbackList) {
-                listener.onCallkitError(errCode);
+                listener.onPeerTimeout(sessionCtx.mSessionId, sessionCtx.mDevNodeId);
             }
         }
     }
+
+    void CallbackOtherUserOnline(final SessionCtx sessionCtx, int uid) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onOtherUserOnline(sessionCtx.mSessionId, uid, sessionCtx.mUserCount);
+            }
+        }
+    }
+
+    void CallbackOtherUserOffline(final SessionCtx sessionCtx, int uid) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onOtherUserOffline(sessionCtx.mSessionId, uid, sessionCtx.mUserCount);
+            }
+        }
+    }
+
+    void CallbackRecordingError(final SessionCtx sessionCtx, int errCode) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onRecordingError(sessionCtx.mSessionId, errCode);
+            }
+        }
+    }
+
+    void CallbackShotTakeDone(final SessionCtx sessionCtx, int errCode, final String filePath,
+                              int width, int height) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onCaptureFrameDone(sessionCtx.mSessionId, errCode, filePath, width, height);
+            }
+        }
+    }
+
+    void CallbackError(final SessionCtx sessionCtx, int errCode) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onSessionError(sessionCtx.mSessionId, errCode);
+            }
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    ///////////////////////////// 通话处理方法 /////////////////////////////
+    ///////////////////////////////////////////////////////////////////////
+    /**
+     * @brief 通话准备处理，创建RTC并且进入频道
+     */
+    int talkingPrepare(final SessionCtx sessionCtx) {
+        boolean bRet;
+
+        synchronized (mTalkEngLock) {
+
+            // 如果RtcSdk还未创建，则进行创建并且初始化
+            if (!mTalkEngine.isReady()) {
+                IAgoraIotAppSdk.InitParam sdkInitParam = mSdkInstance.getInitParam();
+                mTalkEngine = new TalkingEngine();
+                TalkingEngine.InitParam talkInitParam = mTalkEngine.new InitParam();
+                talkInitParam.mContext = sdkInitParam.mContext;
+                talkInitParam.mAppId = sdkInitParam.mAppId;
+                talkInitParam.mCallback = this;
+                mTalkEngine.initialize(talkInitParam);
+            }
+
+            // 加入频道
+            bRet = mTalkEngine.joinChannel(sessionCtx);
+
+            // 设置音频效果
+            //mTalkEngine.setAudioEffect(mAudioEffect);
+
+            // 设置设备视频帧显示控件
+            View displayView = mViewMgr.getDisplayView(sessionCtx.mDevNodeId);
+            if (displayView != null)  {
+                mTalkEngine.setRemoteVideoView(sessionCtx, displayView);
+            }
+        }
+
+        return (bRet ? ErrCode.XOK : ErrCode.XERR_INVALID_PARAM);
+    }
+
+    /**
+     * @brief 应答对方或者对方应答后，开始通话，根据配置决定是否推送本地音频流
+     */
+    void talkingStart(final SessionCtx sessionCtx) {
+
+        synchronized (mTalkEngLock) {
+            mTalkEngine.muteLocalAudioStream(sessionCtx);
+        }
+    }
+
+    /**
+     * @brief 停止通话，状态机切换到空闲，清除对端设备和peerUid
+     */
+    void talkingStop(final SessionCtx sessionCtx) {
+        int sessionCount = mSessionMgr.size();
+
+        synchronized (mTalkEngLock) {
+            mTalkEngine.leaveChannel(sessionCtx);
+
+            // 如果当前没有会话了，直接释放整个RtcSDK
+            if (sessionCount <= 0) {
+                mTalkEngine.release();
+            }
+        }
+    }
+
+    /**
+     * @brief 退出所有的频道，并且释放整个通话引擎
+     */
+    void talkingRelease() {
+        List<SessionCtx> sessionList = mSessionMgr.getAllSessionList();
+        int sessionCount = sessionList.size();
+        int i;
+
+        synchronized (mTalkEngLock) {
+            for (i = 0; i < sessionCount; i++) {
+                SessionCtx sessionCtx = sessionList.get(i);
+                mTalkEngine.leaveChannel(sessionCtx);
+            }
+
+            mTalkEngine.release();
+        }
+
+        ALog.getInstance().d(TAG, "<talkingRelease> done, sessionCount=" + sessionCount);
+    }
+
 
 
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////////// Inner Methods //////////////////////////
     ///////////////////////////////////////////////////////////////////////
-    void setStateMachine(int newStateMachine) {
-        synchronized (mDataLock) {
-            mStateMachine = newStateMachine;
-        }
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    ///////////////////// Methods for MQTT Packet ////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    void inqueueRecvPkt(final TransPacket recvPacket) {
+        mRecvPktQueue.inqueue(recvPacket);
+        sendSingleMessage(MSGID_CALL_RECV_PKT, 0, 0, null, 0);
     }
 
 
-    String getStateMachineTip(int callStatus) {
-        if (callStatus == CALLKIT_STATE_IDLE) {
-            return "1(Idle)";
-        } else if (callStatus == CALLKIT_STATE_DIALING) {
-            return "2(Dial)";
-        } else if (callStatus == CALLKIT_STATE_INCOMING) {
-            return "3(Incoming)";
-        } else if (callStatus == CALLKIT_STATE_TALKING) {
-            return "4(Talking)";
-        } else if (callStatus == CALLKIT_STATE_DIAL_REQING) {
-            return "5(Dial_Requesting)";
-        } else if (callStatus == CALLKIT_STATE_DIAL_RSPING) {
-            return "6(Dial_Responsing)";
-        } else if (callStatus == CALLKIT_STATE_ANSWER_REQING) {
-            return "7(Answer_Requesting)";
-        } else if (callStatus == CALLKIT_STATE_ANSWER_RSPING) {
-            return "8(Answer_Responsing)";
-        } else if (callStatus == CALLKIT_STATE_HANGUP_REQING) {
-            return "9(Hangup_Requesting)";
-        }
-
-        return (callStatus + "(Unknown)");
-    }
-
-
-
-    /**
-     * @brief 统一处理Token过期错误码
-     */
-    void processTokenErrCode(int errCode) {
-        if (errCode == ErrCode.XERR_TOKEN_INVALID)    {
-            AccountMgr accountMgr = (AccountMgr)(mSdkInstance.getAccountMgr());
-            accountMgr.onTokenInvalid();
-        }
-    }
-
-
-
-    //////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////// Methods for JSON parse /////////////////////////
-    //////////////////////////////////////////////////////////////////////////////
-    int parseJsonIntValue(JSONObject jsonState, String fieldName, int defVal) {
-        try {
-            int value = jsonState.getInt(fieldName);
-            return value;
-
-        } catch (JSONException e) {
-            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
-                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
-            return defVal;
-        }
-    }
-
-    long parseJsonLongValue(JSONObject jsonState, String fieldName, long defVal) {
-        try {
-            long value = jsonState.getLong(fieldName);
-            return value;
-
-        } catch (JSONException e) {
-            ALog.getInstance().e(TAG, "<parseJsonLongValue> "
-                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
-            return defVal;
-        }
-    }
-
-    boolean parseJsonBoolValue(JSONObject jsonState, String fieldName, boolean defVal) {
-        try {
-            boolean value = jsonState.getBoolean(fieldName);
-            return value;
-
-        } catch (JSONException e) {
-            ALog.getInstance().e(TAG, "<parseJsonBoolValue> "
-                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
-            return defVal;
-        }
-    }
-
-    String parseJsonStringValue(JSONObject jsonState, String fieldName, String defVal) {
-        try {
-            String value = jsonState.getString(fieldName);
-            return value;
-
-        } catch (JSONException e) {
-            ALog.getInstance().e(TAG, "<parseJsonIntValue> "
-                    + ", fieldName=" + fieldName + ", exp=" + e.toString());
-            return defVal;
-        }
-    }
 }

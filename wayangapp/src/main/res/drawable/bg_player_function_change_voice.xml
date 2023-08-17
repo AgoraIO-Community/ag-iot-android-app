@@ -1,0 +1,4 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@mipmap/changevoice" android:state_selected="false" />
+    <item android:drawable="@mipmap/changevoiceon" android:state_selected="true" />
+</selector>

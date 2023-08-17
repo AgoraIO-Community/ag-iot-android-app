@@ -12,15 +12,13 @@ package io.agora.iotlink.logger;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Time;
 import java.util.Calendar;
 import java.util.Locale;
+
 
 
 public final class ALog {
@@ -74,7 +72,7 @@ public final class ALog {
     }
 
 
-    public synchronized int d(@NonNull String tag, @NonNull String msg) {
+    public synchronized int d(String tag, String msg) {
         Log.d(tag, msg);
         if (mWriter == null) {  // 不输出日志到文件
             return -1;
@@ -93,7 +91,7 @@ public final class ALog {
     }
 
 
-    public synchronized int i(@NonNull String tag, @NonNull String msg) {
+    public synchronized int i(String tag, String msg) {
         Log.i(tag, msg);
         if (mWriter == null) {  // 不输出日志到文件
             return -1;
@@ -111,7 +109,7 @@ public final class ALog {
         return 0;
     }
 
-    public synchronized int w(@NonNull String tag, @NonNull String msg) {
+    public synchronized int w(String tag, String msg) {
         Log.w(tag, msg);
         if (mWriter == null) {  // 不输出日志到文件
             return -1;
@@ -130,7 +128,7 @@ public final class ALog {
         return 0;
     }
 
-    public synchronized int e(@NonNull String tag, @NonNull String msg) {
+    public synchronized int e(String tag, String msg) {
         Log.e(tag, msg);
         if (mWriter == null) {  // 不输出日志到文件
             return -1;
@@ -185,7 +183,7 @@ public final class ALog {
         int year = calendar.get(Calendar.YEAR) ;
         int month = calendar.get(Calendar.MONTH) + 1;
         int date = calendar.get(Calendar.DATE);
-        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int hour = calendar.get(Calendar.HOUR);
         int minute = calendar.get(Calendar.MINUTE);
         int second = calendar.get(Calendar.SECOND);
         int ms = calendar.get(Calendar.MILLISECOND);

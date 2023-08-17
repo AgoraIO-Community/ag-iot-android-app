@@ -10,9 +10,9 @@
 package io.agora.iotlink;
 
 
-import android.graphics.Bitmap;
-import android.view.SurfaceView;
 
+import android.view.View;
+import java.util.UUID;
 
 
 /*
@@ -20,29 +20,29 @@ import android.view.SurfaceView;
  */
 public interface ICallkitMgr {
 
-    //
-    // 呼叫系统的状态机
-    //
-    public static final int CALLKIT_STATE_IDLE = 0x0001;        ///< 当前 空闲状态无通话
-    public static final int CALLKIT_STATE_DIALING = 0x0002;     ///< 正在呼叫设备中
-    public static final int CALLKIT_STATE_INCOMING = 0x0003;    ///< 正在有来电中
-    public static final int CALLKIT_STATE_TALKING = 0x0004;     ///< 正在通话中
-
-    public static final int CALLKIT_STATE_DIAL_REQING = 0x0005;     ///< 正在发送主叫请求中
-    public static final int CALLKIT_STATE_DIAL_RSPING = 0x0006;     ///< 正在等待主叫响应中
-
-    public static final int CALLKIT_STATE_ANSWER_REQING = 0x0007;   ///< 正在发送接听请求中
-    public static final int CALLKIT_STATE_ANSWER_RSPING = 0x0008;   ///< 正在等待接听响应中
-
-    public static final int CALLKIT_STATE_HANGUP_REQING = 0x0009;   ///< 正在发送挂断请求中
-
+    /**
+     * @brief 会话类型
+     */
+    public static final int SESSION_TYPE_UNKNOWN = 0x0000;           ///< 会话类型：未知
+    public static final int SESSION_TYPE_DIAL = 0x0001;              ///< 会话类型：主叫
+    public static final int SESSION_TYPE_INCOMING = 0x0002;          ///< 会话类型：被叫
 
     /**
-     * @brief 音效属性设置
+     * @brief 音效属性
      */
     public enum AudioEffectId {
         NORMAL, OLDMAN, BABYBOY, BABYGIRL, ZHUBAJIE, ETHEREAL, HULK
     }
+
+    /**
+     * @brief 会话的状态机
+     */
+    public static final int SESSION_STATE_IDLE = 0x0000;           ///< 空闲状态
+    public static final int SESSION_STATE_DIAL_REQING = 0x0001;    ///< 正在发送拨号请求
+    public static final int SESSION_STATE_DIALING = 0x0002;        ///< 本地已经进入频道，等待对端响应
+    public static final int SESSION_STATE_TALKING = 0x0003;        ///< 正在通话中
+    public static final int SESSION_STATE_INCOMING = 0x0004;       ///< 设备端来电中
+
 
 
     /**
@@ -75,88 +75,155 @@ public interface ICallkitMgr {
     }
 
     /**
+     * @brief 会话信息
+     */
+    public static class SessionInfo {
+        public UUID mSessionId;         ///< 会话的唯一标识
+        public String mLocalUserId;     ///< 当前用户的 UserId
+        public String mLocalNodeId;     ///< 当前用户的 NodeId
+        public String mPeerNodeId;      ///< 对端设备的 NodeId
+        public int mState;              ///< 当前会话状态
+        public int mType;               ///< 会话类型
+        public int mUserCount;          ///< 在线用户数量
+
+        @Override
+        public String toString() {
+            String infoText = "{ mSessionId=" + mSessionId
+                    + ", mLocalUserId=" + mLocalUserId
+                    + ", mLocalNodeId=" + mLocalNodeId
+                    + ", mPeerNodeId=" + mPeerNodeId
+                    + ", mState=" + mState
+                    + ", mType=" + mType
+                    + ", mUserCount=" + mUserCount + " }";
+            return infoText;
+        }
+    }
+
+    /**
      * @brief 账号管理回调接口
      */
     public static interface ICallback {
 
         /**
-         * @brief 开始正常拨号呼叫
-         * @param errCode : 错误代码
-         * @param iotDevice : 要呼叫的设备
-         */
-        default void onDialDone(int errCode, IotDevice iotDevice) {}
-
-        /**
          * @brief 对端设备来电事件
-         * @param iotDevice : 来电的设备
-         * @param attachMsg: 来电时附带信息
+         * @param sessionId : 会话唯一标识
+         * @param peerNodeId : 对端设备 NodeId
+         * @param attachMsg : 来电附加信息
          */
-        default void onPeerIncoming(IotDevice iotDevice, String attachMsg) {}
+        default void onPeerIncoming(final UUID sessionId, final String peerNodeId,
+                                    final String attachMsg) {}
 
         /**
-         * @brief 对端设备接听呼叫
-         * @param iotDevice : 对端设备
+         * @brief 呼叫请求完成回调事件
+         * @param sessionId : 会话唯一标识
+         * @param peerNodeId : 对端设备 NodeId
+         * @param errCode : 错误代码，0表示呼叫请求成功
          */
-        default void onPeerAnswer(IotDevice iotDevice) {}
+        default void onDialDone(final UUID sessionId, final String peerNodeId, int errCode) {}
 
         /**
-         * @brief 对端设备挂断呼叫或通话
-         * @param iotDevice : 对端设备
+         * @brief 对端接听回调事件
+         * @param sessionId : 会话唯一标识
+         * @param peerNodeId : 对端设备 NodeId
          */
-        default void onPeerHangup(IotDevice iotDevice) {}
+        default void onPeerAnswer(final UUID sessionId, final String peerNodeId) {}
 
         /**
-         * @brief 对端设备超时无人接听
-         * @param iotDevice : 对端设备
+         * @brief 对端挂断回调事件，此时再次通过sessionId查询会话对端已经查询不到了
+         * @param sessionId : 会话唯一标识
+         * @param peerNodeId : 对端设备 NodeId
          */
-        default void onPeerTimeout(IotDevice iotDevice) {}
+        default void onPeerHangup(final UUID sessionId, final String peerNodeId) {}
+
+        /**
+         * @brief 呼叫对端超时无响应回调事件
+         * @param sessionId : 会话唯一标识
+         * @param peerNodeId : 对端设备 NodeId
+         */
+        default void onPeerTimeout(final UUID sessionId, final String peerNodeId) {}
 
         /**
          * @brief 对端首帧出图
-         * @param iotDevice : 对端设备
+         * @param sessionId : 会话唯一标识
          * @param videoWidth : 首帧视频宽度
          * @param videoHeight : 首帧视频高度
          */
-        default void onPeerFirstVideo(IotDevice iotDevice, int videoWidth, int videoHeight) {}
+        default void onPeerFirstVideo(final UUID sessionId, int videoWidth, int videoHeight) {}
 
         /**
          * @brief 有其他用户上线进入通话事件 (非当前用户)
          * @param uid : 上线用户的 RTC userId
          * @param onlineUserCount : 当前在线的总用户数量
          */
-        default void onUserOnline(int uid, int onlineUserCount) {}
+        default void onOtherUserOnline(final UUID sessionId, int uid, int onlineUserCount) {}
 
         /**
          * @brief 有其他用户退出进入通话事件 （非当前用户）
          * @param uid : 退出用户的 RTC userId
          * @param onlineUserCount : 当前仍然在线的总用户数量
          */
-        default void onUserOffline(int uid, int onlineUserCount) {}
+        default void onOtherUserOffline(final UUID sessionId, int uid, int onlineUserCount) {}
 
         /**
          * @brief 错误事件，在呼叫系统中遇到任意错误时发生
-         *         触发该事件后，整个呼叫过程全部清除
+         * @param sessionId : 会话唯一标识
          * @param errCode : 错误代码
          */
-        default void onCallkitError(int errCode) {}
+        default void onSessionError(final UUID sessionId, int errCode) {}
 
         /**
          * @brief 录像错误事件
+         * @param sessionId : 会话唯一标识
          * @param errCode : 错误码
          */
-        default void onRecordingError(int errCode) {}
+        default void onRecordingError(final UUID sessionId, int errCode) {}
+
+        /**
+         * @brief 设备端截图完成事件
+         * @param sessionId : 会话唯一标识
+         * @param errCode : 错误码：0表示截图成功；-1表示写入文件失败或JPEG编码失败；
+         *                  -2表示方法调用后 1秒内没有收到指定用户的视频帧；-3表示截图调用过于频繁
+         * @param filePath : 截图保存的路径
+         * @param width : 截图宽度
+         * @param height : 截图高度
+         */
+        default void onCaptureFrameDone(final UUID sessionId, int errCode,
+                                        final String filePath, int width, int height) {}
+    }
+
+    /**
+     * @brief 主叫参数
+     */
+    public static class DialParam {
+        public String mPeerNodeId;          ///< 要呼叫的对端设备 NodeId
+        public String mAttachMsg;           ///< 主叫呼叫附带信息
+        public boolean mPubLocalAudio;      ///< 设备端接听后是否立即推送本地音频流
+
+        @Override
+        public String toString() {
+            String infoText = "{\n mPeerNodeId=" + mPeerNodeId
+                    + ",\n mAttachMsg=" + mAttachMsg
+                    + ",\n mPubLocalAudio=" + mPubLocalAudio + " }";
+            return infoText;
+        }
+    }
+
+    /**
+     * @brief 主叫请求返回结果
+     */
+    public static class DialResult {
+        public UUID mSessionId;         ///< 主叫请求后，分配的唯一的 sessionId
+        public int mErrCode;            ///< 请求错误码，有如下的值：
+                                        ///<  XOK--表示成功；
+                                        ///<  XERR_NETWORK-- SDK当前非 RUNNING状态
+                                        ///<  XERR_BAD_STATE-- 相应对端已经在通话中
+                                        ///<  XERR_JSON_WRITE--请求数据组包失败
     }
 
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////////// Public Methods ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
-    /**
-     * @brief 获取当前设备管理状态机
-     * @return 返回状态机
-     */
-    int getStateMachine();
-
     /**
      * @brief 注册回调接口
      * @param callback : 回调接口
@@ -173,133 +240,134 @@ public interface ICallkitMgr {
 
 
     /**
-     * @brief 呼叫设备
-     * @param iotDevice : 要呼叫的设备
-     * @param attachMsg : 呼叫时附带的信息
-     * @return 错误码
+     * @brief 根据 sessionId 获取会话状态信息
+     * @param sessionId : 会话唯一标识
+     * @return 返回会话信息，如果没有查询到会话，则返回null
      */
-    int callDial(IotDevice iotDevice, String attachMsg);
+    SessionInfo getSessionInfo(final UUID sessionId);
+
 
     /**
-     * @brief 挂断当前通话
-     * @return 错误码
+     * @brief 呼叫设备
+     * @param dialParam : 呼叫参数信息
+     * @return 会话的 sessionId 和 错误码，如果呼叫成功则返回唯一的sessionId
      */
-    int callHangup();
+    DialResult callDial(final DialParam dialParam);
+
+    /**
+     * @brief 挂断指定的通话
+     * @param sessionId : 会话唯一标识
+     * @return 错误码，目前总是返回 XOK，如果找不到该会话，清除相关信息，也返回 XOK
+     */
+    int callHangup(final UUID sessionId);
 
     /**
      * @brief 接听当前来电
-     * @return 错误码
+     * @param sessionId : 会话唯一标识
+     * @param pubLocalAudio : 接听后是否立即推送本地音频
+     * @return 错误码，XOK--接听成功；XERR_INVALID_PARAM--没有找到该会话；XERR_BAD_STATE--该会话类型不是来电会话；
      */
-    int callAnswer();
-
-    /**
-     * @brief 设置本地视频显示控件，如果不设置则不显示本地视频
-     * @param localView: 本地视频显示控件
-     * @return 错误码
-     */
-    int setLocalVideoView(SurfaceView localView);
+    int callAnswer(final UUID sessionId, boolean pubLocalAudio);
 
     /**
      * @brief 设置对端视频显示控件，如果不设置则不显示对端视频
-     * @param peerView: 对端视频显示控件
-     * @return 错误码
+     * @param sessionId : 会话的唯一标识
+     * @param peerView: 设备端视频显示控件
+     * @return 错误码，XOK--设置成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
      */
-    int setPeerVideoView(SurfaceView peerView);
-
-    /**
-     * @brief 禁止/启用 本地视频推流到对端
-     * @param mute: 是否禁止
-     * @return 错误码
-     */
-    int muteLocalVideo(boolean mute);
+    int setPeerVideoView(final UUID sessionId, final View peerView);
 
     /**
      * @brief 禁止/启用 本地音频推流到对端
+     * @param sessionId : 会话唯一标识
      * @param mute: 是否禁止
-     * @return 错误码
+     * @return 错误码，XOK--设置成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
      */
-    int muteLocalAudio(boolean mute);
+    int muteLocalAudio(final UUID sessionId, boolean mute);
 
     /**
      * @brief 禁止/启用 拉流对端视频
+     * @param sessionId : 会话唯一标识
      * @param mute: 是否禁止
-     * @return 错误码
+     * @return 错误码，XOK--设置成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
      */
-    int mutePeerVideo(boolean mute);
+    int mutePeerVideo(final UUID sessionId, boolean mute);
 
     /**
      * @brief 禁止/启用 拉流对端音频
+     * @param sessionId : 会话唯一标识
      * @param mute: 是否禁止
-     * @return 错误码
+     * @return 错误码，XOK--设置成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
      */
-    int mutePeerAudio(boolean mute);
-
+    int mutePeerAudio(final UUID sessionId, boolean mute);
 
     /**
-     * @brief 设置音频播放的音量
-     * @param volumeLevel: 音量级别
-     * @return 错误码
+     * @brief 截屏对端视频帧图像请求，该函数是异步调用，截图完成后会触发 onCaptureFrameDone() 回调
+     * @param sessionId : 会话唯一标识
+     * @param saveFilePath : 保存的文件（应用层确保文件有可写权限）
+     * @return 错误码，XOK--截图请求成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
      */
-    int setVolume(int volumeLevel);
-
-
-    /**
-     * @brief 设置音效效果（通常是变声等音效）
-     * @param effectId: 音效Id
-     * @return 错误码
-     */
-    int setAudioEffect(AudioEffectId effectId);
-
-    /**
-     * @brief 获取当前音效
-     * @return 当前音效
-     */
-    AudioEffectId getAudioEffect();
+    int capturePeerVideoFrame(final UUID sessionId, final String saveFilePath);
 
     /**
      * @brief 开始录制当前通话（包括音视频流），仅在通话状态下才能调用
+     *         同一时刻只能启动一路录像功能
+     * @param sessionId : 会话唯一标识
      * @param outFilePath : 输出保存的视频文件路径
-     * @return 错误码
+     * @return 错误码，XOK--开始录制成功； XERR_INVALID_PARAM--没有找到该会话；
      */
-    int talkingRecordStart(final String outFilePath);
+    int talkingRecordStart(final UUID sessionId, final String outFilePath);
 
     /**
      * @brief 停止录制当前通话，仅在通话状态下才能调用
-     * @return 错误码
+     * @param sessionId : 会话唯一标识
+     * @return 错误码，XOK--开始录制成功； XERR_INVALID_PARAM--没有找到该会话；
      */
-    int talkingRecordStop();
+    int talkingRecordStop(final UUID sessionId);
 
     /**
      * @brief 判断当前是否正在本地录制
+     * @param sessionId : 会话唯一标识
      * @return true 表示正在本地录制频道； false: 不在录制
      */
-    boolean isTalkingRecording();
+    boolean isTalkingRecording(final UUID sessionId);
+
+
+
 
 
     /**
      * @brief 获取当前网络状态
-     * @return 返回RTC网络状态信息
+     * @return 返回RTC网络状态信息，如果当前没有任何一个会话，则返回null
      */
     RtcNetworkStatus getNetworkStatus();
 
     /**
-     * @brief 截屏对端视频帧图像
-     * @return 抓取到的视频帧图像
+     * @brief 设置本地播放所有混音后音频的音量
+     * @param volumeLevel: 音量级别
+     * @return 错误码，XOK--设置成功； XERR_UNSUPPORTED--设置失败
      */
-    Bitmap capturePeerVideoFrame();
+    int setPlaybackVolume(int volumeLevel);
+
+    /**
+     * @brief 设置音效效果（通常是变声等音效），如果本地推音频流，会影响推送音频效果
+     * @param effectId: 音效Id
+     * @return 错误码，XOK--设置成功； XERR_UNSUPPORTED--设置失败
+     */
+    int setAudioEffect(final AudioEffectId effectId);
+
+    /**
+     * @brief 获取指定会话的当前音效
+     * @return 返回当前设置的音效
+     */
+    AudioEffectId getAudioEffect();
 
     /**
      * @brief 设置RTC私有参数
      * @param privateParam : 要设置的私参
-     * @return 错误码
+     * @return 错误码，XOK--设置成功； XERR_UNSUPPORTED--设置失败
      */
     int setRtcPrivateParam(String privateParam);
 
 
-    /**
-     * @brief 获取在线的通话用户数（不包括设备端）
-     * @param
-     * @return 返回用户数
-     */
-    int getOnlineUserCount();
 }

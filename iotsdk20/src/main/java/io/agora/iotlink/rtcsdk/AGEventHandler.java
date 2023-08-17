@@ -41,6 +41,4 @@ public interface AGEventHandler {
 
     void onRecorderInfoUpdate(Object info);
 
-    void onRequestToken();
-
 }

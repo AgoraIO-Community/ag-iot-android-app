@@ -5,18 +5,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.agora.iotlinkdemo.widget.CommonTitleView
+    <io.agora.falcondemo.widget.CommonTitleView
         android:id="@+id/title_view"
         style="@style/title_view"
         app:ctv_centerText="@string/account_security"
         tools:ignore="MissingConstraints" />
 
     <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvChangePassword"
+        android:id="@+id/tvNodeId"
         style="@style/tv_mine_style"
         android:layout_height="59dp"
         android:layout_marginTop="10dp"
-        android:text="@string/change_password"
+        android:text="nodeId"
         android:textSize="16sp"
         app:layout_constraintTop_toBottomOf="@id/title_view"
         tools:ignore="MissingConstraints" />
@@ -28,7 +28,7 @@
         android:background="@color/grey_ee"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvChangePassword" />
+        app:layout_constraintTop_toBottomOf="@id/tvNodeId" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvLogOff"
@@ -36,7 +36,7 @@
         android:layout_height="59dp"
         android:text="@string/logoff"
         android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@id/tvChangePassword"
+        app:layout_constraintTop_toBottomOf="@id/tvNodeId"
         tools:ignore="MissingConstraints" />
 
     <View

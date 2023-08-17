@@ -8,8 +8,6 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 31
-        versionCode 12
-        versionName "1.5.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -55,14 +53,14 @@ android {
 
 dependencies {
     implementation project(path: ':avengine')
+    implementation project(path: ':org.eclipse.paho.android.service')
 
     // 声网大重构 RTC SDK & RTM SDK
     implementation files('libs/agora-rtc-sdk.jar')
     implementation files('libs/agora-rtm-sdk.jar')
 
 
-    // AWS亚马逊云服务器
-    def aws_version = "2.25.+"
-    implementation "com.amazonaws:aws-android-sdk-iot:$aws_version"
-    implementation "com.amazonaws:aws-android-sdk-mobile-client:$aws_version"
+    // MQTT使用的库
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+
 }

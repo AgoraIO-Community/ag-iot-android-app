@@ -5,13 +5,11 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
     <color name="def_text_color">#000000</color>
     <!--   未使用 与效果图给出的标注存在差异 BF == 85-->
     <color name="black_57">#575757</color>
     <color name="black_3d">#3d3f46</color>
     <color name="black_a1">#A1A1A1</color>
-    <color name="white">#FFFFFFFF</color>
     <color name="white_f6">#F6F6F6</color>
     <color name="white_f1">#F1F1F1</color>
     <color name="white_e3">#E3E3E3</color>
@@ -43,4 +41,46 @@
     <color name="yellow_e7">#F7B500</color>
     <color name="yellow_f7">#F7B500</color>
     <color name="red_e0">#E02020</color>
+
+    <color name="bg_color_blue_31">#3187FF</color>
+    <color name="bg_color_blue_31_t10">#1a3187FF</color>
+    <color name="bg_color_blue_31_t20">#333187FF</color>
+    <color name="bg_color_blue_31_t50">#7f3187FF</color>
+    <color name="bg_color_blue_66">#66B5FF</color>
+    <color name="black">#FF000000</color>
+    <color name="black33">#333333</color>
+    <color name="black_20_percent">#33000000</color>
+    <color name="black_30_percent">#4D000000</color>
+    <color name="black_50_percent">#80000000</color>
+    <color name="black_70_percent">#B3000000</color>
+    <color name="black_80_percent">#CC000000</color>
+    <color name="blue">#ff26b5ff</color>
+    <color name="green">#00FF00</color>
+    <color name="green_and_blue">#6ED9C8</color>
+    <color name="line_color">#EEEEEE</color>
+    <color name="line_color_d8">#D8D8D8</color>
+    <color name="orange">#FF992E</color>
+    <color name="orange_60">#99FF992E</color>
+    <color name="text_color_26">#262626</color>
+    <color name="text_color_33">#333333</color>
+    <color name="text_color_66">#666666</color>
+    <color name="text_color_99">#999999</color>
+    <color name="text_color_dd">#dddddd</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="white_20_percent">#33FFFFFF</color>
+    <color name="white_60_percent">#99FFFFFF</color>
+    <color name="white_70_percent">#B3FFFFFF</color>
+    <color name="white_80_percent">#CCFFFFFF</color>
+    <color name="white_8_percent">#14FFFFFF</color>
+    <color name="white_90_percent">#E5FFFFFF</color>
+    <color name="yellow">#f4ea2a</color>
+    <style name="dialog_complete" parent="@android:style/Theme.Dialog">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
 </resources>

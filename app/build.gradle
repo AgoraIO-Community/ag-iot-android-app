@@ -8,11 +8,11 @@ android {
     compileSdkVersion rootProject.ext.android.compileSdkVersion
 
     defaultConfig {
-        applicationId "io.agora.iotlinkdemo"
+        applicationId "io.agora.falcondemo"
         minSdkVersion rootProject.ext.android.minSdkVersion
         targetSdkVersion rootProject.ext.android.targetSdkVersion
-        versionCode 50
-        versionName "1.5.0.8"
+        versionCode 53
+        versionName "2.0.0.13"
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
@@ -71,6 +71,8 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation project(path: ':iotsdk20')
     implementation project(path: ':avengine')
+    implementation project(path: ':org.eclipse.paho.android.service')
+
     kapt rootProject.ext.deps.arouter_kapt
     implementation rootProject.ext.deps.arouter
     implementation rootProject.ext.deps.appcompat
@@ -94,25 +96,10 @@ dependencies {
     // 二维码解析
     implementation files('libs/core-3.5.0.jar')
 
-    // 各手机厂商离线推送SDK
-    //implementation(name: 'oppo_push_v2.1.0', ext: 'aar')
-//    implementation 'com.huawei.hms:push:4.0.2.300'
-//    implementation files('libs/mi_push_v3.6.12.jar')
-//    implementation files('libs/vivo_push_v2.3.1.jar')
-//    implementation 'io.hyphenate:hyphenate-push:0.1.0'  // 环信
-
-//    // Google firebase 离线推送
-//    implementation 'com.google.android.gms:play-services-base:18.1.0'
-//    implementation 'com.google.firebase:firebase-messaging:23.0.6'
-
-
     // IJK播放器
     implementation 'tv.danmaku.ijk.media:ijkplayer-java:0.8.8'
     implementation 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.8.8'
     implementation 'tv.danmaku.ijk.media:ijkplayer-arm64:0.8.8'
     implementation 'tv.danmaku.ijk.media:ijkplayer-exo:0.8.8'
 
-    def aws_version = "2.25.+"
-    implementation "com.amazonaws:aws-android-sdk-iot:$aws_version"
-    implementation "com.amazonaws:aws-android-sdk-mobile-client:$aws_version"
 }

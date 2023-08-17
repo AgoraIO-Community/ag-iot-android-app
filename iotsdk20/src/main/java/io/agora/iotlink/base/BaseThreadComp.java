@@ -100,14 +100,14 @@ public class BaseThreadComp {
     /**
      * @brief 发送消息，如果队列中有相同的消息则删除
      */
-    protected void sendSingleMessage(Message msg) {
+    public void sendSingleMessage(Message msg) {
         synchronized (mMsgQueueLock) {
             mWorkHandler.removeMessages(msg.what);
             mWorkHandler.sendMessage(msg);
         }
     }
 
-    protected void sendSingleMessage(int what, int arg1, int arg2, Object obj, long delayTime) {
+    public void sendSingleMessage(int what, int arg1, int arg2, Object obj, long delayTime) {
         Message msg = new Message();
         msg.what = what;
         msg.arg1 = arg1;
@@ -128,7 +128,7 @@ public class BaseThreadComp {
     /**
      * @brief 从消息队列中移除相应的消息
      */
-    protected void removeMessage(int what) {
+    public void removeMessage(int what) {
         synchronized (mMsgQueueLock) {
            mWorkHandler.removeMessages(what);
         }

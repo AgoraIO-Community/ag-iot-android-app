@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <io.agora.falcondemo.widget.CommonTitleView
+        android:id="@+id/title_view"
+        style="@style/title_view"
+        tools:ignore="MissingConstraints" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvRegister"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="88dp"
+        android:layout_marginStart="50dp"
+        android:text="@string/register_account"
+        android:textColor="@color/def_text_color"
+        android:textSize="28sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_view" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvInputTips"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="13dp"
+        android:text="@string/please_input_accounts"
+        android:textColor="@color/black_50_percent"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/tvRegister"
+        app:layout_constraintTop_toBottomOf="@id/tvRegister" />
+
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etUserId"
+        style="@style/def_et_input"
+        android:layout_marginTop="26dp"
+        android:drawableStart="@mipmap/user"
+        android:enabled="true"
+        android:hint="@string/please_input_account"
+        android:inputType="text"
+        app:layout_constraintStart_toStartOf="@id/tvInputTips"
+        app:layout_constraintTop_toBottomOf="@id/tvInputTips" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/iBtnClearUserId"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:elevation="6dp"
+        android:src="@mipmap/close"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@id/etUserId"
+        app:layout_constraintEnd_toEndOf="@id/etUserId"
+        app:layout_constraintTop_toTopOf="@id/etUserId"
+        tools:visibility="visible" />
+
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnRegister"
+        style="@style/def_btn_full"
+        android:layout_width="285dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="52dp"
+        android:enabled="true"
+        android:text="@string/register_account"
+        app:layout_constraintEnd_toEndOf="@id/etUserId"
+        app:layout_constraintStart_toStartOf="@id/etUserId"
+        app:layout_constraintTop_toBottomOf="@id/etUserId" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
