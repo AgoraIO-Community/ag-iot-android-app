@@ -123,6 +123,7 @@ public class SdkExecutor
     public ApiResult IotAppSdk_release(final BaseData receiveData) throws Exception {
         long t1 = System.currentTimeMillis();
         AIotAppSdkFactory.getInstance().release();
+        mCallbackMap.clear();
         long t2 = System.currentTimeMillis();
 
         return (new ApiResult(ErrCode.XOK, (t2-t1)));
