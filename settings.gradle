@@ -13,7 +13,6 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AgoraLink"
 include ':app'
-include ':wayangapp'
 include ':iotsdk20'
 include ':avengine'
 include ':org.eclipse.paho.android.service'
