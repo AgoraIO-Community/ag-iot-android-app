@@ -260,12 +260,12 @@ public class TalkingEngine implements AGEventHandler,
             ALog.getInstance().w(TAG, "<initialize> set sample rate successful, smplRate=" + smplRate);
         }
 
-        // 设置私参：使用硬件解码
-        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
-        ret = mRtcEngine.setParameters(hwDecoder);
-        if (ret != 0) {
-            ALog.getInstance().e(TAG, "<initialize> fail to set HW decoder, ret=" + ret);
-        }
+//        // 设置私参：使用硬件解码
+//        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
+//        ret = mRtcEngine.setParameters(hwDecoder);
+//        if (ret != 0) {
+//            ALog.getInstance().e(TAG, "<initialize> fail to set HW decoder, ret=" + ret);
+//        }
 
         mRtcEngine.registerVideoFrameObserver(this);
         mRtcEngine.registerAudioFrameObserver(this);
@@ -401,12 +401,12 @@ public class TalkingEngine implements AGEventHandler,
             ALog.getInstance().w(TAG, "<joinChannel> set sample rate successful, smplRate=" + smplRate);
         }
 
-        // 设置私参：使用硬件解码
-        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
-        ret = mRtcEngine.setParameters(hwDecoder);
-        if (ret != 0) {
-            ALog.getInstance().e(TAG, "<joinChannel> fail to set HW decoder, ret=" + ret);
-        }
+//        // 设置私参：使用硬件解码
+//        String hwDecoder = "{\"engine.video.enable_hw_decoder\":true}";
+//        ret = mRtcEngine.setParameters(hwDecoder);
+//        if (ret != 0) {
+//            ALog.getInstance().e(TAG, "<joinChannel> fail to set HW decoder, ret=" + ret);
+//        }
 
         // APP端永远不推视频流
         ret = mRtcEngine.muteLocalVideoStreamEx(true, rtcConnection);
