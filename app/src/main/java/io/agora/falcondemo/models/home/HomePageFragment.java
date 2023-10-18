@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import io.agora.falcondemo.dialog.DialogInputCommand;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
@@ -37,6 +38,7 @@ import io.agora.falcondemo.dialog.DialogNewDevice;
 import io.agora.falcondemo.models.player.DevPreviewActivity;
 import io.agora.falcondemo.utils.AppStorageUtil;
 import io.agora.falcondemo.utils.FileUtils;
+import io.agora.iotlink.rtcsdk.TalkingEngine;
 
 
 public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBinding>
@@ -230,9 +232,15 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
      * @brief 设备管理
      */
     void onBtnDeviceMgr(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        ICallkitMgr.AudioEffectId currAudioEffectId = callkitMgr.getAudioEffect();
+        String effectName = getAudioEffectName(currAudioEffectId);
 
         PopupMenu deviceMenu = new PopupMenu(getActivity(), view);
         getActivity().getMenuInflater().inflate(R.menu.menu_device, deviceMenu.getMenu());
+        MenuItem menuItem = deviceMenu.getMenu().getItem(2);
+        String title = "通话音效 (" + effectName + ")";
+        menuItem.setTitle(title);
 
         deviceMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -244,6 +252,10 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
                     case R.id.m_device_remove:
                         onMenuRemoveDevice();
+                        break;
+
+                    case R.id.m_talk_effect:
+                        onMenuTalkEffect();
                         break;
 
                 }
@@ -357,7 +369,86 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
         // 切换到选择模式
         switchSelectMode(true);
+    }
 
+    /**
+     * @brief 设置通话音效
+     */
+    void onMenuTalkEffect() {
+        PopupMenu effectMenu = new PopupMenu(getActivity(), getBinding().titleView);
+        getActivity().getMenuInflater().inflate(R.menu.menu_audio_effect, effectMenu.getMenu());
+
+        effectMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()){
+                    case R.id.m_audeffect_normal: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.NORMAL);
+                    } break;
+                    case R.id.m_audeffect_ktv: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.KTV);
+                    } break;
+                    case R.id.m_audeffect_concert: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.CONCERT);
+                    } break;
+                    case R.id.m_audeffect_studio: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.STUDIO);
+                    } break;
+                    case R.id.m_audeffect_photograph: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PHONOGRAPH);
+                    } break;
+                    case R.id.m_audeffect_virtualstereo: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.VIRTUALSTEREO);
+                    } break;
+                    case R.id.m_audeffect_spacial: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.SPACIAL);
+                    } break;
+                    case R.id.m_audeffect_ethereal: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.ETHEREAL);
+                    } break;
+                    case R.id.m_audeffect_voice3d: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.VOICE3D);
+                    } break;
+                    case R.id.m_audeffect_uncle: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.UNCLE);
+                    } break;
+                    case R.id.m_audeffect_oldman: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.OLDMAN);
+                    } break;
+                    case R.id.m_audeffect_boy: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.BOY);
+                    } break;
+                    case R.id.m_audeffect_sister: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.SISTER);
+                    } break;
+                    case R.id.m_audeffect_girl: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.GIRL);
+                    } break;
+                    case R.id.m_audeffect_pigking: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PIGKING);
+                    } break;
+                    case R.id.m_audeffect_hulk: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.HULK);
+                    } break;
+                    case R.id.m_audeffect_rnb: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.RNB);
+                    } break;
+                    case R.id.m_audeffect_popular: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.POPULAR);
+                    } break;
+                    case R.id.m_audeffect_pitchcorrection: {
+                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PITCHCORRECTION);
+                    } break;
+                }
+                return true;
+            }
+        });
+        effectMenu.show();
+    }
+
+    void onMenuAudioEffect(ICallkitMgr.AudioEffectId effectId) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        callkitMgr.setAudioEffect(effectId);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -575,6 +666,73 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         }
 
     }
+
+
+    /**
+     * @brief 发送命令 按钮点击事件
+     */
+    void onDevItemCommandClick(View view, int position, DeviceInfo deviceInfo) {
+        if (mDevListAdapter.isInSelectMode()) {
+            return;
+        }
+        if (deviceInfo.mSessionId == null) {
+            return;
+        }
+
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
+        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
+            Log.d(TAG, "<onDevItemCommandClick> not in talking, state=" + sessionInfo.mState);
+            return;
+        }
+
+        boolean signalReady = AIotAppSdkFactory.getInstance().isSignalingReady();
+        if (!signalReady) {
+            popupMessage("Signaling not ready, cannot send command!");
+            return;
+        }
+
+        DialogInputCommand inputCmdDlg = new DialogInputCommand(this.getActivity());
+        inputCmdDlg.setOnButtonClickListener(new BaseDialog.OnButtonClickListener() {
+            @Override
+            public void onLeftButtonClick() {
+            }
+
+            @Override
+            public void onRightButtonClick() {
+            }
+        });
+
+        inputCmdDlg.mSingleCallback = (integer, obj) -> {
+            if (integer == 0) {
+                String commandData = (String)obj;
+
+                int errCode = callkitMgr.sendCommand(deviceInfo.mSessionId, commandData, new ICallkitMgr.OnCmdSendListener() {
+                    @Override
+                    public void onCmdSendDone(int errCode) {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (errCode != ErrCode.XOK) {
+                                    popupMessage("Send command: " + commandData + " failed, errCode=" + errCode);
+                                } else {
+                                    popupMessage("Send command: " + commandData + " successful!");
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (errCode != ErrCode.XOK) {
+                    popupMessage("Send command: " + commandData + " to device failure, errCode=" + errCode);
+                    return;
+                }
+            }
+        };
+        inputCmdDlg.setCanceledOnTouchOutside(false);
+        inputCmdDlg.show();
+    }
+
 
     /**
      * @brief 选择 按钮点击事件
@@ -926,6 +1084,26 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         popupMessage("Capture successful, save to file=" + filePath);
     }
 
+    @Override
+    public void onReceivedCommand(final UUID sessionId, final String recvedCmd) {
+        Log.d(TAG, "<onReceivedCommand> [IOTSDK/] sessionId=" + sessionId
+                + ", recvedCmd=" + recvedCmd);
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
+                if (findResult.mDevInfo == null) {
+                    Log.e(TAG, "<onReceivedCommand> NOT found session, sessionId=" + sessionId);
+                    return;
+                }
+
+                popupMessage("Recv message: " + recvedCmd + " from devNodeId=" + findResult.mDevInfo.mNodeId);
+            }
+        });
+
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     //////////////////// Methods of DeviceList Storage  ///////////////////////
     ///////////////////////////////////////////////////////////////////////////
@@ -974,5 +1152,47 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         Log.d(TAG, "<deviceListStore> stored device list, devCount=" + devCount);
     }
 
+    ///////////////////////////////////////////////////////////////////////
+    //////////////////// Methods for Audio Effect  ///////////////////////
+    ///////////////////////////////////////////////////////////////////////
+    final static ICallkitMgr.AudioEffectId[] mAudEffectIdArray = {
+            ICallkitMgr.AudioEffectId.NORMAL,
+            ICallkitMgr.AudioEffectId.KTV,
+            ICallkitMgr.AudioEffectId.CONCERT,
+            ICallkitMgr.AudioEffectId.STUDIO,
+            ICallkitMgr.AudioEffectId.PHONOGRAPH,
+            ICallkitMgr.AudioEffectId.VIRTUALSTEREO,
+            ICallkitMgr.AudioEffectId.SPACIAL,
+            ICallkitMgr.AudioEffectId.ETHEREAL,
+            ICallkitMgr.AudioEffectId.VOICE3D,
 
+            ICallkitMgr.AudioEffectId.UNCLE,
+            ICallkitMgr.AudioEffectId.OLDMAN,
+            ICallkitMgr.AudioEffectId.BOY,
+            ICallkitMgr.AudioEffectId.SISTER,
+            ICallkitMgr.AudioEffectId.GIRL,
+            ICallkitMgr.AudioEffectId.PIGKING,
+            ICallkitMgr.AudioEffectId.HULK,
+
+            ICallkitMgr.AudioEffectId.RNB,
+            ICallkitMgr.AudioEffectId.POPULAR,
+            ICallkitMgr.AudioEffectId.PITCHCORRECTION
+    };
+
+    final static String[] mAudEffectNameArray = {
+            "原声", "KTV", "演唱会", "录音棚", "留声机", "虚拟立体声", "空旷", "空灵", "3D人声",
+            "大叔", "老男人", "男孩", "少女", "女孩", "猪八戒", "绿巨人",
+            "R&B", "流行", "电音"
+    };
+
+    String getAudioEffectName(ICallkitMgr.AudioEffectId effectId) {
+        int count = mAudEffectIdArray.length;
+        for (int i = 0; i < count; i++) {
+            if (effectId == mAudEffectIdArray[i]) {
+                return mAudEffectNameArray[i];
+            }
+        }
+
+        return mAudEffectNameArray[0];
+    }
 }

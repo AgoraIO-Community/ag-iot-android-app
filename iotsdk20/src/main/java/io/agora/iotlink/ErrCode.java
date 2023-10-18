@@ -125,6 +125,42 @@ public class ErrCode {
     public static final int XERR_CALLKIT_ERR_OPT = -30009;          ///< 不支持的错误操作
     public static final int XERR_CALLKIT_PEER_UNREG = -30010;       ///< 对端未注册
 
+    //
+    // RTM模块相应的错误
+    //
+    public static final int XERR_RTMMGR_BASE = -120000;
+    public static final int XERR_RTMMGR_LOGIN_UNKNOWN = -121001;            ///< RTM登录失败
+    public static final int XERR_RTMMGR_LOGIN_REJECTED = -121002;           ///< RTM登录被拒绝
+    public static final int XERR_RTMMGR_LOGIN_INVALID_ARGUMENT = -121003;   ///< RTM登录时参数错误
+    public static final int XERR_RTMMGR_LOGIN_INVALID_APP_ID = -121004;     ///< RTM登录时appId错误
+    public static final int XERR_RTMMGR_LOGIN_INVALID_TOKEN = -121005;      ///< RTM登录时token错误
+    public static final int XERR_RTMMGR_LOGIN_TOKEN_EXPIRED = -121006;      ///< RTM登录时token过期
+    public static final int XERR_RTMMGR_LOGIN_NOT_AUTHORIZED = -121007;     ///< RTM登录时鉴权失败
+    public static final int XERR_RTMMGR_LOGIN_ALREADY_LOGIN = -121008;      ///< RTM已经登录
+    public static final int XERR_RTMMGR_LOGIN_TIMEOUT = -121009;            ///< RTM登录超时
+    public static final int XERR_RTMMGR_LOGIN_TOO_OFTEN = -121010;          ///< RTM登录太频繁
+    public static final int XERR_RTMMGR_LOGIN_NOT_INITIALIZED = -121011;    ///< RTM未初始化
+    public static final int XERR_RTMMGR_MSG_FAILURE = -122001;              ///< 发送RTM消息失败
+    public static final int XERR_RTMMGR_MSG_TIMEOUT = -122002;              ///< 发送RTM消息超时
+    public static final int XERR_RTMMGR_MSG_PEER_UNREACHABLE = -122003;     ///< 消息不可到达
+    public static final int XERR_RTMMGR_MSG_CACHED_BY_SERVER = -122004;     ///< 消息未发送被缓存了
+    public static final int XERR_RTMMGR_MSG_TOO_OFTEN = -122005;;           ///< 消息发送太频繁
+    public static final int XERR_RTMMGR_MSG_INVALID_USERID = -122006;       ///< RTM用户账号无效
+    public static final int XERR_RTMMGR_MSG_INVALID_MESSAGE = -122007;      ///< RTM消息无效
+    public static final int XERR_RTMMGR_MSG_IMCOMPATIBLE_MESSAGE = -122008; ///< 消息不兼容
+    public static final int XERR_RTMMGR_MSG_NOT_INITIALIZED = -122101;      ///< RTM未初始化发消息
+    public static final int XERR_RTMMGR_MSG_USER_NOT_LOGGED_IN = -122102;   ///< RTM未登录发消息
+    public static final int XERR_RTMMGR_LOGOUT_REJECT = -123001;            ///< RTM登出被拒绝
+    public static final int XERR_RTMMGR_LOGOUT_NOT_INITIALIZED = -123101;   ///< RTM未初始化登出
+    public static final int XERR_RTMMGR_LOGOUT_NOT_LOGGED_IN = -123102;     ///< RTM未登录就登出
+    public static final int XERR_RTMMGR_RENEW_FAILURE = -124001;            ///< RTM Renew token失败
+    public static final int XERR_RTMMGR_RENEW_INVALID_ARGUMENT = -124002;   ///< RTM Renew参数错误
+    public static final int XERR_RTMMGR_RENEW_REJECTED = -124003;           ///< RTM Renew被拒绝
+    public static final int XERR_RTMMGR_RENEW_TOO_OFTEN = -124004;          ///< RTM Renew太频繁
+    public static final int XERR_RTMMGR_RENEW_TOKEN_EXPIRED = -124005;      ///< RTM Renew过期
+    public static final int XERR_RTMMGR_RENEW_INVALID_TOKEN = -124006;      ///< RTM Renew无效
+    public static final int XERR_RTMMGR_RENEW_NOT_INITIALIZED = -124101;    ///< RTM未初始化Renew
+    public static final int XERR_RTMMGR_RENEW_NOT_LOGGED_IN = -124102;      ///< RTM未登录就Renew
 
 
 }

@@ -14,6 +14,8 @@ package io.agora.iotlink;
 import android.view.View;
 import java.util.UUID;
 
+import io.agora.iotlink.logger.ALog;
+
 
 /*
  * @brief 呼叫系统接口
@@ -31,7 +33,25 @@ public interface ICallkitMgr {
      * @brief 音效属性
      */
     public enum AudioEffectId {
-        NORMAL, OLDMAN, BABYBOY, BABYGIRL, ZHUBAJIE, ETHEREAL, HULK
+        NORMAL,         ///< 原声
+        KTV,            ///< KTV
+        CONCERT,        ///< 演唱会
+        STUDIO,         ///< 录音棚
+        PHONOGRAPH,     ///< 留声机
+        VIRTUALSTEREO,  ///< 虚拟立体声
+        SPACIAL,        ///< 空旷
+        ETHEREAL,       ///< 空灵
+        VOICE3D,        ///< 3D人声
+        UNCLE,          ///< 大叔
+        OLDMAN,         ///< 老男人
+        BOY,            ///< 男孩
+        SISTER,         ///< 少女
+        GIRL,           ///< 女孩
+        PIGKING,        ///< 猪八戒
+        HULK,           ///< 绿巨人 浩克
+        RNB,            ///< R&B
+        POPULAR,        ///< 流行
+        PITCHCORRECTION ///< 电音
     }
 
     /**
@@ -75,6 +95,38 @@ public interface ICallkitMgr {
     }
 
     /**
+     * @brief 视频质量类型
+     */
+    public static final int VIDEOQUALITY_TYPE_DEFAULT = 0x0000; ///< 默认质量
+    public static final int VIDEOQUALITY_TYPE_SR = 0x0001;      ///< 超分
+    public static final int VIDEOQUALITY_TYPE_SI = 0x0002;      ///< 超级画质
+
+    /**
+     * @brief 视频超分程度
+     */
+    public static final int SR_DEGREE_100 = 100;        ///< 1倍超分
+    public static final int SR_DEGREE_133 = 133;        ///< 1.33倍超分
+    public static final int SR_DEGREE_150 = 150;        ///< 1.5倍超分
+    public static final int SR_DEGREE_200 = 200;        ///< 2倍超分
+
+    /**
+     * @brief 设置的视频质量参数
+     */
+    public static class VideoQualityParam {
+        public int mQualityType = VIDEOQUALITY_TYPE_DEFAULT;    ///< 视频质量类型，参考 @VIDEOQUALITY_TYPE_XXXX
+        public int mSrDegree = SR_DEGREE_200;    ///< 超分程度，参考 @SR_DEGREE_XXXX，仅对 VIDEOQUALITY_TYPE_SR有效
+        public int mSiDegree = 256;              ///< 超级画质程度, 0~256 (256最大程度),仅对 VIDEOQUALITY_TYPE_SI有效
+
+        @Override
+        public String toString() {
+            String infoText = "{ mQualityType=" + mQualityType
+                    + ", mSrDegree=" + mSrDegree
+                    + ", mSiDegree=" + mSiDegree + " }";
+            return infoText;
+        }
+    }
+
+    /**
      * @brief 会话信息
      */
     public static class SessionInfo {
@@ -85,6 +137,7 @@ public interface ICallkitMgr {
         public int mState;              ///< 当前会话状态
         public int mType;               ///< 会话类型
         public int mUserCount;          ///< 在线用户数量
+        public VideoQualityParam mVideoQuality = new VideoQualityParam();
 
         @Override
         public String toString() {
@@ -189,6 +242,15 @@ public interface ICallkitMgr {
          */
         default void onCaptureFrameDone(final UUID sessionId, int errCode,
                                         final String filePath, int width, int height) {}
+
+        /**
+         * @brief 接收到设备端的命令
+         * @param sessionId : 会话唯一标识
+         * @param recvedCmd : 命令数据
+         */
+        default void onReceivedCommand(final UUID sessionId, final String recvedCmd) {}
+
+
     }
 
     /**
@@ -218,6 +280,19 @@ public interface ICallkitMgr {
                                         ///<  XERR_NETWORK-- SDK当前非 RUNNING状态
                                         ///<  XERR_BAD_STATE-- 相应对端已经在通话中
                                         ///<  XERR_JSON_WRITE--请求数据组包失败
+    }
+
+
+    /**
+     * @brief 命令发送回调监听器
+     */
+    public static interface OnCmdSendListener {
+
+        /**
+         * @brief 命令发送完成回调
+         * @param errCode: 命令发送结果错误码
+         */
+        default void onCmdSendDone(int errCode) { }
     }
 
 
@@ -302,6 +377,14 @@ public interface ICallkitMgr {
     int mutePeerAudio(final UUID sessionId, boolean mute);
 
     /**
+     * @brief 设置对端视频质量
+     * @param sessionId : 会话唯一标识
+     * @param videoQuality: 视频质量参数
+     * @return 错误码，XOK--设置成功； XERR_INVALID_PARAM--没有找到该会话； XERR_UNSUPPORTED--设置失败
+     */
+    int setPeerVideoQuality(final UUID sessionId, final VideoQualityParam videoQuality);
+
+    /**
      * @brief 截屏对端视频帧图像请求，该函数是异步调用，截图完成后会触发 onCaptureFrameDone() 回调
      * @param sessionId : 会话唯一标识
      * @param saveFilePath : 保存的文件（应用层确保文件有可写权限）
@@ -332,8 +415,15 @@ public interface ICallkitMgr {
      */
     boolean isTalkingRecording(final UUID sessionId);
 
-
-
+    /**
+     * @brief 发送命令到会话对应的设备端
+     * @param sessionId : 会话唯一标识
+     * @param cmd : 命令内容
+     * @param
+     * @return 错误码，XOK--设置成功； XERR_UNSUPPORTED--设置失败
+     */
+    int sendCommand(final UUID sessionId, final String cmd,
+                       final OnCmdSendListener cmdSendListener);
 
 
     /**

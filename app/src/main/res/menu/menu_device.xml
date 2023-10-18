@@ -11,5 +11,8 @@
         android:icon="@drawable/btn_home_mine_selector"
         android:title="删除设备" />
 
-
+    <item
+        android:id="@+id/m_talk_effect"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="通话音效" />
 </menu>

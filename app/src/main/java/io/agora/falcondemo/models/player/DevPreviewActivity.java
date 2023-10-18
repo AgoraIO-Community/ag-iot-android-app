@@ -1,15 +1,26 @@
 package io.agora.falcondemo.models.player;
 
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.PopupWindow;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
+
+import com.agora.baselibrary.utils.ScreenUtils;
 
 import java.util.UUID;
 
 import io.agora.iotlink.AIotAppSdkFactory;
+import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.falcondemo.R;
 import io.agora.falcondemo.base.BaseViewBindingActivity;
@@ -24,8 +35,18 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 
 
     private UUID mSessionId = null;
+    private ICallkitMgr.VideoQualityParam mVideoQuality = null;
 
-
+    private PopupWindow mCtrlPnlWnd = null;
+    private View mCtrlPnlView = null;
+    private Button mBtnDefault = null;
+    private Button mBtnSr100 = null;
+    private Button mBtnSr133 = null;
+    private Button mBtnSr150 = null;
+    private Button mBtnSr200 = null;
+    private Button mBtnSi = null;
+    private SeekBar mSbSiDegree = null;
+    private TextView mTvSiDegree = null;
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////// Methods of Override BaseActivity /////////////////////
@@ -43,6 +64,12 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 
         ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(mSessionId);
         getBinding().tvNodeId.setText(sessionInfo.mPeerNodeId);
+        mVideoQuality = sessionInfo.mVideoQuality;
+
+        getBinding().btnPanel.setOnClickListener(view -> {
+            onBtnPannel(view);
+        });
+
 
         Log.d(TAG, "<initView> ");
     }
@@ -93,6 +120,164 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         super.onDestroy();
         Log.d(TAG, "<onDestroy> ");
         mSessionId = null;
+    }
+
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    //////////////// Events and Message Handle Methods ///////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+    void onBtnPannel(View parentView) {
+
+        if ((mCtrlPnlView == null) || (mCtrlPnlWnd == null)) {
+            mCtrlPnlView = LayoutInflater.from(this).inflate(R.layout.layout_fullscrn_ctrl, null);
+            mBtnDefault = (Button)mCtrlPnlView.findViewById(R.id.btnDefault);
+            mBtnSr100 = (Button)mCtrlPnlView.findViewById(R.id.btnSr100);
+            mBtnSr133 = (Button)mCtrlPnlView.findViewById(R.id.btnSr133);
+            mBtnSr150 = (Button)mCtrlPnlView.findViewById(R.id.btnSr150);
+            mBtnSr200 = (Button)mCtrlPnlView.findViewById(R.id.btnSr200);
+            mBtnSi = (Button)mCtrlPnlView.findViewById(R.id.btnSi);
+            mSbSiDegree = (SeekBar)mCtrlPnlView.findViewById(R.id.sbSiDegree);
+            mTvSiDegree = (TextView)mCtrlPnlView.findViewById(R.id.tvSiDegree);
+
+            mBtnDefault.setOnClickListener(view -> {
+                onBtnDefault(view);
+            });
+
+            mBtnSr100.setOnClickListener(view -> {
+                onBtnSr100(view);
+            });
+
+            mBtnSr133.setOnClickListener(view -> {
+                onBtnSr133(view);
+            });
+
+            mBtnSr150.setOnClickListener(view -> {
+                onBtnSr150(view);
+            });
+
+            mBtnSr200.setOnClickListener(view -> {
+                onBtnSr200(view);
+            });
+
+            mBtnSi.setOnClickListener(view -> {
+                onBtnSi(view);
+            });
+
+            mTvSiDegree.setText("画质深度: 256");
+
+            mSbSiDegree.setMax(256);
+            mSbSiDegree.setProgress(mVideoQuality.mSiDegree);
+            mSbSiDegree.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    onSiDegreeChanged(seekBar.getProgress(), seekBar.getMax());
+                }
+            });
+
+
+            mCtrlPnlWnd = new PopupWindow(this);
+            mCtrlPnlWnd.setContentView(mCtrlPnlView);
+            mCtrlPnlWnd.setWidth(ScreenUtils.dp2px(460));
+            mCtrlPnlWnd.setHeight(ScreenUtils.dp2px(240));
+        }
+
+        mCtrlPnlWnd.setFocusable(true);
+        mCtrlPnlWnd.setOutsideTouchable(true);
+        mCtrlPnlWnd.showAtLocation(mCtrlPnlView, Gravity.LEFT|Gravity.BOTTOM, 10, 10);
+    }
+
+    void onBtnDefault(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_DEFAULT;
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to defalut successful!");
+        } else {
+            popupMessage("Set video quality to defalut failure, errCode=" + errCode);
+        }
+    }
+
+    void onBtnSr100(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SR;
+        mVideoQuality.mSiDegree = ICallkitMgr.SR_DEGREE_100;
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SR_1X successful!");
+        } else {
+            popupMessage("Set video quality to SR_1X failure, errCode=" + errCode);
+        }
+    }
+    void onBtnSr133(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SR;
+        mVideoQuality.mSiDegree = ICallkitMgr.SR_DEGREE_133;
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SR_1.33X successful!");
+        } else {
+            popupMessage("Set video quality to SR_1.33X failure, errCode=" + errCode);
+        }
+    }
+    void onBtnSr150(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SR;
+        mVideoQuality.mSiDegree = ICallkitMgr.SR_DEGREE_150;
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SR_1.5X successful!");
+        } else {
+            popupMessage("Set video quality to SR_1.5X failure, errCode=" + errCode);
+        }
+    }
+
+    void onBtnSr200(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SR;
+        mVideoQuality.mSiDegree = ICallkitMgr.SR_DEGREE_200;
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SR_2X successful!");
+        } else {
+            popupMessage("Set video quality to SR_2X failure, errCode=" + errCode);
+        }
+    }
+
+    void onBtnSi(View view) {
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SI;
+        mVideoQuality.mSiDegree = mSbSiDegree.getProgress();
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " successful!");
+        } else {
+            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " failure, errCode=" + errCode);
+        }
+    }
+
+    void onSiDegreeChanged(int sbProgress, int sbMax) {
+        Log.d(TAG, "<onSiDegreeChanged> sbProgress=" + sbProgress + ", sbMax=" + sbMax);
+
+        mTvSiDegree.setText("画质深度: " + sbProgress);
+
+        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        mVideoQuality.mQualityType = ICallkitMgr.VIDEOQUALITY_TYPE_SI;
+        mVideoQuality.mSiDegree = mSbSiDegree.getProgress();
+        int errCode = callkitMgr.setPeerVideoQuality(mSessionId, mVideoQuality);
+        if (errCode == ErrCode.XOK) {
+            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " successful!");
+        } else {
+            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " failure, errCode=" + errCode);
+        }
     }
 
 

@@ -25,12 +25,11 @@ public interface IAgoraIotAppSdk  {
     // SDK 状态机
     //
     public static final int SDK_STATE_INVALID = 0x0000;             ///< SDK未初始化
-    public static final int SDK_STATE_INITIALIZED = 0x0001;         ///< SDK初始化完成，但还未就绪
-    public static final int SDK_STATE_PREPARING = 0x0002;           ///< SDK正在就绪中
-    public static final int SDK_STATE_RUNNING = 0x0003;             ///< SDK就绪完成，可以正常使用
+    public static final int SDK_STATE_INITIALIZED = 0x0001;         ///< SDK初始化完成，但还未登录
+    public static final int SDK_STATE_LOGIN_ONGOING = 0x0002;       ///< SDK正在登录中
+    public static final int SDK_STATE_RUNNING = 0x0003;             ///< SDK登录完成，可以正常使用
     public static final int SDK_STATE_RECONNECTING = 0x0004;        ///< SDK正在内部重连中，暂时不可用
-    public static final int SDK_STATE_UNPREPARING = 0x0005;         ///< SDK正在注销处理，完成后切换到初始化完成状态
-
+    public static final int SDK_STATE_LOGOUT_ONGOING = 0x0005;      ///< SDK正在注销处理，完成后切换到初始化完成状态
 
     //
     // SDK 状态机变化原因
@@ -52,6 +51,12 @@ public interface IAgoraIotAppSdk  {
          * @param reason : 状态变化原因，参考 @SDK_REASON_XXXX
          */
         void onSdkStateChanged(int oldSdkState, int newSdkState, int reason);
+
+        /**
+         * @brief 在信令状态机变化时回调
+         * @param isSignalingValid : 当前是否可以收发信令
+         */
+        void onSignalingStateChanged(boolean isSignalingValid);
     }
 
     /**
@@ -75,18 +80,18 @@ public interface IAgoraIotAppSdk  {
 
 
     /**
-     * @brief SDK就绪监听器，errCode=0表示就绪成功
+     * @brief SDK登录监听器，errCode=0表示就绪成功
      */
-    public interface OnPrepareListener {
-        void onSdkPrepareDone(final PrepareParam paramParam, int errCode);
+    public interface OnLoginListener {
+        void onSdkLoginDone(final LoginParam loginParam, int errCode);
     }
 
     /**
-     * @brief SDK就绪参数，其中 mClientType值如下：
+     * @brief SDK登录参数，其中 mClientType值如下：
      *        1: Web;  2: Phone;  3: Pad;  4: TV;  5: PC;  6: Mini_app
      */
-    public static class PrepareParam {
-        public String mUserId;
+    public static class LoginParam {
+        public String mUserId;          ///< 登录的用户Id
         public int mClientType;
 
         @Override
@@ -123,28 +128,34 @@ public interface IAgoraIotAppSdk  {
      */
     int getStateMachine();
 
+    /**
+     * @brief 判断当前信令是否可用，如果可用则可以收发信令命令
+     * @return true--可以收发信令命令；  false--不能收发信令命令
+     */
+    boolean isSignalingReady();
+
 
     /**
-     * @brief 就绪准备操作，仅在 SDK_STATE_INITIALIZED 状态下才能调用，异步调用，
-     *        异步操作完成后，通过 onSdkPrepareDone() 回调就绪操作结果
-     *        如果就绪操作成功，则 SDK状态切换到 SDK_STATE_RUNNING 状态
-     *        如果就绪操作失败，则 SDK状态切换回 SDK_STATE_INITIALIZED
-     * @param prepareParam : 就绪操作的参数
-     * @param prepareListener : 就绪操作监听器
-     * @return 返回错误码，XOK--就绪操作请求成功，SDK状态会切换到 SDK_STATE_PREPARING 开始异步就绪操作
+     * @brief 登录操作，仅在 SDK_STATE_INITIALIZED 状态下才能调用，异步调用，
+     *        异步操作完成后，通过 onSdkLoginDone() 回调就绪操作结果
+     *        如果登录操作成功，则 SDK状态切换到 SDK_STATE_RUNNING 状态
+     *        如果登录操作失败，则 SDK状态切换回 SDK_STATE_INITIALIZED
+     * @param loginParam : 登录操作的参数
+     * @param loginListener : 登录操作完成监听器
+     * @return 返回错误码，XOK--就绪操作请求成功，SDK状态会切换到 SDK_STATE_LOGIN_ONGOING 开始异步就绪操作
      *                   XERR_BAD_STATE-- 当前 非SDK_STATE_INITIALIZED 状态下调用本函数
      */
-    int prepare(final PrepareParam prepareParam, final OnPrepareListener prepareListener);
+    int login(final LoginParam loginParam, final OnLoginListener loginListener);
 
 
     /**
-     * @brief 逆就绪停止运行操作，仅在 SDK_STATE_RUNNING 或者 SDK_STATE_RECONNECTING 或者 SDK_STATE_PREPARING
+     * @brief 登出操作，仅在 SDK_STATE_RUNNING 或者 SDK_STATE_RECONNECTING 或者 SDK_STATE_LOGIN_ONGOING
      *         这三种状态下才能调用，同步调用
-     *         该函数会触发SDK状态先切换到 SDK_STATE_UNPREPARING 状态，然后切换到 SDK_STATE_INITIALIZED 状态
+     *         该函数会触发SDK状态先切换到 SDK_STATE_LOGOUT_ONGOING 状态，然后切换到 SDK_STATE_INITIALIZED 状态
      * @return 返回错误码， XOK--逆就绪操作请求成功，SDK状态会切换到 SDK_STATE_INITIALIZED
-     *                   XERR_BAD_STATE-- 当前SDK状态不是 SDK_STATE_RUNNING 或者 SDK_STATE_RUNNING
+     *                   XERR_BAD_STATE-- 当前SDK状态不是上述三种状态之一
      */
-    int unprepare();
+    int logout();
 
     /**
      * @brief 获取就绪后的本地 userId

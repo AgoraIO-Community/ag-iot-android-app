@@ -31,6 +31,8 @@ import io.agora.iotlink.callkit.SessionCtx;
 import io.agora.iotlink.callkit.SessionMgr;
 import io.agora.iotlink.logger.ALog;
 import io.agora.iotlink.rtcsdk.TalkingEngine;
+import io.agora.iotlink.rtmsdk.RtmMgrComp;
+import io.agora.iotlink.rtmsdk.RtmPacket;
 import io.agora.iotlink.transport.TransPacket;
 import io.agora.iotlink.transport.TransPktQueue;
 import io.agora.iotlink.utils.JsonUtils;
@@ -39,7 +41,8 @@ import io.agora.rtc2.Constants;
 /*
  * @brief 呼叫系统管理器
  */
-public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEngine.ICallback {
+public class CallkitMgr extends BaseThreadComp
+        implements ICallkitMgr, TalkingEngine.ICallback     {
 
 
     ////////////////////////////////////////////////////////////////////////
@@ -85,6 +88,9 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     private SessionMgr mSessionMgr = new SessionMgr();
     private TalkingEngine mTalkEngine = new TalkingEngine();   ///< 通话引擎
     private static final Object mTalkEngLock = new Object();   ///< 通话引擎同步访问锁
+    private AudioEffectId mAudioEffectId = AudioEffectId.NORMAL;    ///< 音频特性
+
+
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -100,6 +106,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         mSessionMgr.clear();
         mViewMgr.clear();
         mRecvPktQueue.clear();
+
+
 
         // 启动呼叫系统的工作线程
         runStart(TAG);
@@ -120,6 +128,28 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
 
     }
 
+    /**
+     * @brief 获取当前所有会话列表
+     */
+    public List<SessionCtx> getAllSessionList() {
+        List<SessionCtx> sessionList = mSessionMgr.getAllSessionList();
+        return sessionList;
+    }
+
+    /**
+     * @brief 接收到 RTM数据包事件中调用
+     */
+    public void onRtmRecvedPacket(final RtmPacket recvedPacket) {
+        ALog.getInstance().d(TAG, "<onRtmRecvedPacket> recvedPacket=" + recvedPacket);
+
+        SessionCtx sessionCtx = mSessionMgr.findSessionByDevNodeId(recvedPacket.mPeerId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<onRtmRecvedPacket> not found session by devNodeId=" + recvedPacket.mPeerId);
+            return;
+        }
+
+        CallbackRtmCmd(sessionCtx, recvedPacket.mPktData);
+    }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -219,6 +249,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         sessionInfo.mState = sessionCtx.mState;
         sessionInfo.mType = sessionCtx.mType;
         sessionInfo.mUserCount = sessionCtx.mUserCount;
+        sessionInfo.mVideoQuality = sessionCtx.mVideoQuality;
 
         ALog.getInstance().d(TAG, "<getSessionInfo> sessionInfo=" + sessionInfo);
         return sessionInfo;
@@ -448,6 +479,27 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     }
 
     @Override
+    public int setPeerVideoQuality(final UUID sessionId, final VideoQualityParam videoQuality) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<setPeerVideoQuality> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
+        // 更新 sessionCtx 内容
+        sessionCtx.mVideoQuality = videoQuality;
+        mSessionMgr.updateSession(sessionCtx);
+
+        boolean ret;
+        synchronized (mTalkEngLock) {
+            ret = mTalkEngine.setPeerVideoQuality(sessionCtx, videoQuality);
+        }
+
+        ALog.getInstance().d(TAG, "<setPeerVideoQuality> done, ret=" + ret);
+        return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
+    }
+
+    @Override
     public int capturePeerVideoFrame(final UUID sessionId, final String saveFilePath) {
         SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
         if (sessionCtx == null) {
@@ -500,10 +552,6 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         return ret;
     }
 
-    /**
-     * @brief 判断当前是否正在本地录制
-     * @return true 表示正在本地录制频道； false: 不在录制
-     */
     @Override
     public boolean isTalkingRecording(final UUID sessionId) {
         SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
@@ -519,6 +567,19 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
 
         ALog.getInstance().d(TAG, "<isTalkingRecording> done, recording=" + recording);
         return recording;
+    }
+
+    @Override
+    public int sendCommand(final UUID sessionId, final String cmd,
+                           final OnCmdSendListener cmdSendListener  ) {
+        SessionCtx sessionCtx = mSessionMgr.getSession(sessionId);
+        if (sessionCtx == null) {
+            ALog.getInstance().e(TAG, "<sendCommand> not found session, sessionId=" + sessionId);
+            return ErrCode.XERR_INVALID_PARAM;
+        }
+
+        int ret = mSdkInstance.rtmSendPacketToDev(sessionCtx, cmd, cmdSendListener);
+        return ret;
     }
 
     @Override
@@ -547,75 +608,24 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
 
     @Override
     public int setAudioEffect(AudioEffectId effectId) {
-        int voice_changer = Constants.AUDIO_EFFECT_OFF;
-        switch (effectId) {
-            case OLDMAN:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
-                break;
-
-            case BABYBOY:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_BOY;
-                break;
-
-            case BABYGIRL:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_GIRL;
-                break;
-
-            case ZHUBAJIE:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_PIGKING;
-                break;
-
-            case ETHEREAL:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_SISTER;
-                break;
-
-            case HULK:
-                voice_changer = Constants.VOICE_CHANGER_EFFECT_HULK;
-                break;
-        }
-
-        boolean ret;
+        boolean ret = true;
         synchronized (mTalkEngLock) {
-            ret = mTalkEngine.setAudioEffect(voice_changer);
+            mAudioEffectId = effectId;
+            if (mTalkEngine.isReady()) {
+                ret = mTalkEngine.setAudioEffect(effectId);
+            }
         }
 
         ALog.getInstance().d(TAG, "<setAudioEffect> done, ret=" + ret
-                + ", voice_changer=" + voice_changer);
+                + ", effectId=" + effectId);
         return (ret ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED);
     }
 
     @Override
     public AudioEffectId getAudioEffect() {
-        int voice_changer;
+        AudioEffectId effectId;
         synchronized (mTalkEngLock) {
-            voice_changer = mTalkEngine.getAudioEffect();
-        }
-
-        AudioEffectId effectId = AudioEffectId.NORMAL;
-        switch (voice_changer) {
-            case Constants.VOICE_CHANGER_EFFECT_OLDMAN:
-                effectId = AudioEffectId.OLDMAN;
-                break;
-
-            case Constants.VOICE_CHANGER_EFFECT_BOY:
-                effectId = AudioEffectId.BABYBOY;
-                break;
-
-            case Constants.VOICE_CHANGER_EFFECT_GIRL:
-                effectId = AudioEffectId.BABYGIRL;
-                break;
-
-            case Constants.VOICE_CHANGER_EFFECT_PIGKING:
-                effectId = AudioEffectId.ZHUBAJIE;
-                break;
-
-            case Constants.VOICE_CHANGER_EFFECT_SISTER:
-                effectId = AudioEffectId.ETHEREAL;
-                break;
-
-            case Constants.VOICE_CHANGER_EFFECT_HULK:
-                effectId = AudioEffectId.HULK;
-                break;
+            effectId = mAudioEffectId;
         }
 
         return effectId;
@@ -634,6 +644,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         }
         return (ret == Constants.ERR_OK) ? ErrCode.XOK : ErrCode.XERR_UNSUPPORTED;
     }
+
+
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -819,6 +831,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
                 sessionCtx.mRtcToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "token", null);
                 sessionCtx.mChnlName = JsonUtils.parseJsonStringValue(payloadJsonObj, "cname", null);
                 sessionCtx.mLocalUid = JsonUtils.parseJsonIntValue(payloadJsonObj, "uid", -1);
+                sessionCtx.mRtmToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "rtmToken", null);
             }
 
             // 处理主叫服务器回应完成
@@ -834,6 +847,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             // 判断参数字段，注意: 协议包中这里 peerNodeId 是 APP账号的 NodeId，不是设备的NodeId
             //  这里 peerNodeId 就用不到了，判断哪个设备直接用 cname 来判断
             String rtcToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "token", null);
+            String rtmToken = JsonUtils.parseJsonStringValue(payloadJsonObj, "rtmToken", null);
             String chnlName = JsonUtils.parseJsonStringValue(payloadJsonObj, "cname", null);
             String peerNodeId = JsonUtils.parseJsonStringValue(payloadJsonObj, "peerId", null);
             String attachMsg = JsonUtils.parseJsonStringValue(payloadJsonObj, "extraMsg", null);
@@ -853,7 +867,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             }
 
             // 处理MQTT来电消息
-            DoMqttEventIncoming(traceId, attachMsg, chnlName, rtcToken, localUid);
+            DoMqttEventIncoming(traceId, attachMsg, chnlName, rtcToken, localUid, rtmToken);
         }
     }
 
@@ -861,7 +875,8 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
     /**
      * @brief 工作线程中运行，处理来电事件
      */
-    void DoMqttEventIncoming(long traceId, final String attachMsg, final String chnlName, final String rtcToken, int localUid) {
+    void DoMqttEventIncoming(long traceId, final String attachMsg, final String chnlName,
+                             final String rtcToken, int localUid, final String rtmToken) {
         ALog.getInstance().d(TAG, "<DoMqttEventIncoming> Enter, traceId=" + traceId
                     + ", attachMsg=" + attachMsg + ", chnlName=" + chnlName + ", localUid=" + localUid );
 
@@ -872,6 +887,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         SessionCtx newSession = new SessionCtx();
         newSession.mChnlName = chnlName;
         newSession.mRtcToken = rtcToken;
+        newSession.mRtmToken = rtmToken;
         newSession.mLocalNodeId = loalNode.mNodeId;
         newSession.mDevNodeId = chnlName;  // 这里使用cname作为设备端的 nodeId
         newSession.mAttachMsg = attachMsg;
@@ -886,6 +902,12 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         newSession.mSubDevVideo = true;     // 订阅设备视频流
         mSessionMgr.addSession(newSession);
         ALog.getInstance().w(TAG, "<DoMqttEventIncoming> sessionCtx=" + newSession);
+
+
+        // RTM组件中连接设备处理
+        if (!TextUtils.isEmpty(rtmToken)) {
+            mSdkInstance.rtmConnectToDevice(newSession.mLocalNodeId, newSession.mRtmToken);
+        }
 
         // 进入频道，准备被叫通话
         talkingPrepare(newSession);
@@ -926,6 +948,10 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         sessionCtx.mTimestamp = System.currentTimeMillis();  // 更新会话时间戳
         mSessionMgr.updateSession(sessionCtx);
 
+        // RTM组件中连接设备处理
+        if (!TextUtils.isEmpty(sessionCtx.mRtmToken)) {
+            mSdkInstance.rtmConnectToDevice(sessionCtx.mLocalNodeId, sessionCtx.mRtmToken);
+        }
 
         // 进入频道，准备主叫通话
         int errCode = talkingPrepare(sessionCtx);
@@ -1216,6 +1242,14 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
         }
     }
 
+    void CallbackRtmCmd(final SessionCtx sessionCtx, final String cmdData) {
+        synchronized (mCallbackList) {
+            for (ICallkitMgr.ICallback listener : mCallbackList) {
+                listener.onReceivedCommand(sessionCtx.mSessionId, cmdData);
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////
     ///////////////////////////// 通话处理方法 /////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -1242,7 +1276,7 @@ public class CallkitMgr extends BaseThreadComp implements ICallkitMgr, TalkingEn
             bRet = mTalkEngine.joinChannel(sessionCtx);
 
             // 设置音频效果
-            //mTalkEngine.setAudioEffect(mAudioEffect);
+            mTalkEngine.setAudioEffect(mAudioEffectId);
 
             // 设置设备视频帧显示控件
             View displayView = mViewMgr.getDisplayView(sessionCtx.mDevNodeId);

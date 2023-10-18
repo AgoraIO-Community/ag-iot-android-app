@@ -4,6 +4,8 @@ import android.view.View;
 
 import java.util.UUID;
 
+import io.agora.iotlink.ICallkitMgr;
+
 
 /**
  * @brief 记录通话相关信息
@@ -22,6 +24,7 @@ public class SessionCtx  {
     public UUID mSessionId = UUID.randomUUID();    ///< 会话Id，是会话的唯一标识
     public String mChnlName;        ///< 频道名
     public String mRtcToken;        ///< 分配的RTC token
+    public String mRtmToken;        ///< 分配的 RTM token
     public String mLocalNodeId;     ///< 本地的 NodeId
     public String mDevNodeId;       ///< 设备的 NodeId
     public String mAttachMsg;       ///< 呼叫或者来电时的附带消息
@@ -37,6 +40,8 @@ public class SessionCtx  {
     public boolean mPubLocalAudio;  ///< 是否推送本地音频流
     public boolean mSubDevAudio;    ///< 当前是否订阅设备端音频流
     public boolean mSubDevVideo;    ///< 当前是否订阅设备端视频流
+
+    public ICallkitMgr.VideoQualityParam mVideoQuality = new ICallkitMgr.VideoQualityParam(); ///< 视频质量
 
 
     ///////////////////////////////////////////////////////////////////////

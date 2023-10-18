@@ -116,7 +116,7 @@ public class HttpTransport {
      * @return 注册结果信息
      */
     public NodeActiveResult nodeActive(final String appId,
-                                       final IAgoraIotAppSdk.PrepareParam prepareParam)  {
+                                       final IAgoraIotAppSdk.LoginParam prepareParam)  {
         Map<String, String> params = new HashMap();
         JSONObject body = new JSONObject();
         NodeActiveResult result = new NodeActiveResult();

@@ -141,7 +141,7 @@ public class PushApplication extends BaseApplication {
         initParam.mStateListener = new IAgoraIotAppSdk.OnSdkStateListener() {
             @Override
             public void onSdkStateChanged(int oldSdkState, int newSdkState, int reason) {
-                ALog.getInstance().d(TAG, "<initializeEngine.onSdkStateChanged> oldSdkState=" + oldSdkState
+                Log.d(TAG, "<initializeEngine.onSdkStateChanged> oldSdkState=" + oldSdkState
                         + ", newSdkState=" + newSdkState + ", reason=" + reason);
                 MainActivity mainActivity = instance.getMainActivity();
                 if (mainActivity == null) {
@@ -153,6 +153,11 @@ public class PushApplication extends BaseApplication {
                         mainActivity.onSdkStateChanged(oldSdkState, newSdkState, reason);
                     }
                 });
+            }
+
+            @Override
+            public void onSignalingStateChanged(boolean isSignalingValid) {
+                Log.d(TAG, "<initializeEngine.onSignalingStateChanged> isSignalingValid=" + isSignalingValid);
             }
         };
         int ret = AIotAppSdkFactory.getInstance().initialize(initParam);

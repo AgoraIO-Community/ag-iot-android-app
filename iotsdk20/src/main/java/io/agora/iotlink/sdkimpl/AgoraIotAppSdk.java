@@ -20,7 +20,10 @@ import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.ICallkitMgr;
 import io.agora.iotlink.base.BaseThreadComp;
+import io.agora.iotlink.callkit.SessionCtx;
 import io.agora.iotlink.logger.ALog;
+import io.agora.iotlink.rtmsdk.RtmMgrComp;
+import io.agora.iotlink.rtmsdk.RtmPacket;
 import io.agora.iotlink.transport.HttpTransport;
 import io.agora.iotlink.transport.MqttTransport;
 import io.agora.iotlink.transport.TransPacket;
@@ -33,32 +36,32 @@ import io.agora.iotlink.transport.TransPktQueue;
  * @brief SDK引擎接口
  */
 public class AgoraIotAppSdk extends BaseThreadComp
-        implements IAgoraIotAppSdk, MqttTransport.ICallback {
+        implements IAgoraIotAppSdk, MqttTransport.ICallback, RtmMgrComp.IRtmMgrCallback {
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Constant Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/AgoraIotAppSdk";
     private static final int MQTT_TIMEOUT = 10000;
-    private static final int UNPREPARE_WAIT_TIMEOUT = 3500;
+    private static final int LOGOUT_WAIT_TIMEOUT = 3500;
 
 
 
     //
     // The message Id
     //
-    private static final int MSGID_PREPARE_NODEACTIVE = 0x0001;
-    private static final int MSGID_PREPARE_INIT_DONE = 0x0002;
+    private static final int MSGID_LOGIN_NODEACTIVE = 0x0001;
+    private static final int MSGID_LOGIN_INIT_DONE = 0x0002;
     private static final int MSGID_MQTT_STATE_CHANGED = 0x0003;
     private static final int MSGID_PACKET_SEND = 0x0004;
     private static final int MSGID_PACKET_RECV = 0x0005;
-    private static final int MSGID_UNPREPARE = 0x0006;
+    private static final int MSGID_LOGOUT = 0x0006;
 
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
     ////////////////////////////////////////////////////////////////////////
-    private final Object mUnprepareEvent = new Object();
+    private final Object mLogoutEvent = new Object();
     private InitParam mInitParam;
     private CallkitMgr mCallkitMgr;
 
@@ -67,8 +70,8 @@ public class AgoraIotAppSdk extends BaseThreadComp
     private LocalNode mLocalNode = new LocalNode();
     private volatile int mStateMachine = AgoraIotAppSdk.SDK_STATE_INVALID;     ///< 当前呼叫状态机
 
-    private PrepareParam mPrepareParam;
-    private OnPrepareListener mPrepareListener;
+    private LoginParam mLoginParam;
+    private OnLoginListener mLoginListener;
     private MqttTransport mMqttTransport = new MqttTransport();
 
     private String mMqttTopicSub;                                   ///< MQTT订阅的主题
@@ -76,7 +79,7 @@ public class AgoraIotAppSdk extends BaseThreadComp
     private TransPktQueue mRecvPktQueue = new TransPktQueue();      ///< 接收数据包队列
     private TransPktQueue mSendPktQueue = new TransPktQueue();      ///< 发送数据包队列
 
-
+    private RtmMgrComp mRtmComp;                                ///< RTM组件
 
     ///////////////////////////////////////////////////////////////////////
     //////////////// Override Methods of IAgoraIotAppSdk //////////////////
@@ -160,53 +163,64 @@ public class AgoraIotAppSdk extends BaseThreadComp
         }
     }
 
+    @Override
+    public boolean isSignalingReady() {
+        int rtmState = mRtmComp.getState();
+        boolean ready = false;
+        if ((rtmState == RtmMgrComp.RTM_STATE_RUNNING) || (rtmState == RtmMgrComp.RTM_STATE_RENEWING)) {
+            ready = true;
+        }
+
+        return ready;
+    }
+
 
     @Override
-    public int prepare(final PrepareParam prepareParam, final OnPrepareListener prepareListener) {
+    public int login(final LoginParam loginParam, final OnLoginListener loginListener) {
         int state = getStateMachine();
         if (state != SDK_STATE_INITIALIZED) {
-            ALog.getInstance().e(TAG, "<prepare> bad status, state=" + state);
+            ALog.getInstance().e(TAG, "<login> bad status, state=" + state);
             return ErrCode.XERR_BAD_STATE;
         }
 
-        setStateMachine(SDK_STATE_PREPARING);    // 设置状态机正在准备操作
+        setStateMachine(SDK_STATE_LOGIN_ONGOING);    // 设置状态机正在准备操作
 
         // 回调状态机变化
-        CallbackStateChanged(SDK_STATE_INITIALIZED, SDK_STATE_PREPARING, SDK_REASON_NONE);
+        CallbackStateChanged(SDK_STATE_INITIALIZED, SDK_STATE_LOGIN_ONGOING, SDK_REASON_NONE);
 
         // 发送消息进行操作
         synchronized (mDataLock) {
-            mPrepareParam = prepareParam;
-            mPrepareListener = prepareListener;
+            mLoginParam = loginParam;
+            mLoginListener = loginListener;
 
             // 设置本地节点信息
             mLocalNode.mReady = false;
-            mLocalNode.mUserId = prepareParam.mUserId;
+            mLocalNode.mUserId = loginParam.mUserId;
         }
-        sendSingleMessage(MSGID_PREPARE_NODEACTIVE, 0, 0, null, 0);
+        sendSingleMessage(MSGID_LOGIN_NODEACTIVE, 0, 0, null, 0);
 
-        ALog.getInstance().d(TAG, "<prepare> prepareParam=" + prepareParam.toString());
+        ALog.getInstance().d(TAG, "<login> loginParam=" + loginParam.toString());
         return ErrCode.XOK;
     }
 
     @Override
-    public int unprepare() {
+    public int logout() {
         int state = getStateMachine();
         if (state == SDK_STATE_INVALID) {
-            ALog.getInstance().e(TAG, "<unprepare> bad status, state=" + state);
+            ALog.getInstance().e(TAG, "<logout> bad status, state=" + state);
             return ErrCode.XERR_BAD_STATE;
         }
         if (state == SDK_STATE_INITIALIZED) {
-            ALog.getInstance().e(TAG, "<unprepare> already unprepared!");
+            ALog.getInstance().e(TAG, "<logout> already unprepared!");
             return ErrCode.XOK;
         }
-        ALog.getInstance().d(TAG, "<unprepare> ==>Enter");
+        ALog.getInstance().d(TAG, "<logout> ==>Enter");
 
         // 设置状态机到 注销状态
-        setStateMachine(SDK_STATE_UNPREPARING);
+        setStateMachine(SDK_STATE_LOGOUT_ONGOING);
 
         // 回调状态机变化
-        CallbackStateChanged(state, SDK_STATE_UNPREPARING, SDK_REASON_NONE);
+        CallbackStateChanged(state, SDK_STATE_LOGOUT_ONGOING, SDK_REASON_NONE);
 
 
         // 释放和重新初始化呼叫模块
@@ -215,14 +229,14 @@ public class AgoraIotAppSdk extends BaseThreadComp
 
         // 删除队列中所有消息, 仅发送注销消息
         removeAllMessages();
-        sendSingleMessage(MSGID_UNPREPARE, 0, 0, null, 0);
+        sendSingleMessage(MSGID_LOGOUT, 0, 0, null, 0);
 
-        synchronized (mUnprepareEvent) {
+        synchronized (mLogoutEvent) {
             try {
-                mUnprepareEvent.wait(UNPREPARE_WAIT_TIMEOUT);
+                mLogoutEvent.wait(LOGOUT_WAIT_TIMEOUT);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                ALog.getInstance().e(TAG, "<unprepare> exception=" + e.getMessage());
+                ALog.getInstance().e(TAG, "<logout> exception=" + e.getMessage());
             }
         }
 
@@ -239,9 +253,9 @@ public class AgoraIotAppSdk extends BaseThreadComp
         setStateMachine(SDK_STATE_INITIALIZED);
 
         // 回调状态机变化
-        CallbackStateChanged(SDK_STATE_UNPREPARING, SDK_STATE_INITIALIZED, SDK_REASON_NONE);
+        CallbackStateChanged(SDK_STATE_LOGOUT_ONGOING, SDK_STATE_INITIALIZED, SDK_REASON_NONE);
 
-        ALog.getInstance().d(TAG, "<unprepare> <==Exit");
+        ALog.getInstance().d(TAG, "<logout> <==Exit");
         return ErrCode.XOK;
     }
 
@@ -281,6 +295,22 @@ public class AgoraIotAppSdk extends BaseThreadComp
         }
     }
 
+    /**
+     * @brief RTM连接到设备
+     */
+    int rtmConnectToDevice(final String localUserId, final String rtmToken) {
+        int ret = mRtmComp.connectToDevice(localUserId, rtmToken);
+        return ret;
+    }
+
+    /**
+     * @brief RTM发生数据包
+     */
+    int rtmSendPacketToDev(final SessionCtx sessionCtx, final String cmdData,
+                           final ICallkitMgr.OnCmdSendListener sendListener     ) {
+        int ret = mRtmComp.sendPacketToDev(sessionCtx, cmdData, sendListener);
+        return ret;
+    }
 
     /**
      * @brief 发送数据包，被其他组件模块调用
@@ -329,11 +359,11 @@ public class AgoraIotAppSdk extends BaseThreadComp
     @Override
     protected void processWorkMessage(Message msg)   {
         switch (msg.what) {
-            case MSGID_PREPARE_NODEACTIVE:
-                    onMessagePrepareNodeActive(msg);
+            case MSGID_LOGIN_NODEACTIVE:
+                    onMessageLoginNodeActive(msg);
                 break;
 
-            case MSGID_PREPARE_INIT_DONE:
+            case MSGID_LOGIN_INIT_DONE:
                     onMessageInitDone(msg);
                 break;
 
@@ -349,7 +379,7 @@ public class AgoraIotAppSdk extends BaseThreadComp
                     onMessagePacketRecv(msg);
                 break;
 
-            case MSGID_UNPREPARE:
+            case MSGID_LOGOUT:
                     onMessageUnprepare(msg);
                 break;
         }
@@ -360,12 +390,12 @@ public class AgoraIotAppSdk extends BaseThreadComp
     @Override
     protected void removeAllMessages() {
         synchronized (mMsgQueueLock) {
-            mWorkHandler.removeMessages(MSGID_PREPARE_NODEACTIVE);
-            mWorkHandler.removeMessages(MSGID_PREPARE_INIT_DONE);
+            mWorkHandler.removeMessages(MSGID_LOGIN_NODEACTIVE);
+            mWorkHandler.removeMessages(MSGID_LOGIN_INIT_DONE);
             mWorkHandler.removeMessages(MSGID_MQTT_STATE_CHANGED);
             mWorkHandler.removeMessages(MSGID_PACKET_SEND);
             mWorkHandler.removeMessages(MSGID_PACKET_RECV);
-            mWorkHandler.removeMessages(MSGID_UNPREPARE);
+            mWorkHandler.removeMessages(MSGID_LOGOUT);
         }
 
         if (mMqttTransport != null) {
@@ -388,35 +418,35 @@ public class AgoraIotAppSdk extends BaseThreadComp
     /**
      * @brief 组件线程消息处理：Node节点激活
      */
-    void onMessagePrepareNodeActive(Message msg) {
+    void onMessageLoginNodeActive(Message msg) {
         int sdkState = getStateMachine();
-        if (sdkState != SDK_STATE_PREPARING) {
-            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> bad state, sdkState=" + sdkState);
+        if (sdkState != SDK_STATE_LOGIN_ONGOING) {
+            ALog.getInstance().e(TAG, "<onMessageLoginNodeActive> bad state, sdkState=" + sdkState);
             return;
         }
-        removeMessage(MSGID_PREPARE_NODEACTIVE);
+        removeMessage(MSGID_LOGIN_NODEACTIVE);
 
         // 激活节点
-        PrepareParam prepareParam;
+        LoginParam loginParam;
         synchronized (mDataLock) {
-            prepareParam = mPrepareParam;
+            loginParam = mLoginParam;
         }
 
-        HttpTransport.NodeActiveResult result = HttpTransport.getInstance().nodeActive(mInitParam.mAppId, prepareParam);
+        HttpTransport.NodeActiveResult result = HttpTransport.getInstance().nodeActive(mInitParam.mAppId, loginParam);
         if (result.mErrCode != ErrCode.XOK) {
-            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> fail to nodeActive, ret=" + result.mErrCode);
-            sendSingleMessage(MSGID_PREPARE_INIT_DONE, result.mErrCode, 0, null, 0);
+            ALog.getInstance().e(TAG, "<onMessageLoginNodeActive> fail to nodeActive, ret=" + result.mErrCode);
+            sendSingleMessage(MSGID_LOGIN_INIT_DONE, result.mErrCode, 0, null, 0);
             return;
         }
-        if (getStateMachine() != SDK_STATE_PREPARING) {
-            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> bad state2, sdkState=" + getStateMachine());
+        if (getStateMachine() != SDK_STATE_LOGIN_ONGOING) {
+            ALog.getInstance().e(TAG, "<onMessageLoginNodeActive> bad state2, sdkState=" + getStateMachine());
             return;
         }
 
             // 更新本地节点信息
         synchronized (mDataLock) {
             mLocalNode.mReady = true;
-            mLocalNode.mUserId = prepareParam.mUserId;
+            mLocalNode.mUserId = loginParam.mUserId;
             mLocalNode.mNodeId = result.mNodeId;
             mLocalNode.mRegion = result.mNodeRegion;
             mLocalNode.mToken = result.mNodeToken;
@@ -454,14 +484,23 @@ public class AgoraIotAppSdk extends BaseThreadComp
                 mLocalNode.mNodeId = null;
             }
             mMqttTransport.release();
-            ALog.getInstance().e(TAG, "<onMessagePrepareNodeActive> fail to mqtt init, ret=" + ret);
-            sendSingleMessage(MSGID_PREPARE_INIT_DONE, ret, 0, null, 0);
+            ALog.getInstance().e(TAG, "<onMessageLoginNodeActive> fail to mqtt init, ret=" + ret);
+            sendSingleMessage(MSGID_LOGIN_INIT_DONE, ret, 0, null, 0);
             return;
         }
 
+        // 创建 RTM组件
+        RtmMgrComp.InitParam rtmInitParam = new RtmMgrComp.InitParam();
+        rtmInitParam.mContext = mInitParam.mContext;
+        rtmInitParam.mRtmAppId = mInitParam.mAppId;
+        rtmInitParam.mSdkInstance = this;
+        rtmInitParam.mCallback = this;
+        mRtmComp = new RtmMgrComp();
+        mRtmComp.initialize(rtmInitParam);
+
         // 发送一个超时延时的事件，这样如果没有 MQTT初始化回调回来，也能继续后续处理
-        sendSingleMessage(MSGID_PREPARE_INIT_DONE, ErrCode.XERR_TIMEOUT, 0, null, MQTT_TIMEOUT);
-        ALog.getInstance().d(TAG, "<onMessagePrepareNodeActive> done");
+        sendSingleMessage(MSGID_LOGIN_INIT_DONE, ErrCode.XERR_TIMEOUT, 0, null, MQTT_TIMEOUT);
+        ALog.getInstance().d(TAG, "<onMessageLoginNodeActive> done");
     }
 
 
@@ -470,26 +509,26 @@ public class AgoraIotAppSdk extends BaseThreadComp
      */
     void onMessageInitDone(Message msg) {
         int sdkState = getStateMachine();
-        if (sdkState != SDK_STATE_PREPARING) {
+        if (sdkState != SDK_STATE_LOGIN_ONGOING) {
             ALog.getInstance().e(TAG, "<onMessageInitDone> bad state, sdkState=" + sdkState);
             return;
         }
-        removeMessage(MSGID_PREPARE_NODEACTIVE);
-        removeMessage(MSGID_PREPARE_INIT_DONE);
+        removeMessage(MSGID_LOGIN_NODEACTIVE);
+        removeMessage(MSGID_LOGIN_INIT_DONE);
 
         // 获取回调数据
-        PrepareParam prepareParam;
-        OnPrepareListener prepareListener;
+        LoginParam loginParam;
+        OnLoginListener loginListener;
         synchronized (mDataLock) {
-            prepareParam = mPrepareParam;
-            prepareListener = mPrepareListener;
+            loginParam = mLoginParam;
+            loginListener = mLoginListener;
         }
 
         if (msg.arg1 != ErrCode.XOK) {  // prepare() 操作有错误
             // 清除数据
             synchronized (mDataLock) {
                 mLocalNode.mReady = false;
-                mLocalNode.mNodeId = prepareParam.mUserId;
+                mLocalNode.mNodeId = loginParam.mUserId;
             }
             if (mMqttTransport != null) {
                 mMqttTransport.release();
@@ -507,7 +546,7 @@ public class AgoraIotAppSdk extends BaseThreadComp
         }
 
         ALog.getInstance().d(TAG, "<onMessageInitDone> done, errCode=" + msg.arg1);
-        prepareListener.onSdkPrepareDone(prepareParam, msg.arg1);
+        loginListener.onSdkLoginDone(loginParam, msg.arg1);
     }
 
     /**
@@ -515,7 +554,7 @@ public class AgoraIotAppSdk extends BaseThreadComp
      */
     void onMessageMqttStateChanged(Message msg) {
         int sdkState = getStateMachine();
-        if (sdkState == SDK_STATE_UNPREPARING || sdkState == SDK_STATE_INITIALIZED){
+        if (sdkState == SDK_STATE_LOGOUT_ONGOING || sdkState == SDK_STATE_INITIALIZED){
             ALog.getInstance().e(TAG, "<onMessageMqttStateChanged> bad state");
             return;
         }
@@ -645,10 +684,17 @@ public class AgoraIotAppSdk extends BaseThreadComp
         }
         mRecvPktQueue.clear();
         mSendPktQueue.clear();
+
+        // 销毁RTM组件
+        if (mRtmComp != null) {
+            mRtmComp.release();
+            mRtmComp = null;
+        }
+
         ALog.getInstance().d(TAG, "<onMessageUnprepare> END");
 
-        synchronized (mUnprepareEvent) {
-            mUnprepareEvent.notify();    // 事件通知
+        synchronized (mLogoutEvent) {
+            mLogoutEvent.notify();    // 事件通知
         }
     }
 
@@ -669,19 +715,55 @@ public class AgoraIotAppSdk extends BaseThreadComp
         }
     }
 
+    /**
+     * @brief 回调RTM状态机变化
+     */
+    void CallbackRtmStateChanged(int newState) {
+        ALog.getInstance().d(TAG, "<CallbackRtmStateChanged> newState=" + newState);
+
+        synchronized (mDataLock) {
+            if (mInitParam.mStateListener == null) {
+                return;
+            }
+
+            if ((newState == RtmMgrComp.RTM_STATE_RUNNING) || (newState == RtmMgrComp.RTM_STATE_RENEWING)) {
+                mInitParam.mStateListener.onSignalingStateChanged(true);
+            } else {
+                mInitParam.mStateListener.onSignalingStateChanged(false);
+            }
+        }
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////// Override Methods of IRtmCallback ////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public void onRtmRecvedPacket(final RtmPacket recvedPacket) {
+        if (mCallkitMgr != null) {
+            mCallkitMgr.onRtmRecvedPacket(recvedPacket);
+        }
+    }
+
+    @Override
+    public void onRtmStateChanged(int newState) {
+        ALog.getInstance().d(TAG, "<onRtmStateChanged> newState=" + newState);
+        CallbackRtmStateChanged(newState);
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////
     //////////// Methods for Override MqttTransport.ICallback ////////////////
     //////////////////////////////////////////////////////////////////////////
     public void onMqttTransInitDone(int errCode) {
         int sdkState = getStateMachine();
-        if (sdkState != SDK_STATE_PREPARING) {
+        if (sdkState != SDK_STATE_LOGIN_ONGOING) {
             ALog.getInstance().d(TAG, "<onMqttTransInitDone> bad state, sdkState=" + sdkState);
             return;
         }
 
-        removeMessage(MSGID_PREPARE_INIT_DONE);  // 移除已有的超时消息
-        sendSingleMessage(MSGID_PREPARE_INIT_DONE, errCode, 0, null, 0);
+        removeMessage(MSGID_LOGIN_INIT_DONE);  // 移除已有的超时消息
+        sendSingleMessage(MSGID_LOGIN_INIT_DONE, errCode, 0, null, 0);
     }
 
     public void onMqttTransStateChanged(int newState) {

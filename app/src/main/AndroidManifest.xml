@@ -61,7 +61,7 @@
 
         <activity
             android:name="io.agora.falcondemo.models.player.DevPreviewActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="landscape" />
 
         <activity
             android:name="io.agora.falcondemo.models.settings.AccountSecurityActivity"

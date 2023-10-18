@@ -89,24 +89,24 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
 
         showLoadingView();
 
-        IAgoraIotAppSdk.PrepareParam prepareParam = new IAgoraIotAppSdk.PrepareParam();
+        IAgoraIotAppSdk.LoginParam prepareParam = new IAgoraIotAppSdk.LoginParam();
         prepareParam.mUserId = account;
         prepareParam.mClientType = 2;
-        int ret = AIotAppSdkFactory.getInstance().prepare(prepareParam, new IAgoraIotAppSdk.OnPrepareListener() {
+        int ret = AIotAppSdkFactory.getInstance().login(prepareParam, new IAgoraIotAppSdk.OnLoginListener() {
             @Override
-            public void onSdkPrepareDone(IAgoraIotAppSdk.PrepareParam prepareParam1, int errCode) {
-                Log.d(TAG, "<onBtnLogin.onSdkPrepareDone> errCode=" + errCode);
+            public void onSdkLoginDone(IAgoraIotAppSdk.LoginParam loginParam, int errCode) {
+                Log.d(TAG, "<onBtnLogin.onSdkLoginDone> errCode=" + errCode);
 
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         hideLoadingView();
                         if (errCode != ErrCode.XOK) {
-                            popupMessage("Fail to prepare SDK, errCode=" + errCode);
+                            popupMessage("Fail to login account, errCode=" + errCode);
                             return;
                         }
 
-                        popupMessageLongTime("Prepare SDK successful!");
+                        popupMessageLongTime("Login account successful!");
                         gotoMainActivity();
 
                     }
@@ -116,7 +116,7 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
 
         if (ret != ErrCode.XOK) {
             hideLoadingView();
-            popupMessage("Fail to prepare sdk, ret=" + ret);
+            popupMessage("Fail to login account, ret=" + ret);
             return;
         }
 

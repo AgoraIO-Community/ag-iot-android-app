@@ -79,7 +79,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
                 @Override
                 public void onRightButtonClick() {
                     // 进行登出操作
-                    int errCode = AIotAppSdkFactory.getInstance().unprepare();
+                    int errCode = AIotAppSdkFactory.getInstance().logout();
                     if (errCode == ErrCode.XOK) {
                         popupMessage("User account logout successful!");
 

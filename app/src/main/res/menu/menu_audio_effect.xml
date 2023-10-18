@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/m_audeffect_normal"
+        android:icon="@drawable/btn_home_index_selector"
+        android:title="原声" />
+
+    <item
+        android:id="@+id/m_audeffect_ktv"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="KTV" />
+
+    <item
+        android:id="@+id/m_audeffect_concert"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="演唱会" />
+
+    <item
+        android:id="@+id/m_audeffect_studio"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="录音棚" />
+
+    <item
+        android:id="@+id/m_audeffect_photograph"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="留声机" />
+
+    <item
+        android:id="@+id/m_audeffect_virtualstereo"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="虚拟立体声" />
+
+    <item
+        android:id="@+id/m_audeffect_spacial"
+       android:icon="@drawable/btn_home_mine_selector"
+        android:title="空旷" />
+
+    <item
+        android:id="@+id/m_audeffect_ethereal"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="空灵" />
+
+    <item
+        android:id="@+id/m_audeffect_voice3d"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="3D人声" />
+
+    <item
+        android:id="@+id/m_audeffect_uncle"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="大叔" />
+
+    <item
+        android:id="@+id/m_audeffect_oldman"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="老男人" />
+
+    <item
+        android:id="@+id/m_audeffect_boy"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="男孩" />
+
+    <item
+        android:id="@+id/m_audeffect_sister"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="少女" />
+
+    <item
+        android:id="@+id/m_audeffect_girl"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="女孩" />
+
+    <item
+        android:id="@+id/m_audeffect_pigking"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="猪八戒" />
+
+    <item
+        android:id="@+id/m_audeffect_hulk"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="绿巨人" />
+
+    <item
+        android:id="@+id/m_audeffect_rnb"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="R &amp; B" />
+
+    <item
+        android:id="@+id/m_audeffect_popular"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="流行" />
+
+    <item
+        android:id="@+id/m_audeffect_pitchcorrection"
+        android:icon="@drawable/btn_home_mine_selector"
+        android:title="电音" />
+
+</menu>

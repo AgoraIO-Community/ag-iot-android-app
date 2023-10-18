@@ -16,6 +16,7 @@ import android.content.Context;
 import android.media.AudioFormat;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
+import android.media.effect.Effect;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
@@ -592,23 +593,109 @@ public class TalkingEngine implements AGEventHandler,
         return (ret == Constants.ERR_OK);
     }
 
+
+    /**
+     * @brief 设置指定频道的设备的视频质量
+     */
+    public boolean setPeerVideoQuality(final SessionCtx sessionCtx,
+                                       final ICallkitMgr.VideoQualityParam videoQuality) {
+        if (mRtcEngine == null) {
+            ALog.getInstance().e(TAG, "<setPeerVideoQuality> bad state");
+            return false;
+        }
+
+        int ret;
+        String enable_sr;
+        String sr_type;
+        String ve_alpha_blending;
+
+        switch (videoQuality.mQualityType) {
+
+            case ICallkitMgr.VIDEOQUALITY_TYPE_SR: {  // 超分
+
+                if (ICallkitMgr.SR_DEGREE_100 == videoQuality.mSrDegree) {
+                    sr_type = "{\"rtc.video.sr_type\" : 6}";
+                } else if  (ICallkitMgr.SR_DEGREE_133 == videoQuality.mSrDegree) {
+                    sr_type = "{\"rtc.video.sr_type\" : 7}";
+                } else if  (ICallkitMgr.SR_DEGREE_150 == videoQuality.mSrDegree) {
+                    sr_type = "{\"rtc.video.sr_type\" : 8}";
+                } else {
+                    sr_type = "{\"rtc.video.sr_type\" : 3}";
+                }
+                ret = mRtcEngine.setParameters(sr_type);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [SR] set sr_type=" + sr_type
+                        + ", ret=" + ret);
+
+                enable_sr = String.format(Locale.getDefault(),
+                        "{\"rtc.video.enable_sr\": {\"enabled\": true, \"mode\": 0, \"uid\": %d}}",
+                        sessionCtx.mPeerUid);
+                ret = mRtcEngine.setParameters(enable_sr);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [SR] set enable_sr=" + enable_sr
+                        + ", ret=" + ret);
+
+            } break;
+
+            case ICallkitMgr.VIDEOQUALITY_TYPE_SI: {  // 超级画质
+
+                sr_type = "{\"rtc.video.sr_type\" : 20}";
+                ret = mRtcEngine.setParameters(sr_type);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [SI] set sr_type=" + sr_type
+                        + ", ret=" + ret);
+
+                ve_alpha_blending = String.format(Locale.getDefault(),
+                        "{\"rtc.video.ve_alpha_blending\": %d}", videoQuality.mSiDegree);
+                ret = mRtcEngine.setParameters(ve_alpha_blending);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [SI] set ve_alpha_blending="
+                                + ve_alpha_blending + ", ret=" + ret);
+
+                enable_sr = String.format(Locale.getDefault(),
+                        "{\"rtc.video.enable_sr\": {\"enabled\": true, \"mode\": 0, \"uid\": %d}}",
+                        sessionCtx.mPeerUid);
+                ret = mRtcEngine.setParameters(enable_sr);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [SI] set enable_sr=" + enable_sr
+                        + ", ret=" + ret);
+
+            } break;
+
+            case ICallkitMgr.VIDEOQUALITY_TYPE_DEFAULT:  // 默认质量
+            default: {
+                enable_sr = String.format(Locale.getDefault(),
+                        "{\"rtc.video.enable_sr\": {\"enabled\": false, \"mode\": 0, \"uid\": %d}}",
+                        sessionCtx.mPeerUid);
+                ret = mRtcEngine.setParameters(enable_sr);
+                ALog.getInstance().d(TAG, "<setPeerVideoQuality> [NONE] set enable_sr=" + enable_sr
+                        + ", ret=" + ret);
+
+            } break;
+        }
+
+        ALog.getInstance().d(TAG, "<setPeerVideoQuality> sessionCtx=" + sessionCtx
+                + ", videoQuality=" + videoQuality);
+        return (ret == Constants.ERR_OK);
+    }
+
     /**
      * @brief 设置指定频道的设备端，是否推送音频流
      */
-    public boolean setAudioEffect(int voice_changer) {
+    public boolean setAudioEffect(ICallkitMgr.AudioEffectId effectId) {
         if (mRtcEngine == null) {
             ALog.getInstance().e(TAG, "<setAudioEffect> bad state");
             return false;
         }
-        mVoiceChanger = voice_changer;
-        int ret = mRtcEngine.setAudioEffectPreset(voice_changer);
-        ALog.getInstance().d(TAG, "<setAudioEffect> voice_changer=" + voice_changer + ", ret=" + ret);
-        return (ret == Constants.ERR_OK);
+        PresetParam presetParam = getPresetByEffectId(effectId);
+        int errCode;
+
+        errCode = mRtcEngine.setAudioProfile(Constants.AudioProfile.getValue(presetParam.mAudioProfile));
+        ALog.getInstance().d(TAG, "<setAudioEffect> mAudioProfile=" + presetParam.mAudioProfile
+                + ", errCode=" + errCode);
+
+        errCode = mRtcEngine.setAudioEffectPreset(presetParam.mAudioPreset);
+        ALog.getInstance().d(TAG, "<setAudioEffect> mAudioPreset=" + presetParam.mAudioPreset
+                + ", errCode=" + errCode);
+
+        return (errCode == Constants.ERR_OK);
     }
 
-    public int getAudioEffect() {
-        return mVoiceChanger;
-    }
 
     /**
      * @brief 设置播放音量
@@ -1557,5 +1644,123 @@ public class TalkingEngine implements AGEventHandler,
         } catch (InterruptedException interruptExp) {
             interruptExp.printStackTrace();
         }
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////// Methods for Audio Effect //////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @brief Rtc的音效参数
+     */
+    private static class PresetParam {
+        public Constants.AudioProfile mAudioProfile;
+        public int mAudioPreset;
+
+    }
+
+    /**
+     * @brief 根据 effectId 来获取 Rtc的音效参数
+     */
+    PresetParam getPresetByEffectId(ICallkitMgr.AudioEffectId effectId) {
+        PresetParam param = new PresetParam();
+        param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+        param.mAudioPreset = Constants.AUDIO_EFFECT_OFF;
+
+        switch (effectId) {
+            case KTV: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_KTV;
+            } break;
+
+            case CONCERT: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_VOCAL_CONCERT;
+            } break;
+
+            case STUDIO: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_STUDIO;
+            } break;
+
+            case PHONOGRAPH: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_PHONOGRAPH;
+            } break;
+
+            case VIRTUALSTEREO: {
+                param.mAudioProfile = Constants.AudioProfile.MUSIC_HIGH_QUALITY;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_VIRTUAL_STEREO;
+            } break;
+
+            case SPACIAL: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_SPACIAL;
+            } break;
+
+            case ETHEREAL: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_ETHEREAL;
+            } break;
+
+            case VOICE3D: {
+                param.mAudioProfile = Constants.AudioProfile.MUSIC_STANDARD_STEREO;
+                param.mAudioPreset = Constants.ROOM_ACOUSTICS_3D_VOICE;
+            } break;
+
+           case UNCLE: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_UNCLE;
+            } break;
+
+            case OLDMAN: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_OLDMAN;
+            } break;
+
+            case BOY: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_BOY;
+            } break;
+
+            case SISTER: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_SISTER;
+            } break;
+
+            case GIRL: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_GIRL;
+            } break;
+
+            case PIGKING: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_PIGKING;
+            } break;
+
+            case HULK: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.VOICE_CHANGER_EFFECT_HULK;
+            } break;
+
+            case RNB: {
+                param.mAudioProfile = Constants.AudioProfile.MUSIC_HIGH_QUALITY;
+                param.mAudioPreset = Constants.STYLE_TRANSFORMATION_RNB;
+            } break;
+
+            case POPULAR: {
+                param.mAudioProfile = Constants.AudioProfile.MUSIC_HIGH_QUALITY;
+                param.mAudioPreset = Constants.STYLE_TRANSFORMATION_POPULAR;
+            } break;
+
+            case PITCHCORRECTION: {
+                param.mAudioProfile = Constants.AudioProfile.DEFAULT;
+                param.mAudioPreset = Constants.PITCH_CORRECTION;
+            } break;
+        }
+
+        return param;
     }
 }
