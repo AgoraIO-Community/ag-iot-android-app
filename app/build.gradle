@@ -11,8 +11,8 @@ android {
         applicationId "io.agora.falcondemo"
         minSdkVersion rootProject.ext.android.minSdkVersion
         targetSdkVersion rootProject.ext.android.targetSdkVersion
-        versionCode 62
-        versionName "2.1.0.8"
+        versionCode 63
+        versionName "2.1.0.9"
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
