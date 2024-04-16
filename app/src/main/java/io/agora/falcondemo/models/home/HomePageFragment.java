@@ -1,7 +1,11 @@
 package io.agora.falcondemo.models.home;
 
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -11,23 +15,31 @@ import android.widget.CompoundButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.agora.baselibrary.base.BaseDialog;
+
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.dialog.DialogInputCommand;
+import io.agora.falcondemo.models.devstream.DevStreamActivity;
+import io.agora.falcondemo.thirdpartyaccount.ThirdAccountMgr;
+import io.agora.falcondemo.utils.DevStreamUtils;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
-import io.agora.iotlink.ICallkitMgr;
 import io.agora.falcondemo.R;
 import io.agora.falcondemo.base.BaseViewBindingFragment;
 import io.agora.falcondemo.base.PermissionHandler;
@@ -38,20 +50,34 @@ import io.agora.falcondemo.dialog.DialogNewDevice;
 import io.agora.falcondemo.models.player.DevPreviewActivity;
 import io.agora.falcondemo.utils.AppStorageUtil;
 import io.agora.falcondemo.utils.FileUtils;
-import io.agora.iotlink.rtcsdk.TalkingEngine;
+import io.agora.iotlink.IConnectionMgr;
+import io.agora.iotlink.IConnectionObj;
+import io.agora.iotlink.base.BaseEvent;
+import io.agora.iotlink.logger.ALog;
 
 
 public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBinding>
-        implements PermissionHandler.ICallback, ICallkitMgr.ICallback  {
+        implements PermissionHandler.ICallback, IConnectionMgr.ICallback, IConnectionObj.ICallback  {
     private static final String TAG = "IOTLINK/HomePageFrag";
 
 
+    //
+    // message Id
+    //
+    private static final int MSGID_HOMEPAGE_CONNECTALL = 0x2001;       ///< 连接所有设备
+
+
+
+
+
+    private volatile boolean mFragmentForeground = false;        ///< 界面是否在前台
     private PermissionHandler mPermHandler;             ///< 权限申请处理
+    private Handler mMsgHandler = null;                 ///< 主线程中的消息处理
 
     private MainActivity mMainActivity;
+    private HomePageFragment mHomeFragment;
     private DeviceListAdapter mDevListAdapter;
     private SwipeRefreshLayout mSwipeRefreshLayout;
-    private AlertDialog mAnswerRjectDlg = null;
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -66,6 +92,9 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     @Override
     public void initView() {
         mMainActivity = (MainActivity)getActivity();
+        mHomeFragment = this;
+        mFragmentForeground = false;
+
         //
         // 初始化设备列表
         //
@@ -77,12 +106,30 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             mDevListAdapter.setRecycleView(getBinding().rvDeviceList);
             getBinding().rvDeviceList.setLayoutManager(new LinearLayoutManager(getActivity()));
             getBinding().rvDeviceList.setAdapter(mDevListAdapter);
+            getBinding().rvDeviceList.setItemViewCacheSize(15);
             mDevListAdapter.setMRVItemClickListener((view, position, data) -> {
             });
         }
         mSwipeRefreshLayout = getBinding().srlDevList;
 
         getBinding().titleView.hideLeftImage();
+
+        // 创建主线程消息处理
+        mMsgHandler = new Handler(getActivity().getMainLooper())
+        {
+            @SuppressLint("HandlerLeak")
+            @RequiresApi(api = Build.VERSION_CODES.M)
+            public void handleMessage(Message msg)
+            {
+                switch (msg.what)
+                {
+                    case MSGID_HOMEPAGE_CONNECTALL:
+                        onMsgConnectAll(msg);
+                        break;
+                }
+            }
+        };
+
 
         //
         //
@@ -96,7 +143,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             mPermHandler.requestNextPermission();
         } else {
             Log.d(TAG, "<initView> permission ready");
-
+            mMsgHandler.sendEmptyMessage(MSGID_HOMEPAGE_CONNECTALL);
         }
 
         Log.d(TAG, "<initView> done");
@@ -145,20 +192,22 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
         } else if (permItems[0].requestId == PermissionHandler.PERM_ID_RECORD_AUDIO) { // 麦克风权限结果
             if (allGranted) {
-            //    doCallDial(mSelectedDev);
+                mMsgHandler.sendEmptyMessage(MSGID_HOMEPAGE_CONNECTALL);
             } else {
                 popupMessage(getString(R.string.no_permission));
             }
         }
     }
 
+
+
     @Override
     public void onStart() {
         super.onStart();
         Log.d(TAG, "<onStart> ");
 
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        callkitMgr.registerListener(this);
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        connectMgr.registerListener(this);
     }
 
     @Override
@@ -166,8 +215,8 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         super.onStop();
         Log.d(TAG, "<onStop> ");
 
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        callkitMgr.unregisterListener(this);
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        connectMgr.unregisterListener(this);
     }
 
     @Override
@@ -175,11 +224,15 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         super.onResume();
         Log.d(TAG, "<onResume> ");
 
-        // 当从全屏播放界面返回来时，要重新设置各个设备的视频播放控件
-        UUID sessionId = PushApplication.getInstance().getFullscrnSessionId();
-        if (sessionId != null) {
-            resetDeviceDisplayView(sessionId);
-            PushApplication.getInstance().setFullscrnSessionId(null);
+        int currentUiPage = PushApplication.getInstance().getUiPage();
+        if (currentUiPage == Constant.UI_PAGE_HOME) {  // 当前界面
+            mFragmentForeground = true;
+
+            // 当从全屏播放界面返回来时，要重新设置各个设备的视频播放控件
+            IConnectionObj connectObj = PushApplication.getInstance().getFullscrnConnectionObj();
+            if (connectObj != null) {
+                resetDeviceDisplayView(connectObj);
+            }
         }
     }
 
@@ -187,6 +240,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     public void onPause() {
         super.onPause();
         Log.d(TAG, "<onPause> ");
+        mFragmentForeground = false;
     }
 
     /**
@@ -229,18 +283,49 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     //////////////////////////// Event & Widget Methods  ///////////////////////
     ///////////////////////////////////////////////////////////////////////////
     /**
+     * @brief 连接所有设备
+     */
+    void onMsgConnectAll(Message msg) {
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        List<DeviceInfo> deviceList = mDevListAdapter.getDatas();
+        int i;
+        for (i = 0; i < deviceList.size(); i++) {
+            DeviceInfo deviceInfo = deviceList.get(i);
+            if (deviceInfo.mConnectObj != null) {
+                continue;
+            }
+
+            // 连接操作
+            String attachMsg = "Call_" + deviceInfo.mNodeId + "_at_" + getTimestamp();
+            IConnectionMgr.ConnectCreateParam createParam = new IConnectionMgr.ConnectCreateParam();
+            createParam.mPeerNodeId = deviceInfo.mNodeId;
+            createParam.mAttachMsg = attachMsg;
+            IConnectionObj connectObj = connectMgr.connectionCreate(createParam);
+            if (connectObj == null) {
+                popupMessage("Connect device: " + deviceInfo.mNodeId + " failure!");
+                return;
+            }
+
+            // 更新 sessionId 和 提示信息
+            connectObj.registerListener(mHomeFragment);  // 注册回调函数
+
+            deviceInfo.mConnectObj = connectObj;
+            mDevListAdapter.setItem(i, deviceInfo);
+        }
+    }
+
+
+    /**
      * @brief 设备管理
      */
     void onBtnDeviceMgr(View view) {
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.AudioEffectId currAudioEffectId = callkitMgr.getAudioEffect();
-        String effectName = getAudioEffectName(currAudioEffectId);
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
 
         PopupMenu deviceMenu = new PopupMenu(getActivity(), view);
         getActivity().getMenuInflater().inflate(R.menu.menu_device, deviceMenu.getMenu());
-        MenuItem menuItem = deviceMenu.getMenu().getItem(2);
-        String title = "通话音效 (" + effectName + ")";
-        menuItem.setTitle(title);
+//        MenuItem menuItem = deviceMenu.getMenu().getItem(2);
+//        String title = "通话音效 (" + effectName + ")";
+//        menuItem.setTitle(title);
 
         deviceMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -257,7 +342,6 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
                     case R.id.m_talk_effect:
                         onMenuTalkEffect();
                         break;
-
                 }
                 return true;
             }
@@ -291,12 +375,12 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
         showLoadingView();
 
-        // 挂断所有要删除的通话
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        // 挂断所有要删除的链接
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
         for (int i = 0; i < selectedCount; i++) {
             DeviceInfo deviceInfo = selectedList.get(i);
-            if (deviceInfo.mSessionId != null) {    // 要删除的设备进行挂断操作
-                callkitMgr.callHangup(deviceInfo.mSessionId);
+            if (deviceInfo.mConnectObj != null) {    // 要删除的设备进行断连操作
+                connectMgr.connectionDestroy(deviceInfo.mConnectObj);
             }
         }
 
@@ -361,7 +445,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 //        int i;
 //        for (i = 0; i < devCount; i++) {
 //            DeviceInfo deviceInfo = deviceInfoList.get(i);
-//            if (deviceInfo.mSessionId != null) {
+//            if (deviceInfo.mConnectionId != null) {
 //                popupMessage("There are some devices in talking, should hangup all devices!");
 //                return;
 //            }
@@ -383,61 +467,61 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()){
                     case R.id.m_audeffect_normal: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.NORMAL);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.NORMAL);
                     } break;
                     case R.id.m_audeffect_ktv: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.KTV);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.KTV);
                     } break;
                     case R.id.m_audeffect_concert: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.CONCERT);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.CONCERT);
                     } break;
                     case R.id.m_audeffect_studio: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.STUDIO);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.STUDIO);
                     } break;
                     case R.id.m_audeffect_photograph: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PHONOGRAPH);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PHONOGRAPH);
                     } break;
                     case R.id.m_audeffect_virtualstereo: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.VIRTUALSTEREO);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.VIRTUALSTEREO);
                     } break;
                     case R.id.m_audeffect_spacial: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.SPACIAL);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.SPACIAL);
                     } break;
                     case R.id.m_audeffect_ethereal: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.ETHEREAL);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.ETHEREAL);
                     } break;
                     case R.id.m_audeffect_voice3d: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.VOICE3D);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.VOICE3D);
                     } break;
                     case R.id.m_audeffect_uncle: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.UNCLE);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.UNCLE);
                     } break;
                     case R.id.m_audeffect_oldman: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.OLDMAN);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.OLDMAN);
                     } break;
                     case R.id.m_audeffect_boy: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.BOY);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.BOY);
                     } break;
                     case R.id.m_audeffect_sister: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.SISTER);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.SISTER);
                     } break;
                     case R.id.m_audeffect_girl: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.GIRL);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.GIRL);
                     } break;
                     case R.id.m_audeffect_pigking: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PIGKING);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PIGKING);
                     } break;
                     case R.id.m_audeffect_hulk: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.HULK);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.HULK);
                     } break;
                     case R.id.m_audeffect_rnb: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.RNB);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.RNB);
                     } break;
                     case R.id.m_audeffect_popular: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.POPULAR);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.POPULAR);
                     } break;
                     case R.id.m_audeffect_pitchcorrection: {
-                        onMenuAudioEffect(ICallkitMgr.AudioEffectId.PITCHCORRECTION);
+                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PITCHCORRECTION);
                     } break;
                 }
                 return true;
@@ -446,9 +530,8 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         effectMenu.show();
     }
 
-    void onMenuAudioEffect(ICallkitMgr.AudioEffectId effectId) {
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        callkitMgr.setAudioEffect(effectId);
+    void onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE effectId) {
+        AIotAppSdkFactory.getInstance().setPublishAudioEffect(effectId);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -456,61 +539,95 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * @brief 呼叫挂断 按钮点击事件
+     * @brief 连接断开 按钮点击事件
      */
     void onDevItemDialHangupClick(View view, int position, DeviceInfo deviceInfo) {
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
 
-        if (deviceInfo.mSessionId == null) {
-            int sdkState = AIotAppSdkFactory.getInstance().getStateMachine();
-            if (sdkState != IAgoraIotAppSdk.SDK_STATE_RUNNING) {
-                popupMessage("Network is reconnecting, call dial later...");
-                return;
-            }
-
-            // 呼叫操作
+        if (deviceInfo.mConnectObj == null) {
+            // 连接操作
             String attachMsg = "Call_" + deviceInfo.mNodeId + "_at_" + getTimestamp();
-            ICallkitMgr.DialParam dialParam = new ICallkitMgr.DialParam();
-            dialParam.mPeerNodeId = deviceInfo.mNodeId;
-            dialParam.mAttachMsg = attachMsg;
-            dialParam.mPubLocalAudio = false;
-            ICallkitMgr.DialResult dialResult = callkitMgr.callDial(dialParam);
-            if (dialResult.mErrCode != ErrCode.XOK) {
-                popupMessage("Call device: " + deviceInfo.mNodeId + " failure, errCode=" + dialResult.mErrCode);
+            IConnectionMgr.ConnectCreateParam createParam = new IConnectionMgr.ConnectCreateParam();
+            createParam.mPeerNodeId = deviceInfo.mNodeId;
+            createParam.mAttachMsg = attachMsg;
+            ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] connect device: " + deviceInfo
+                                    + ", position=" + position);
+            IConnectionObj connectObj = connectMgr.connectionCreate(createParam);
+            if (connectObj == null) {
+                popupMessage("Connect device: " + deviceInfo.mNodeId + " failure!");
                 return;
             }
 
+            // 注册回调函数
+            connectObj.registerListener(mHomeFragment);
 
             // 更新 sessionId 和 提示信息
-            ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(dialResult.mSessionId);
-
-            deviceInfo.mSessionId = dialResult.mSessionId;
-            deviceInfo.mTips = "Dial Requesting...";
-            deviceInfo.mUserCount = sessionInfo.mUserCount;
+            deviceInfo.mConnectObj = connectObj;
             mDevListAdapter.setItem(position, deviceInfo);
 
-            // 设置设备显示控件
-            if (deviceInfo.mVideoView != null) {
-                deviceInfo.mVideoView.setVisibility(View.VISIBLE);
-            }
-            callkitMgr.setPeerVideoView(deviceInfo.mSessionId, deviceInfo.mVideoView);
-
         } else {
-            // 挂断操作
-            int errCode = callkitMgr.callHangup(deviceInfo.mSessionId);
+            // 断开操作
+            ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] disconnect device: " + deviceInfo
+                    + ", position=" + position);
+            int errCode = connectMgr.connectionDestroy(deviceInfo.mConnectObj);
             if (errCode != ErrCode.XOK) {
-                popupMessage("Hangup device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
+                popupMessage("Disconnect device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
                 return;
             }
 
             // 更新设备状态信息
             deviceInfo.clear();
             mDevListAdapter.setItem(position, deviceInfo);
-            popupMessage("Hangup device: " + deviceInfo.mNodeId + " successful!");
+            popupMessage("Disconnect device: " + deviceInfo.mNodeId + " successful!");
         }
+    }
+
+
+    /**
+     * @brief 订阅 按钮点击事件
+     */
+    void onDevItemPreviewClick(View view, int position, DeviceInfo deviceInfo) {
+        if (mDevListAdapter.isInSelectMode()) {
+            return;
+        }
+        if (deviceInfo.mConnectObj == null) {
+            return;
+        }
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemPreviewClick> not connected, state=" + connectInfo.mState);
+            return;
+        }
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        int errCode;
+
+        if (!streamStatus.mSubscribed) {
+            // 订阅流 PUBLIC_1
+            ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] subscribe device: " + deviceInfo
+                    + ", position=" + position);
+            errCode = deviceInfo.mConnectObj.streamSubscribeStart(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, "xxxx");
+            if (errCode != ErrCode.XOK) {
+                popupMessage("Subscribe PUB_1 stream of: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
+                return;
+            }
+
+            errCode = deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+
+        } else {
+            // 取消 流 PUBLIC_1的订阅
+            ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] unsubscribe device: " + deviceInfo
+                    + ", position=" + position);
+            errCode = deviceInfo.mConnectObj.streamSubscribeStop(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            if (errCode != ErrCode.XOK) {
+                popupMessage("Unsubscribe PUB_1 stream of: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
+                return;
+            }
+        }
+
+        mDevListAdapter.setItem(position, deviceInfo);
     }
 
     /**
@@ -520,25 +637,28 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
             return;
         }
-        boolean devMute = (!deviceInfo.mDevMute);
-
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemMuteAudioClick> not in talking, state=" + sessionInfo.mState);
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemMuteAudioClick> not connected, state=" + connectInfo.mState);
             return;
         }
 
-        int errCode = callkitMgr.mutePeerAudio(deviceInfo.mSessionId, devMute);
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        if (!streamStatus.mSubscribed) {
+            popupMessage("The stream have NOT subscribed, please subscribe firstly");
+            return;
+        }
+
+        boolean audioMute = streamStatus.mAudioMute;
+        int errCode = deviceInfo.mConnectObj.muteAudioPlayback(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, (!audioMute));
         if (errCode != ErrCode.XOK) {
             popupMessage("Mute or unmute device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
             return;
         }
 
-        deviceInfo.mDevMute = devMute;
         mDevListAdapter.setItem(position, deviceInfo);
     }
 
@@ -549,41 +669,43 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
+            return;
+        }
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemRecordClick> not connected, state=" + connectInfo.mState);
+            return;
+        }
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        if (!streamStatus.mSubscribed) {
+            popupMessage("The stream have NOT subscribed, please subscribe firstly");
             return;
         }
 
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemRecordClick> not in talking, state=" + sessionInfo.mState);
-            return;
-        }
-
-        boolean recording = callkitMgr.isTalkingRecording(deviceInfo.mSessionId);
+        boolean recording = deviceInfo.mConnectObj.isStreamRecording(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
         if (recording) {
             // 停止录像
-            int errCode = callkitMgr.talkingRecordStop(deviceInfo.mSessionId);
+            int errCode = deviceInfo.mConnectObj.streamRecordStop(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Device: " + deviceInfo.mNodeId + " stop recording failure, errCode=" + errCode);
                 return;
             }
 
-            popupMessage("Device: " + deviceInfo.mNodeId + " recording stopped!");
-            deviceInfo.mRecording = false;
+            popupMessage("Device: " + deviceInfo.mNodeId + " recording stopped, save to file: " + deviceInfo.mRcdFilePath);
             mDevListAdapter.setItem(position, deviceInfo);
 
         } else {
             // 启动录像
-            String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, false);
-            int errCode = callkitMgr.talkingRecordStart(deviceInfo.mSessionId, strSavePath);
+            String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, false);
+            int errCode = deviceInfo.mConnectObj.streamRecordStart(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, strSavePath);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Device: " + deviceInfo.mNodeId + " start recording failure, errCode=" + errCode);
                 return;
             }
 
             popupMessage("Device: " + deviceInfo.mNodeId + " start recording......");
-            deviceInfo.mRecording = true;
+            deviceInfo.mRcdFilePath = strSavePath;
             mDevListAdapter.setItem(position, deviceInfo);
         }
     }
@@ -595,25 +717,22 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
             return;
         }
-        boolean micPush = (!deviceInfo.mMicPush);
-
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemMicClick> not in talking, state=" + sessionInfo.mState);
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemMicClick> not connected, state=" + connectInfo.mState);
             return;
         }
+        boolean audioPublishing = connectInfo.mAudioPublishing;
 
-        int errCode = callkitMgr.muteLocalAudio(deviceInfo.mSessionId, (!micPush));
+        int errCode = deviceInfo.mConnectObj.publishAudioEnable(!audioPublishing, IConnectionObj.AUDIO_CODEC_TYPE.G722);
         if (errCode != ErrCode.XOK) {
             popupMessage("Voice or unvoice device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
             return;
         }
 
-        deviceInfo.mMicPush = micPush;
         mDevListAdapter.setItem(position, deviceInfo);
     }
 
@@ -624,18 +743,16 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
+            return;
+        }
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemFullscrnClick> not connected, state=" + connectInfo.mState);
             return;
         }
 
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemFullscrnClick> not in talking, state=" + sessionInfo.mState);
-            return;
-        }
-
-        PushApplication.getInstance().setFullscrnSessionId(deviceInfo.mSessionId);
+        PushApplication.getInstance().setFullscrnConnectionObj(deviceInfo.mConnectObj);
         gotoDevPreviewActivity();
     }
 
@@ -647,24 +764,26 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
+            return;
+        }
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemShotCaptureClick> not connected, state=" + connectInfo.mState);
+            return;
+        }
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        if (!streamStatus.mSubscribed) {
+            popupMessage("The stream have NOT subscribed, please subscribe firstly");
             return;
         }
 
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemShotCaptureClick> not in talking, state=" + sessionInfo.mState);
-            return;
-        }
-
-        String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, true);
-        int errCode = callkitMgr.capturePeerVideoFrame(deviceInfo.mSessionId, strSavePath);
+        String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, true);
+        int errCode = deviceInfo.mConnectObj.streamVideoFrameShot(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, strSavePath);
         if (errCode != ErrCode.XOK) {
             popupMessage("Device: " + deviceInfo.mNodeId + " shot capture failure, errCode=" + errCode);
             return;
         }
-
     }
 
 
@@ -675,20 +794,12 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         if (mDevListAdapter.isInSelectMode()) {
             return;
         }
-        if (deviceInfo.mSessionId == null) {
+        if (deviceInfo.mConnectObj == null) {
             return;
         }
-
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-        ICallkitMgr.SessionInfo sessionInfo = callkitMgr.getSessionInfo(deviceInfo.mSessionId);
-        if (sessionInfo.mState != ICallkitMgr.SESSION_STATE_TALKING) {  // 只在通话时操作
-            Log.d(TAG, "<onDevItemCommandClick> not in talking, state=" + sessionInfo.mState);
-            return;
-        }
-
-        boolean signalReady = AIotAppSdkFactory.getInstance().isSignalingReady();
-        if (!signalReady) {
-            popupMessage("Signaling not ready, cannot send command!");
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemCommandClick> not connected, state=" + connectInfo.mState);
             return;
         }
 
@@ -706,31 +817,35 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         inputCmdDlg.mSingleCallback = (integer, obj) -> {
             if (integer == 0) {
                 String commandData = (String)obj;
-
-                int errCode = callkitMgr.sendCommand(deviceInfo.mSessionId, commandData, new ICallkitMgr.OnCmdSendListener() {
-                    @Override
-                    public void onCmdSendDone(int errCode) {
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (errCode != ErrCode.XOK) {
-                                    popupMessage("Send command: " + commandData + " failed, errCode=" + errCode);
-                                } else {
-                                    popupMessage("Send command: " + commandData + " successful!");
-                                }
-                            }
-                        });
-                    }
-                });
-
-                if (errCode != ErrCode.XOK) {
-                    popupMessage("Send command: " + commandData + " to device failure, errCode=" + errCode);
-                    return;
-                }
+                deviceInfo.mConnectObj.sendMessageData(commandData.getBytes(StandardCharsets.UTF_8));
             }
         };
         inputCmdDlg.setCanceledOnTouchOutside(false);
         inputCmdDlg.show();
+    }
+
+
+    /**
+     * @brief 流管理 按钮点击事件
+     */
+    void onDevItemStreamMgrClick(View view, int position, DeviceInfo deviceInfo) {
+        if (mDevListAdapter.isInSelectMode()) {
+            return;
+        }
+        if (deviceInfo.mConnectObj == null) {
+            return;
+        }
+        IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+        if (connectInfo.mState != IConnectionObj.STATE_CONNECTED) {  // 只在连接成功后操作
+            Log.d(TAG, "<onDevItemStreamMgrClick> not connected, state=" + connectInfo.mState);
+            return;
+        }
+
+        // 界面跳转
+        PushApplication.getInstance().setFullscrnConnectionObj(deviceInfo.mConnectObj);
+        Intent intent = new Intent(getActivity(), DevStreamActivity.class);
+        startActivity(intent);
+        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_STREAM_MGR);
     }
 
 
@@ -774,13 +889,16 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     void gotoDevPreviewActivity() {
         Intent intent = new Intent(getActivity(), DevPreviewActivity.class);
         startActivity(intent);
+        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_FULLSCRN);
     }
 
     /**
      * @brief 重新设置所有设备的视频显示控件
      */
-    void resetDeviceDisplayView(final UUID sessionId) {
-        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
+    void resetDeviceDisplayView(final IConnectionObj connectObj) {
+        String devNodeId = connectObj.getInfo().mPeerNodeId;
+
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
         List<DeviceInfo> deviceList = mDevListAdapter.getDatas();
         if (deviceList == null) {
             return;
@@ -788,321 +906,203 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         int deviceCount = deviceList.size();
         for (int i = 0; i < deviceCount; i++) {
             DeviceInfo deviceInfo = deviceList.get(i);
-            if (deviceInfo.mSessionId == null) {
+            if (deviceInfo.mConnectObj == null) {
                 continue;
             }
-            if (sessionId.compareTo(deviceInfo.mSessionId) == 0) {
-                callkitMgr.setPeerVideoView(deviceInfo.mSessionId, deviceInfo.mVideoView);
-                Log.d(TAG, "<resetDeviceDisplayView> sessionId=" + sessionId
+            if (deviceInfo.mNodeId.compareTo(devNodeId) == 0) {
+                 mDevListAdapter.setItem(i, deviceInfo);  // 刷新显示
+                Log.d(TAG, "<resetDeviceDisplayView> connectObj=" + connectObj
                         + ", mNodeId=" + deviceInfo.mNodeId);
                 return;
             }
         }
+
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    //////////////// Override Methods of ICallkitMgr.ICallback  ///////////////
+    //////////////// Override Methods of IConnectionMgr.ICallback  ///////////////
     ///////////////////////////////////////////////////////////////////////////
     @Override
-    public void onPeerIncoming(final UUID sessionId, final String peerNodeId,
-                                final String attachMsg) {
-        Log.d(TAG, "<onPeerIncoming> [IOTSDK/] sessionId=" + sessionId
-                + ", peerNodeId=" + peerNodeId + ", attachMsg=" + attachMsg);
+    public void onConnectionCreateDone(final IConnectionObj connectObj, int errCode) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onConnectionCreateDone> [IOTSDK/] connectObj=" + connectObj
+                + ", errCode=" + errCode);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
                 if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onPeerIncoming> NOT found device, peerNodeId=" + peerNodeId);
+                    Log.e(TAG, "<onConnectionCreateDone> NOT found connection, peerNodeId=" + peerNodeId);
                     return;
                 }
-
-                // 更新设备状态信息
-                findResult.mDevInfo.mSessionId = sessionId;
-                findResult.mDevInfo.mSessionType = 2;
-                findResult.mDevInfo.mTips = "Incoming...";
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-
-                {   // 设置来电设备的视频显示控件
-                    ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-                    if (findResult.mDevInfo.mVideoView != null) {
-                        findResult.mDevInfo.mVideoView.setVisibility(View.VISIBLE);
-                    }
-                    callkitMgr.setPeerVideoView(sessionId, findResult.mDevInfo.mVideoView);
-                }
-
-
-                // 弹框显示是否接听
-                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                builder.setTitle("Incoming Call");
-                builder.setMessage("Incoming call from device: " + findResult.mDevInfo.mNodeId + " ...");
-                builder.setCancelable(false);
-                builder.setPositiveButton("Answer", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        mAnswerRjectDlg = null;
-
-                        // 接听操作
-                        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-
-                        int sdkState = AIotAppSdkFactory.getInstance().getStateMachine();
-                        if (sdkState != IAgoraIotAppSdk.SDK_STATE_RUNNING) {
-                            callkitMgr.callHangup(sessionId); // 挂断操作
-                            // 更新设备状态信息
-                            findResult.mDevInfo.clear();
-                            mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-
-                            popupMessage("Network is reconnecting, answer later...");
-                            return;
-                        }
-
-                        callkitMgr.callAnswer(sessionId, false);
-
-                        // 更新设备状态信息
-                        findResult.mDevInfo.mTips = "Talking";
-                        mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-                    }
-                });
-                builder.setNegativeButton("Reject", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        mAnswerRjectDlg = null;
-
-                        // 挂断操作
-                        ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-                        callkitMgr.callHangup(sessionId);
-
-                        // 更新设备状态信息
-                        findResult.mDevInfo.clear();
-                        mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-                    }
-                });
-
-                mAnswerRjectDlg = builder.show();
-                mAnswerRjectDlg.setCanceledOnTouchOutside(false);
-
-            }
-        });
-    }
-
-    @Override
-    public void onDialDone(final UUID sessionId, final String peerNodeId, int errCode) {
-        Log.d(TAG, "<onDialDone> [IOTSDK/] sessionId=" + sessionId
-                + ", peerNodeId=" + peerNodeId + ", errCode=" + errCode);
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
-                if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onDialDone> NOT found session, sessionId=" + sessionId);
-                    return;
-                }
-
-                if (errCode != ErrCode.XOK) {  // 呼叫失败
-                    popupMessage("Call device: " + findResult.mDevInfo.mNodeId + " error, errCode=" + errCode);
-
-                    // 更新设备状态信息
-                    findResult.mDevInfo.clear();
+                if (errCode != ErrCode.XOK) {  // 连接设备失败
+                    popupMessage("Connect device: " + findResult.mDevInfo.mNodeId + " failure, errCode=" + errCode);
+                    findResult.mDevInfo.clear();  // 重置设备信息
                     mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
                     return;
                 }
 
                 // 更新设备状态信息
-                findResult.mDevInfo.mTips = "Dialing...";
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
+                 mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
             }
         });
     }
 
     @Override
-    public void onPeerAnswer(final UUID sessionId, final String peerNodeId) {
-        Log.d(TAG, "<onPeerAnswer> [IOTSDK/] sessionId=" + sessionId
-                + ", peerNodeId=" + peerNodeId);
+    public void onPeerAnswerOrReject(final IConnectionObj connectObj, boolean answer) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onPeerAnswerOrReject> [IOTSDK/] connectObj=" + connectObj
+                + ", answer=" + answer);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
                 if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onPeerAnswer> NOT found session, sessionId=" + sessionId);
+                    Log.e(TAG, "<onPeerAnswerOrReject> NOT found connection, peerNodeId=" + peerNodeId);
+                    return;
+                }
+                if (!mFragmentForeground) {  // 在后台时不提示了
                     return;
                 }
 
-                // 更新设备状态信息
-                findResult.mDevInfo.mTips = "Talking...";
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
+                String strAnswer = (answer) ? " answer " : " reject ";
+                popupMessage("Peer device: " + findResult.mDevInfo.mNodeId + strAnswer + "connection!");
             }
         });
     }
 
     @Override
-    public void onPeerHangup(final UUID sessionId, final String peerNodeId) {
-        Log.d(TAG, "<onPeerHangup> [IOTSDK/] sessionId=" + sessionId
-                + ", peerNodeId=" + peerNodeId);
+    public void onPeerDisconnected(final IConnectionObj connectObj, int errCode) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onPeerDisconnected> [IOTSDK/] connectObj=" + connectObj
+                + ", peerNodeId=" + connectObj.getInfo().mPeerNodeId + ", errCode=" + errCode);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
                 if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onPeerHangup> NOT found session, sessionId=" + sessionId);
+                    Log.e(TAG, "<onPeerDisconnected> NOT found connection, peerNodeId=" + peerNodeId);
                     return;
                 }
-
-                popupMessage("Peer device: " + findResult.mDevInfo.mNodeId + " hangup!");
-
-                // 更新设备状态信息
-                findResult.mDevInfo.clear();
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-
-                if (mAnswerRjectDlg != null) {
-                    mAnswerRjectDlg.cancel();
-                    mAnswerRjectDlg = null;
-                }
-
-            }
-        });
-    }
-
-    @Override
-    public void onPeerTimeout(final UUID sessionId, final String peerNodeId) {
-        Log.d(TAG, "<onPeerTimeout> [IOTSDK/] sessionId=" + sessionId
-                + ", peerNodeId=" + peerNodeId);
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
-                if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onPeerTimeout> NOT found session, sessionId=" + sessionId);
-                    return;
-                }
-
-                popupMessage("Call device: " + findResult.mDevInfo.mNodeId + " timeout and hangup!");
-
                 // 更新设备状态信息
                 findResult.mDevInfo.clear();
                 mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
 
-                if (mAnswerRjectDlg != null) {
-                    mAnswerRjectDlg.cancel();
-                    mAnswerRjectDlg = null;
+                if (!mFragmentForeground) {  // 在后台时不提示了
+                    return;
                 }
+                popupMessage("Peer device: " + findResult.mDevInfo.mNodeId + " disconnected!");
             }
         });
     }
 
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    //////////////// Override Methods of IConnectionObj.ICallback  ////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
     @Override
-    public void onPeerFirstVideo(final UUID sessionId, int videoWidth, int videoHeight) {
-        Log.d(TAG, "<onPeerFirstVideo> [IOTSDK/] sessionId=" + sessionId
+    public void onStreamFirstFrame(final IConnectionObj connectObj, IConnectionObj.STREAM_ID subStreamId,
+                                     int videoWidth, int videoHeight) {
+        Log.d(TAG, "<onStreamFirstFrame> [IOTSDK/] connectObj=" + connectObj
+                + ", subStreamId=" + DevStreamUtils.getStreamName(subStreamId)
                 + ", videoWidth=" + videoWidth + ", videoHeight=" + videoHeight);
     }
 
     @Override
-    public void onOtherUserOnline(final UUID sessionId, int uid, int onlineUserCount) {
-        Log.d(TAG, "<onOtherUserOnline> [IOTSDK/] sessionId=" + sessionId
-                + ", onlineUserCount=" + onlineUserCount);
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
-                if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onOtherUserOnline> NOT found session, sessionId=" + sessionId);
-                    return;
-                }
-
-                // 更新设备状态信息
-                findResult.mDevInfo.mUserCount = onlineUserCount;
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-            }
-        });
-    }
-
-    @Override
-    public void onOtherUserOffline(final UUID sessionId, int uid, int onlineUserCount) {
-        Log.d(TAG, "<onOtherUserOffline> [IOTSDK/] sessionId=" + sessionId
-                + ", onlineUserCount=" + onlineUserCount);
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
-                if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onOtherUserOffline> NOT found session, sessionId=" + sessionId);
-                    return;
-                }
-
-                // 更新设备状态信息
-                findResult.mDevInfo.mUserCount = onlineUserCount;
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-            }
-        });
-    }
-
-    @Override
-    public void onSessionError(final UUID sessionId, int errCode) {
-        Log.d(TAG, "<onSessionError> [IOTSDK/] sessionId=" + sessionId
-                + ", errCode=" + errCode);
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
-                if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onOtherUserOffline> NOT found session, sessionId=" + sessionId);
-                    return;
-                }
-
-                popupMessage("Talking " + findResult.mDevInfo.mNodeId + " error, errCode=" + errCode);
-
-                // 更新设备状态信息
-                findResult.mDevInfo.clear();
-                mDevListAdapter.setItem(findResult.mPosition, findResult.mDevInfo);
-
-                if (mAnswerRjectDlg != null) {
-                    mAnswerRjectDlg.cancel();
-                    mAnswerRjectDlg = null;
-                }
-            }
-        });
-    }
-
-    @Override
-    public void onRecordingError(final UUID sessionId, int errCode) {
-        Log.d(TAG, "<onRecordingError> [IOTSDK/] sessionId=" + sessionId
-                + ", errCode=" + errCode);
-    }
-
-    @Override
-    public void onCaptureFrameDone(final UUID sessionId, int errCode,
-                                   final String filePath, int width, int height) {
-        Log.d(TAG, "<onCaptureFrameDone> [IOTSDK/] sessionId=" + sessionId
+    public void onStreamVideoFrameShotDone(final IConnectionObj connectObj, IConnectionObj.STREAM_ID subStreamId, int errCode,
+                                       final String filePath, int width, int height) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onStreamVideoFrameShotDone> [IOTSDK/] connectObj=" + connectObj
+                + ", subStreamId=" + DevStreamUtils.getStreamName(subStreamId)
                 + ", errCode=" + errCode + ", filePath=" + filePath);
 
-        popupMessage("Capture successful, save to file=" + filePath);
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
+                if (findResult.mDevInfo == null) {
+                    Log.e(TAG, "<onPeerHangup> NOT found connection, peerNodeId=" + peerNodeId);
+                    return;
+                }
+                if (!mFragmentForeground) {  // 在后台时不提示了
+                    return;
+                }
+
+                if (errCode != ErrCode.XOK) {
+                    popupMessage("Device: " + findResult.mDevInfo.mNodeId + " frame shot failure, errCode=" + errCode);
+                    return;
+                }
+
+                popupMessage("Device: " + findResult.mDevInfo.mNodeId + " frame shot successful, save to file: " + filePath);
+            }
+        });
     }
 
     @Override
-    public void onReceivedCommand(final UUID sessionId, final String recvedCmd) {
-        Log.d(TAG, "<onReceivedCommand> [IOTSDK/] sessionId=" + sessionId
-                + ", recvedCmd=" + recvedCmd);
+    public void onStreamError(final IConnectionObj connectObj,
+                              final IConnectionObj.STREAM_ID subStreamId, int errCode) {
+        Log.d(TAG, "<onStreamError> [IOTSDK/] connectObj=" + connectObj
+                + ", subStreamId=" + DevStreamUtils.getStreamName(subStreamId)
+                + ", errCode=" + errCode);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemBySessionId(sessionId);
+                String deviceId = connectObj.getInfo().mPeerNodeId;
+                String streamName = DevStreamUtils.getStreamName(subStreamId);
+                popupMessage("Device: " + deviceId + "  Stream: " + streamName + " failure, errCode=" + errCode);
+            }
+        });
+    }
+
+    @Override
+    public void onMessageSendDone(final IConnectionObj connectObj, int errCode,
+                                  UUID signalId, final byte[] messageData) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
                 if (findResult.mDevInfo == null) {
-                    Log.e(TAG, "<onReceivedCommand> NOT found session, sessionId=" + sessionId);
+                    Log.e(TAG, "<onSignalSendDone> NOT found session, peerNodeId=" + peerNodeId);
                     return;
                 }
 
-                popupMessage("Recv message: " + recvedCmd + " from devNodeId=" + findResult.mDevInfo.mNodeId);
+                if (errCode == ErrCode.XOK) {
+                    popupMessage("Send signal data to device: " + findResult.mDevInfo.mNodeId + " successful!");
+                } else {
+                    popupMessage("Send signal data to device: " + findResult.mDevInfo.mNodeId + " failure, errCode=" + errCode);
+                }
+             }
+        });
+    }
+
+    @Override
+    public void onMessageReceived(final IConnectionObj connectObj, final byte[] recvedMsgData) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DeviceListAdapter.FindResult findResult = mDevListAdapter.findItemByDevNodeId(peerNodeId);
+                if (findResult.mDevInfo == null) {
+                    Log.e(TAG, "<onSignalRecved> NOT found session, peerNodeId=" + peerNodeId);
+                    return;
+                }
+                if (!mFragmentForeground) {  // 在后台时不提示了
+                    return;
+                }
+
+                popupMessage("Recv message: " + recvedMsgData + " from devNodeId=" + findResult.mDevInfo.mNodeId);
             }
         });
-
     }
+
+
+
+
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////// Methods of DeviceList Storage  ///////////////////////
@@ -1113,7 +1113,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     private List<DeviceInfo> deviceListLoad() {
         List<DeviceInfo> deviceInfoList = new ArrayList<>();
 
-        String localUserId = AIotAppSdkFactory.getInstance().getLocalUserId();
+        String localUserId = ThirdAccountMgr.getInstance().getLocalNodeId();
         String keyDevCount = localUserId + "_device_count";
 
         int devCount = AppStorageUtil.queryIntValue(keyDevCount, 0);
@@ -1139,7 +1139,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     private void deviceListStore(final List<DeviceInfo> deviceInfoList) {
         int devCount = deviceInfoList.size();
 
-        String localUserId = AIotAppSdkFactory.getInstance().getLocalUserId();
+        String localUserId = ThirdAccountMgr.getInstance().getLocalNodeId();
         String keyDevCount = localUserId + "_device_count";
 
         AppStorageUtil.keepShared(keyDevCount, devCount);
@@ -1155,28 +1155,28 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     ///////////////////////////////////////////////////////////////////////
     //////////////////// Methods for Audio Effect  ///////////////////////
     ///////////////////////////////////////////////////////////////////////
-    final static ICallkitMgr.AudioEffectId[] mAudEffectIdArray = {
-            ICallkitMgr.AudioEffectId.NORMAL,
-            ICallkitMgr.AudioEffectId.KTV,
-            ICallkitMgr.AudioEffectId.CONCERT,
-            ICallkitMgr.AudioEffectId.STUDIO,
-            ICallkitMgr.AudioEffectId.PHONOGRAPH,
-            ICallkitMgr.AudioEffectId.VIRTUALSTEREO,
-            ICallkitMgr.AudioEffectId.SPACIAL,
-            ICallkitMgr.AudioEffectId.ETHEREAL,
-            ICallkitMgr.AudioEffectId.VOICE3D,
+    final static IAgoraIotAppSdk.AUDIO_EFFECT_TYPE[] mAudEffectIdArray = {
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.NORMAL,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.KTV,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.CONCERT,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.STUDIO,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PHONOGRAPH,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.VIRTUALSTEREO,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.SPACIAL,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.ETHEREAL,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.VOICE3D,
 
-            ICallkitMgr.AudioEffectId.UNCLE,
-            ICallkitMgr.AudioEffectId.OLDMAN,
-            ICallkitMgr.AudioEffectId.BOY,
-            ICallkitMgr.AudioEffectId.SISTER,
-            ICallkitMgr.AudioEffectId.GIRL,
-            ICallkitMgr.AudioEffectId.PIGKING,
-            ICallkitMgr.AudioEffectId.HULK,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.UNCLE,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.OLDMAN,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.BOY,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.SISTER,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.GIRL,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PIGKING,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.HULK,
 
-            ICallkitMgr.AudioEffectId.RNB,
-            ICallkitMgr.AudioEffectId.POPULAR,
-            ICallkitMgr.AudioEffectId.PITCHCORRECTION
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.RNB,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.POPULAR,
+            IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PITCHCORRECTION
     };
 
     final static String[] mAudEffectNameArray = {
@@ -1185,7 +1185,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             "R&B", "流行", "电音"
     };
 
-    String getAudioEffectName(ICallkitMgr.AudioEffectId effectId) {
+    String getAudioEffectName(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE effectId) {
         int count = mAudEffectIdArray.length;
         for (int i = 0; i < count; i++) {
             if (effectId == mAudEffectIdArray[i]) {

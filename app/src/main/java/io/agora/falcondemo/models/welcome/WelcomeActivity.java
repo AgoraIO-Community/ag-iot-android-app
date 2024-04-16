@@ -21,21 +21,11 @@ import com.agora.baselibrary.utils.SPUtil;
 import java.util.List;
 
 import io.agora.falcondemo.dialog.DialogInputAppId;
-import io.agora.falcondemo.dialog.DialogNewDevice;
-import io.agora.falcondemo.models.home.DeviceInfo;
-import io.agora.falcondemo.models.home.DeviceListAdapter;
-import io.agora.iotlink.ErrCode;
-import io.agora.iotlink.IAgoraIotAppSdk;
-import io.agora.falcondemo.R;
-import io.agora.falcondemo.base.AgoraApplication;
 import io.agora.falcondemo.base.BaseViewBindingActivity;
 import io.agora.falcondemo.base.PushApplication;
 import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.databinding.ActivityWelcomeBinding;
-import io.agora.falcondemo.dialog.CommonDialog;
 import io.agora.falcondemo.dialog.UserAgreementDialog;
-import io.agora.iotlink.AIotAppSdkFactory;
-import io.agora.falcondemo.models.home.MainActivity;
 import io.agora.falcondemo.models.login.AccountLoginActivity;
 import io.agora.falcondemo.utils.AppStorageUtil;
 
@@ -190,27 +180,26 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             inAppIdDlg.mSingleCallback = (integer, obj) -> {
                 String inputAppId = (String)obj;
                 AppStorageUtil.safePutString(this, Constant.APP_ID, inputAppId);
-                doAIotSdkInitialize(inputAppId);
+                doAccountMgrInitialize(inputAppId);
             };
             inAppIdDlg.setCanceledOnTouchOutside(false);
             inAppIdDlg.show();
 
         } else {
-            doAIotSdkInitialize(appId);
+            doAccountMgrInitialize(appId);
         }
 
         Log.d(TAG, "<onMsgEngineInitialie> <==Exit");
     }
 
-    void doAIotSdkInitialize(final String appId) {
-        // 初始化SDK引擎
-        AgoraApplication appInstance = (AgoraApplication) getApplication();
-        appInstance.initializeEngine(appId);
+    void doAccountMgrInitialize(final String appId) {
+        // 初始化账号系统
+        PushApplication.getInstance().ThirdAccountMgrInit(appId);
 
         // 开始处理隐私协议
         mUiState = UI_STATE_USRAGREE;
         mMsgHandler.sendEmptyMessageDelayed(MSGID_CHECK_USRAGREE, 100);
-        Log.d(TAG, "<doAIotSdkInitialize> done");
+        Log.d(TAG, "<doAccountMgrInitialize> done");
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -255,55 +244,8 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
     //////////////////////////////////////////////////////////////////
     void onMsgHandleLogin() {
         mUiState = UI_STATE_LOGIN;
-
-//        int sdkState = AIotAppSdkFactory.getInstance().getStateMachine();
-//        if (sdkState == IAgoraIotAppSdk.SDK_STATE_RUNNING) {  // 当前账号已经登录，直接跳转到主界面
-//            Log.d(TAG, "<onMsgHandleLogin> account already login, goto main");
-//            gotoMainActivity();
-//            return;
-//        }
-//
-//        String storedAccount = AppStorageUtil.safeGetString(this, Constant.ACCOUNT, null);
-//        String storedPassword = AppStorageUtil.safeGetString(this, Constant.PASSWORD, null);
-//        if (TextUtils.isEmpty(storedAccount) || TextUtils.isEmpty(storedPassword)) { // 没有历史登录信息
-//            Log.d(TAG, "<onMsgHandleLogin> No login history, goto loginActivity");
-//            gotoLoginActivity();
-//            return;
-//        }
-//
-//
-//        // 开始进行登录操作
-//        IAgoraIotAppSdk.PrepareParam prepareParam = new IAgoraIotAppSdk.PrepareParam();
-//        prepareParam.mUserId = storedAccount;
-//        prepareParam.mClientType = 2;
-//        int ret = AIotAppSdkFactory.getInstance().prepare(prepareParam, new IAgoraIotAppSdk.OnPrepareListener() {
-//            @Override
-//            public void onSdkPrepareDone(IAgoraIotAppSdk.PrepareParam prepareParam, int errCode) {
-//                runOnUiThread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        onCallbackLoginDone(errCode);
-//                    }
-//                });
-//            }
-//        });
-//
-//        if (ret != ErrCode.XOK) {   // 登录失败，切换到登录界面
-//            Log.e(TAG, "<onMsgHandleLogin> fail to prepare(), ret=" + ret);
-//            gotoLoginActivity();
-//        }
-//
         gotoLoginActivity();
-    }
-
-    void onCallbackLoginDone(final int errCode) {
-        Log.d(TAG, "<onCallbackLoginDone> errCode=" + errCode);
-        if (errCode == ErrCode.XOK) {        // 自动登录成功直接跳转到主界面
-            gotoMainActivity();
-
-        } else {   // 自动登录失败跳转到登录界面
-            gotoLoginActivity();
-        }
+        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_LOGIN);  // 登录界面
     }
 
     void gotoLoginActivity() {
@@ -311,13 +253,8 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // 清除Activity堆栈
         startActivity(intent);
+        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_LOGIN); // 登录界面
     }
 
-    void gotoMainActivity() {
-        Intent intent = new Intent(WelcomeActivity.this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); // 清除Activity堆栈
-        startActivity(intent);
-    }
 
 }

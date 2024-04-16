@@ -11,24 +11,20 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.agora.baselibrary.base.BaseDialog;
-import com.agora.baselibrary.utils.NetUtils;
 
 import io.agora.falcondemo.R;
 import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.dialog.CommonDialog;
+import io.agora.falcondemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.falcondemo.utils.AppStorageUtil;
 import io.agora.iotlink.AIotAppSdkFactory;
-import io.agora.iotlink.AlarmVideoDownloader;
 import io.agora.falcondemo.base.BaseViewBindingFragment;
 import io.agora.falcondemo.databinding.FragmentHomeMineBinding;
 import io.agora.falcondemo.models.settings.AboutActivity;
 import io.agora.falcondemo.models.settings.AccountSecurityActivity;
-import io.agora.iotlink.ErrCode;
-import io.agora.iotlink.ICallkitMgr;
 
 
-public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBinding>
-        implements AlarmVideoDownloader.ICallback {
+public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBinding> {
     private static final String TAG = "IOTLINK/MineFragment";
 
     Activity mOwnerActivity;
@@ -49,8 +45,8 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
         getBinding().ivToEdit.setVisibility(View.INVISIBLE);
         getBinding().vToEdit.setVisibility(View.INVISIBLE);
 
-        String userId = AIotAppSdkFactory.getInstance().getLocalUserId();
-        String nodeId = AIotAppSdkFactory.getInstance().getLocalNodeId();
+        String userId = AppStorageUtil.safeGetString(this.getContext(), Constant.ACCOUNT, null);
+        String nodeId = ThirdAccountMgr.getInstance().getLocalNodeId();
         String txtName = userId + "\n (" + nodeId + ")";
         getBinding().tvUserMobile.setText(txtName);
     }

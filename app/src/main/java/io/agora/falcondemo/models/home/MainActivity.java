@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.navigation.ActivityKt;
 import androidx.navigation.NavController;
+import androidx.navigation.NavDestination;
 import androidx.navigation.ui.BottomNavigationViewKt;
 
 import com.agora.baselibrary.base.BaseDialog;
@@ -21,6 +22,8 @@ import com.agora.baselibrary.base.BaseDialog;
 import io.agora.falcondemo.R;
 import io.agora.falcondemo.base.AgoraApplication;
 import io.agora.falcondemo.base.BaseViewBindingActivity;
+import io.agora.falcondemo.base.PushApplication;
+import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.databinding.ActivityMainBinding;
 import io.agora.falcondemo.dialog.CommonDialog;
 import io.agora.falcondemo.models.login.AccountLoginActivity;
@@ -56,11 +59,27 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
         navController = ActivityKt.findNavController(this, R.id.nav_host_fragment_activity_main);
         BottomNavigationViewKt.setupWithNavController(getBinding().navView, navController);
 
-        // 检测悬浮窗权限
-        checkOverlayWndPermission();
+        navController.addOnDestinationChangedListener(new NavController.OnDestinationChangedListener() {
+            @Override
+            public void onDestinationChanged(@NonNull NavController navController, @NonNull NavDestination navDestination, @Nullable Bundle bundle) {
+                switch (navDestination.getId()) {
+                    case R.id.navigation_home:
+                        Log.d(TAG, "<initView> navigation_home");
+                        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_HOME); // 切换回主界面
+                        break;
+                    case R.id.navigation_mine:
+                        Log.d(TAG, "<initView> navigation_mine");
+                        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_MINE); // 切换到我的界面
+                        break;
+                }
+            }
+        });
 
         AgoraApplication appInstance = (AgoraApplication) getApplication();
         appInstance.setMainActivity(this);
+
+        // TODO: 不再需要检测悬浮窗权限
+        //checkOverlayWndPermission();
     }
 
     @Override
@@ -117,28 +136,6 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
         return super.onKeyDown(keyCode, event);
     }
 
-    /**
-     * @brief SDK状态变化时被调用
-     */
-    public void onSdkStateChanged(int oldSdkState, int newSdkState, int reason) {
-        ALog.getInstance().d(TAG, "<onSdkStateChanged> oldSdkState=" + oldSdkState
-                + ", newSdkState=" + newSdkState + ", reason=" + reason);
-
-        if (oldSdkState == IAgoraIotAppSdk.SDK_STATE_RUNNING &&
-                newSdkState == IAgoraIotAppSdk.SDK_STATE_RECONNECTING) {
-            popupMessage("正在网络重连中......");
-
-        } else if (oldSdkState == IAgoraIotAppSdk.SDK_STATE_RECONNECTING &&
-                newSdkState == IAgoraIotAppSdk.SDK_STATE_RUNNING) {
-            popupMessage("网络重连成功");
-
-        }
-
-        if (reason == IAgoraIotAppSdk.SDK_REASON_ABORT) {
-            popupMessage("账号被抢占，需要重新登录!");
-            gotoLoginActivity();
-        }
-    }
 
     /**
      * @brief 检测当前悬浮窗权限
@@ -207,10 +204,5 @@ public class MainActivity extends BaseViewBindingActivity<ActivityMainBinding> {
     }
 
 
-    void gotoLoginActivity() {
-        ALog.getInstance().d(TAG, "<gotoLoginActivity>");
-        Intent intent = new Intent(MainActivity.this, AccountLoginActivity.class);
-        startActivity(intent);
-    }
 
 }

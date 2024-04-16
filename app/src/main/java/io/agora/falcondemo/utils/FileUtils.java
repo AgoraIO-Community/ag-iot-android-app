@@ -8,6 +8,7 @@ import android.util.Log;
 import com.agora.baselibrary.utils.StringUtils;
 
 import io.agora.falcondemo.base.PushApplication;
+import io.agora.iotlink.IConnectionObj;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -35,7 +36,7 @@ public class FileUtils {
         return getBaseStrPath() + "ag" + File.separator;
     }
 
-    public static String getFileSavePath(String baseName, boolean isPic) {
+    public static String getFileSavePath(String baseName, IConnectionObj.STREAM_ID streamId, boolean isPic) {
         String name = isPic ? ".jpg" : ".mp4";
         Time time = new Time("GMT+8");
         time.setToNow();
@@ -43,7 +44,8 @@ public class FileUtils {
         if (!dir.exists()) {
             dir.mkdir();
         }
-        return FileUtils.getStrSDPath() + baseName + "_shot_" +
+        String streamName = DevStreamUtils.getStreamName(streamId);
+        return FileUtils.getStrSDPath() + baseName + "_shot_" + streamName + "_" +
                 StringUtils.INSTANCE.getDetailTime("yyyy-MM-dd_HH_mm_ss", System.currentTimeMillis() / 1000) + name;
     }
 

@@ -8,7 +8,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.agora.baselibrary.base.BaseDialog;
 
-import io.agora.iotlink.AIotAppSdkFactory;
+import io.agora.falcondemo.base.PushApplication;
+import io.agora.falcondemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.iotlink.ErrCode;
 import io.agora.falcondemo.R;
 import io.agora.falcondemo.base.BaseViewBindingActivity;
@@ -36,7 +37,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
     public void initView(@Nullable Bundle savedInstanceState) {
         mActivity = this;
 
-        String localNodeId = AIotAppSdkFactory.getInstance().getLocalNodeId();
+        String localNodeId = ThirdAccountMgr.getInstance().getLocalNodeId();
         getBinding().tvNodeId.setText(localNodeId);
     }
 
@@ -79,7 +80,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
                 @Override
                 public void onRightButtonClick() {
                     // 进行登出操作
-                    int errCode = AIotAppSdkFactory.getInstance().logout();
+                    int errCode = ErrCode.XOK; // AIotAppSdkFactory.getInstance().logout();
                     if (errCode == ErrCode.XOK) {
                         popupMessage("User account logout successful!");
 
@@ -108,5 +109,6 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
     void gotoLoginActivity() {
         Intent intent = new Intent(AccountSecurityActivity.this, AccountLoginActivity.class);
         startActivity(intent);
+        PushApplication.getInstance().setUiPage(Constant.UI_PAGE_LOGIN);
     }
 }

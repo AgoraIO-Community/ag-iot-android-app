@@ -22,12 +22,12 @@ import android.util.Log;
 
 import com.agora.baselibrary.base.BaseApplication;
 
+import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.models.home.MainActivity;
 import io.agora.falcondemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.falcondemo.utils.AppStorageUtil;
-import io.agora.iotlink.AIotAppSdkFactory;
-import io.agora.iotlink.IAgoraIotAppSdk;
-import io.agora.iotlink.logger.ALog;
+import io.agora.iotlink.ErrCode;
+import io.agora.iotlink.IConnectionObj;
 import io.agora.iotlink.utils.PreferenceManager;
 
 import java.io.File;
@@ -49,9 +49,11 @@ public class PushApplication extends BaseApplication {
 
     private boolean mIsChkedOverlayWnd = false;         ///< 是否检测过一次悬浮窗权限
 
-    private UUID mFullscrnSessionId = null;             ///< 全屏时的 sessionId
+    private IConnectionObj mFullscrnConnectObj = null;             ///< 全屏时的连接对象
 
     private MainActivity mMainActivity = null;
+
+    private volatile int mUiPage = Constant.UI_PAGE_WELCOME;
 
     //////////////////////////////////////////////////////////////////
     ////////////////////// Public Methods ///////////////////////////
@@ -120,56 +122,6 @@ public class PushApplication extends BaseApplication {
         return false;
     }
 
-    public void initializeEngine(final String appId) {
-        if (mIotAppSdkReady) {
-            return;
-        }
-
-        String serverUrl = "https://api.sd-rtn.com/agoralink/cn/api";
-
-        //
-        //初始化IotAppSdk2.0 引擎
-        //
-        IAgoraIotAppSdk.InitParam initParam = new IAgoraIotAppSdk.InitParam();
-        initParam.mContext = this;
-        initParam.mAppId = appId;
-        initParam.mServerUrl = serverUrl;
-
-        File file = this.getExternalFilesDir(null);
-        String cachePath = file.getAbsolutePath();
-        initParam.mLogFilePath = cachePath + "/callkit.log";
-        initParam.mStateListener = new IAgoraIotAppSdk.OnSdkStateListener() {
-            @Override
-            public void onSdkStateChanged(int oldSdkState, int newSdkState, int reason) {
-                Log.d(TAG, "<initializeEngine.onSdkStateChanged> oldSdkState=" + oldSdkState
-                        + ", newSdkState=" + newSdkState + ", reason=" + reason);
-                MainActivity mainActivity = instance.getMainActivity();
-                if (mainActivity == null) {
-                    return;
-                }
-                mainActivity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mainActivity.onSdkStateChanged(oldSdkState, newSdkState, reason);
-                    }
-                });
-            }
-
-            @Override
-            public void onSignalingStateChanged(boolean isSignalingValid) {
-                Log.d(TAG, "<initializeEngine.onSignalingStateChanged> isSignalingValid=" + isSignalingValid);
-            }
-        };
-        int ret = AIotAppSdkFactory.getInstance().initialize(initParam);
-
-        //
-        // 设置第三方账号服务器地址
-        //
-        ThirdAccountMgr.getInstance().setAccountServerUrl(serverUrl);
-
-        mIotAppSdkReady = true;
-    }
-
 
     public boolean isChkedOverlayWnd() {
         return mIsChkedOverlayWnd;
@@ -184,20 +136,20 @@ public class PushApplication extends BaseApplication {
     }
 
     /**
-     * @brief 设置 全屏播放的 sessionId
+     * @brief 设置 全屏播放的 连接对象
      */
-    public void setFullscrnSessionId(final UUID sessionId) {
+    public void setFullscrnConnectionObj(final IConnectionObj connectObj) {
         synchronized (mDataLock) {
-            mFullscrnSessionId = sessionId;
+            mFullscrnConnectObj = connectObj;
         }
     }
 
     /**
-     * @brief 获取 全屏播放的 sessionId
+     * @brief 获取 全屏播放的 连接对象
      */
-    public UUID getFullscrnSessionId() {
+    public IConnectionObj getFullscrnConnectionObj() {
         synchronized (mDataLock) {
-            return mFullscrnSessionId;
+            return mFullscrnConnectObj;
         }
     }
 
@@ -215,4 +167,25 @@ public class PushApplication extends BaseApplication {
         return mMainActivity;
     }
 
+
+    public int ThirdAccountMgrInit(final String appId) {
+
+        ThirdAccountMgr.getInstance();
+
+        return ErrCode.XOK;
+    }
+
+
+
+    /**
+     * @brief 设置/获取当前显示界面
+     */
+    public int getUiPage() {
+        return mUiPage;
+    }
+
+    public void setUiPage(int uiPage) {
+        mUiPage = uiPage;
+        Log.d(TAG, "<setUiPage> uiPage=" + uiPage);
+    }
 }

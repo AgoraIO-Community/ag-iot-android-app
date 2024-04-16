@@ -14,7 +14,7 @@
 
 
         <SurfaceView
-            android:id="@+id/svDeviceView"
+            android:id="@+id/svStreamView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginStart="0dp"
@@ -23,12 +23,12 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvDeviceName"
+            android:id="@+id/tvStreamName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginTop="10dp"
-            android:text="01GTKG1WTJXJRKFEJWNG5J1X98"
+            android:text="PUBLIC 1"
             android:textColor="@color/green_and_blue"
             android:textSize="14sp"
             app:layout_constraintStart_toEndOf="parent"
@@ -36,12 +36,12 @@
 
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tvDeviceTips"
+            android:id="@+id/tvStreamTips"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginTop="28dp"
-            android:text="设备关闭"
+            android:text="流停止"
             android:textColor="@color/green"
             android:textSize="14sp"
             app:layout_constraintStart_toEndOf="parent"
@@ -49,18 +49,18 @@
 
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_dial_hangup"
+            android:id="@+id/btn_stream_preview"
             android:layout_width="70dp"
             android:layout_height="35dp"
             android:layout_marginStart="10dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="连接"
+            android:text="预览"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_mute_audio"
+            android:id="@+id/btn_mute_streamaudio"
             android:layout_width="70dp"
             android:layout_height="35dp"
             android:layout_marginStart="100dp"
@@ -72,7 +72,7 @@
 
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_record"
+            android:id="@+id/btn_stream_record"
             android:layout_width="70dp"
             android:layout_height="35dp"
             android:layout_marginStart="190dp"
@@ -82,83 +82,18 @@
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_mic"
+            android:id="@+id/btn_stream_shot"
             android:layout_width="70dp"
             android:layout_height="35dp"
             android:layout_marginStart="280dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="通话"
-            app:layout_constraintStart_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_fullscreen"
-            android:layout_width="70dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="280dp"
-            android:layout_marginTop="60dp"
-            android:background="#80D6D6D6"
-            android:text="全屏"
-            app:layout_constraintStart_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_shotcapture"
-            android:layout_width="70dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="280dp"
-            android:layout_marginTop="120dp"
-            android:background="#80D6D6D6"
             android:text="截图"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-
-        <androidx.appcompat.widget.AppCompatCheckBox
-            android:id="@+id/cb_dev_select"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:layout_marginStart="310dp"
-            android:layout_marginTop="10dp"
-            android:button="@drawable/bg_cb_check_status"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_command"
-            android:layout_width="70dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="10dp"
-            android:layout_marginTop="120dp"
-            android:background="#80D6D6D6"
-            android:text="命令"
-            app:layout_constraintStart_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_streammgr"
-            android:layout_width="70dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="10dp"
-            android:layout_marginTop="60dp"
-            android:background="#80D6D6D6"
-            android:text="流管理"
-            app:layout_constraintStart_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_preview"
-            android:layout_width="70dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="140dp"
-            android:layout_marginTop="140dp"
-            android:background="#80D6D6D6"
-            android:text="预览"
-            app:layout_constraintStart_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
     </FrameLayout>
 

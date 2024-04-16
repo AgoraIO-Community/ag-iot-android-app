@@ -10,8 +10,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.agora.baselibrary.base.BaseAdapter;
 
 import io.agora.iotlink.AIotAppSdkFactory;
-import io.agora.iotlink.ICallkitMgr;
 import io.agora.falcondemo.R;
+import io.agora.iotlink.IConnectionMgr;
+import io.agora.iotlink.IConnectionObj;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -170,31 +171,6 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         public DeviceInfo mDevInfo;     ///< 查询到的设备信息
     }
 
-    /**
-     * @brief 根据 非空的sessionId 找到设备项
-     */
-    public FindResult findItemBySessionId(final UUID sessionId) {
-        FindResult findResult = new FindResult();
-        findResult.mPosition = -1;
-        if (sessionId == null) {
-            return findResult;
-        }
-
-        List<DeviceInfo> deviceList = getDatas();
-        for (int i = 0; i < deviceList.size(); i++) {
-            DeviceInfo deviceInfo = deviceList.get(i);
-            if (deviceInfo.mSessionId == null) {
-                continue;
-            }
-            if (sessionId.compareTo(deviceInfo.mSessionId) == 0) {
-                findResult.mPosition = i;
-                findResult.mDevInfo = deviceInfo;
-                return findResult;
-            }
-        }
-
-        return findResult;
-    }
 
     /**
      * @brief 根据 非空的设备 nodeId 找到设备项
@@ -249,36 +225,70 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         // 设备名
         deviceInfo.mViewHolder.setText(R.id.tvDeviceName, deviceInfo.mNodeId);
 
-        // 在线用户数量
-        String userCountTxt = "User: " + deviceInfo.mUserCount;
-        deviceInfo.mViewHolder.setText(R.id.tvUserCount, userCountTxt);
+        // 获取流的状态信息
+        int connectState = IConnectionObj.STATE_DISCONNECTED;
+        boolean audioPublishing = false;
+        boolean subscribed = false;
+        boolean muteAudio = true;
+        boolean recording = false;
+        if (deviceInfo.mConnectObj != null) {
+            IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+            connectState = connectInfo.mState;
+            audioPublishing = connectInfo.mAudioPublishing;
+
+            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            subscribed = streamStatus.mSubscribed;
+            muteAudio = streamStatus.mAudioMute;
+            recording = streamStatus.mRecording;
+        }
+
+        // 设置设备显示控件
+        deviceInfo.mVideoView = deviceInfo.mViewHolder.getView(R.id.svDeviceView);
+        if (subscribed) {
+            deviceInfo.mVideoView.setVisibility(View.VISIBLE);
+            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+        } else {
+            deviceInfo.mVideoView.setVisibility(View.INVISIBLE);
+        }
 
         // 提示文字
-        if (deviceInfo.mTips != null) {
-            deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, deviceInfo.mTips);
+        if (deviceInfo.mConnectObj == null) {
+            deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Disconnected");  // 未连接
         } else {
-            deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Device Closed");
+            if (connectState != IConnectionObj.STATE_CONNECTED) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Connecting...");
+            } else if (recording) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Recording...");
+            } else if (subscribed) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Subscribed"); // 已订阅
+            } else {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Connected");
+            }
         }
 
         // 呼叫挂断按钮
         Button btnDialHangup = deviceInfo.mViewHolder.getView(R.id.btn_dial_hangup);
-        if (deviceInfo.mSessionId == null) {
-            btnDialHangup.setText("呼叫");
+        if (deviceInfo.mConnectObj == null) {
+            btnDialHangup.setText("连接");
         } else {
-            btnDialHangup.setText("挂断");
+            btnDialHangup.setText("断开");
         }
+
+        // 预览按钮
+        Button btnPreview = deviceInfo.mViewHolder.getView(R.id.btn_preview);
+        btnPreview.setText(subscribed ? "停止" : "预览");
 
         // 静音播音按钮
         Button btnMute = deviceInfo.mViewHolder.getView(R.id.btn_mute_audio);
-        btnMute.setText(deviceInfo.mDevMute ? "播放" : "静音");
+        btnMute.setText(muteAudio ? "音放" : "静音");
 
         // 录像按钮
         Button btnRecord = deviceInfo.mViewHolder.getView(R.id.btn_record);
-        btnRecord.setText(deviceInfo.mRecording ? "停止" : "录像");
+        btnRecord.setText(recording ? "停录" : "录像");
 
         // 通话禁音按钮
         Button btnMic = deviceInfo.mViewHolder.getView(R.id.btn_mic);
-        btnMic.setText(deviceInfo.mMicPush ? "禁麦" : "通话");
+        btnMic.setText(audioPublishing ? "禁麦" : "通话");
     }
 
     /**
@@ -311,59 +321,86 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         deviceInfo.mViewHolder = holder;
         getDatas().set(position, deviceInfo);   // 更新控件信息
 
-
-        // 设置设备显示控件
-        View displayView = holder.getView(R.id.svDeviceView);
-        if (deviceInfo.mSessionId != null) {
-            displayView.setVisibility(View.VISIBLE);
-            ICallkitMgr callkitMgr = AIotAppSdkFactory.getInstance().getCallkitMgr();
-            callkitMgr.setPeerVideoView(deviceInfo.mSessionId, displayView);
-        } else {
-            displayView.setVisibility(View.INVISIBLE);
-        }
-
         // 设备名
         holder.setText(R.id.tvDeviceName, deviceInfo.mNodeId);
 
-        // 在线用户数量
-        String userCountTxt = "User: " + deviceInfo.mUserCount;
-        holder.setText(R.id.tvUserCount, userCountTxt);
+        // 获取流的状态信息
+        int connectState = IConnectionObj.STATE_DISCONNECTED;
+        boolean audioPublishing = false;
+        boolean subscribed = false;
+        boolean muteAudio = false;
+        boolean recording = false;
+        if (deviceInfo.mConnectObj != null) {
+            IConnectionObj.ConnectionInfo connectInfo = deviceInfo.mConnectObj.getInfo();
+            connectState = connectInfo.mState;
+            audioPublishing = connectInfo.mAudioPublishing;
+
+            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            subscribed = streamStatus.mSubscribed;
+            muteAudio = streamStatus.mAudioMute;
+            recording = streamStatus.mRecording;
+        }
+
+        // 设置设备显示控件
+        deviceInfo.mVideoView = holder.getView(R.id.svDeviceView);
+        if (subscribed) {
+            deviceInfo.mVideoView.setVisibility(View.VISIBLE);
+            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+        } else {
+            deviceInfo.mVideoView.setVisibility(View.INVISIBLE);
+        }
 
         // 提示文字
-        if (deviceInfo.mTips != null) {
-            holder.setText(R.id.tvDeviceTips, deviceInfo.mTips);
+        if (deviceInfo.mConnectObj == null) {
+            deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Disconnected");  // 未连接
         } else {
-            holder.setText(R.id.tvDeviceTips, "Device Closed");
+            if (connectState != IConnectionObj.STATE_CONNECTED) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Connecting...");
+            } else if (recording) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Recording...");
+            } else if (subscribed) {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Subscribed"); // 已订阅
+            } else {
+                deviceInfo.mViewHolder.setText(R.id.tvDeviceTips, "Connected");
+            }
         }
 
         // 呼叫挂断按钮
         Button btnDialHangup = holder.getView(R.id.btn_dial_hangup);
-        if (deviceInfo.mSessionId == null) {
-            btnDialHangup.setText("呼叫");
+        if (deviceInfo.mConnectObj == null) {
+            btnDialHangup.setText("连接");
         } else {
-            btnDialHangup.setText("挂断");
+            btnDialHangup.setText("断开");
         }
         btnDialHangup.setOnClickListener(view -> {
             mOwner.onDevItemDialHangupClick(view, position, deviceInfo);
         });
 
+
+        // 预览按钮
+        Button btnPreview = holder.getView(R.id.btn_preview);
+        btnPreview.setText(subscribed ? "停止" : "预览");
+        btnPreview.setOnClickListener(view -> {
+            mOwner.onDevItemPreviewClick(view, position, deviceInfo);
+        });
+
         // 静音播音按钮
         Button btnMute = holder.getView(R.id.btn_mute_audio);
-        btnMute.setText(deviceInfo.mDevMute ? "播放" : "静音");
+        btnMute.setText(muteAudio ? "音放" : "静音");
         btnMute.setOnClickListener(view -> {
             mOwner.onDevItemMuteAudioClick(view, position, deviceInfo);
         });
 
         // 录像按钮
         Button btnRecord = holder.getView(R.id.btn_record);
-        btnRecord.setText(deviceInfo.mRecording ? "停止" : "录像");
+        btnRecord.setText(recording ? "停录" : "录像");
         btnRecord.setOnClickListener(view -> {
             mOwner.onDevItemRecordClick(view, position, deviceInfo);
         });
 
         // 通话禁音按钮
         Button btnMic = holder.getView(R.id.btn_mic);
-        btnMic.setText(deviceInfo.mMicPush ? "禁麦" : "通话");
+        btnMic.setText(audioPublishing ? "禁麦" : "通话");
         btnMic.setOnClickListener(view -> {
             mOwner.onDevItemMicClick(view, position, deviceInfo);
         });
@@ -386,6 +423,13 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         btnCommand.setOnClickListener(view -> {
             mOwner.onDevItemCommandClick(view, position, deviceInfo);
         });
+
+        // 流管理按钮
+        Button btnStreamMgr = holder.getView(R.id.btn_streammgr);
+        btnStreamMgr.setOnClickListener(view -> {
+            mOwner.onDevItemStreamMgrClick(view, position, deviceInfo);
+        });
+
 
         // 选择按钮
         CheckBox cbSlect = holder.getView(R.id.cb_dev_select);
