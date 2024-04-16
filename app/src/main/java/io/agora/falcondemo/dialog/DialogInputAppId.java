@@ -33,12 +33,23 @@ public class DialogInputAppId extends BaseDialog<DialogInputAppidBinding> {
 
         getBinding().btnConfirm.setOnClickListener(view -> {
             String inputAppId = getBinding().etAppId.getText().toString();
+            String inputKey = getBinding().etKey.getText().toString();
+            String inputSecret = getBinding().etSecret.getText().toString();
             if (TextUtils.isEmpty(inputAppId)) {
                 popupMessage("appId 不能为空!");
                 return;
             }
+            if (TextUtils.isEmpty(inputKey)) {
+                popupMessage("Basic Auth Key 不能为空!");
+                return;
+            }
+            if (TextUtils.isEmpty(inputSecret)) {
+                popupMessage("Basic Auth Secret 不能为空!");
+                return;
+            }
 
-            mSingleCallback.onSingleCallback(0, inputAppId);
+            String[] params = { inputAppId, inputKey, inputSecret};
+            mSingleCallback.onSingleCallback(0, params);
 
             getOnButtonClickListener().onRightButtonClick();
             dismiss();
@@ -50,7 +61,7 @@ public class DialogInputAppId extends BaseDialog<DialogInputAppidBinding> {
     protected void setGravity() {
         getWindow().setLayout(
                 ScreenUtils.dp2px(300),
-                ScreenUtils.dp2px(230)
+                ScreenUtils.dp2px(400)
         );
         getWindow().getAttributes().gravity = Gravity.CENTER;
     }

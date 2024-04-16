@@ -164,6 +164,8 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
         Log.d(TAG, "<onMsgEngineInitialie> ==>Enter");
 
         String appId = AppStorageUtil.safeGetString(this, Constant.APP_ID, null);
+        String basicAuthKey = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_KEY, null);
+        String basicAuthSecret = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_SECRET, null);
         if (TextUtils.isEmpty(appId)) {  // 当前没有appId保存，需要用户输入
 
             DialogInputAppId inAppIdDlg = new DialogInputAppId(this);
@@ -178,23 +180,29 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
             });
 
             inAppIdDlg.mSingleCallback = (integer, obj) -> {
-                String inputAppId = (String)obj;
+                String[] params = (String[])obj;
+                String inputAppId = params[0];
+                String inputKey = params[1];
+                String inputSecret = params[2];
+
                 AppStorageUtil.safePutString(this, Constant.APP_ID, inputAppId);
-                doAccountMgrInitialize(inputAppId);
+                AppStorageUtil.safePutString(this, Constant.BASIC_AUTH_KEY, inputKey);
+                AppStorageUtil.safePutString(this, Constant.BASIC_AUTH_SECRET, inputSecret);
+                doAccountMgrInitialize();
             };
             inAppIdDlg.setCanceledOnTouchOutside(false);
             inAppIdDlg.show();
 
         } else {
-            doAccountMgrInitialize(appId);
+            doAccountMgrInitialize();
         }
 
         Log.d(TAG, "<onMsgEngineInitialie> <==Exit");
     }
 
-    void doAccountMgrInitialize(final String appId) {
+    void doAccountMgrInitialize() {
         // 初始化账号系统
-        PushApplication.getInstance().ThirdAccountMgrInit(appId);
+        PushApplication.getInstance().ThirdAccountMgrInit();
 
         // 开始处理隐私协议
         mUiState = UI_STATE_USRAGREE;

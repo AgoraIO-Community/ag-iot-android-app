@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="300dp"
-    android:layout_height="230dp"
+    android:layout_height="400dp"
     android:background="@drawable/bg_full_radius_white_7">
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="输入项目 appId"
+        android:text="输入项目信息"
         android:textColor="@color/def_text_color"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -48,6 +48,65 @@
         app:layout_constraintTop_toTopOf="@id/etAppId"
         tools:visibility="visible" />
 
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etKey"
+        style="@style/def_et_input"
+        android:layout_width="254dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
+        android:maxLength="100"
+        android:drawableStart="@null"
+        android:hint="请输入 Basic Auth Key"
+        android:textSize="16sp"
+        android:inputType="textMultiLine"
+        android:lines="2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etAppId" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/btClearKey"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:elevation="6dp"
+        android:src="@mipmap/close"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/etKey"
+        app:layout_constraintEnd_toEndOf="@id/etKey"
+        app:layout_constraintTop_toTopOf="@id/etKey"
+        tools:visibility="visible" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/etSecret"
+        style="@style/def_et_input"
+        android:layout_width="254dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
+        android:maxLength="100"
+        android:drawableStart="@null"
+        android:hint="请输入 Basic Auth Secret"
+        android:textSize="16sp"
+        android:inputType="textMultiLine"
+        android:lines="2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etKey" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/btClearSecret"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="20dp"
+        android:background="@null"
+        android:elevation="6dp"
+        android:src="@mipmap/close"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/etSecret"
+        app:layout_constraintEnd_toEndOf="@id/etSecret"
+        app:layout_constraintTop_toTopOf="@id/etSecret"
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnConfirm"
@@ -59,5 +118,5 @@
         android:textStyle="normal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/etAppId" />
+        app:layout_constraintTop_toBottomOf="@id/etSecret" />
 </androidx.constraintlayout.widget.ConstraintLayout>

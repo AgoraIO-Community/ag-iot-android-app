@@ -90,14 +90,26 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
         }
 
         String appId = AppStorageUtil.safeGetString(this, Constant.APP_ID, null);
+        String authKey = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_KEY, null);
+        String authSecret = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_SECRET, null);
         if (TextUtils.isEmpty(appId)) {
             popupMessage("appId is empty, please clear application cache and input appId!");
+            return;
+        }
+        if (TextUtils.isEmpty(authKey)) {
+            popupMessage("Basic Auth Key is empty, please clear application cache and input key!");
+            return;
+        }
+        if (TextUtils.isEmpty(authSecret)) {
+            popupMessage("Basic Auth Secret is empty, please clear application cache and input secret!");
             return;
         }
 
         // 第三方账号系统登录
         ThirdAccountMgr.UserActiveParam activeParam = new ThirdAccountMgr.UserActiveParam();
         activeParam.mAppId = appId;
+        activeParam.mAuthKey = authKey;
+        activeParam.mAuthSecret = authSecret;
         activeParam.mUserId = account;
         activeParam.mClientType = 2;
         showLoadingView();
@@ -114,7 +126,7 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
                             return;
                         }
 
-                        doAIotSdkInitialize(appId, account, activeResult.mNodeId, activeResult.mNodeToken);
+                        doAIotSdkInitialize(appId, authKey, authSecret, account, activeResult.mNodeId, activeResult.mNodeToken);
                     }
                 });
             }
@@ -124,8 +136,8 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
     /**
      * @brief 根据第三方账号登录信息，初始化 AIotSdk 引擎
      */
-    void doAIotSdkInitialize(final String appId, final String userId,
-                             final String localNodeId, final String localNodeToken  ) {
+    void doAIotSdkInitialize(final String appId, final String authKey, final String authSecret,
+                             final String userId, final String localNodeId, final String localNodeToken) {
 
         IAgoraIotAppSdk.InitParam initParam = new IAgoraIotAppSdk.InitParam();
         initParam.mContext = this;
@@ -133,8 +145,8 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
         initParam.mLocalNodeId = localNodeId;
         initParam.mLocalNodeToken = localNodeToken;
         initParam.mRegion = 1;
-        initParam.mCustomerKey = ThirdAccountMgr.getInstance().getRequestKey();
-        initParam.mCustomerSecret = ThirdAccountMgr.getInstance().getRequestSecret();
+        initParam.mCustomerKey = authKey;
+        initParam.mCustomerSecret = authSecret;
         initParam.mLogFileName = "aiotsdk.log";
 
         int ret = AIotAppSdkFactory.getInstance().initialize(initParam);

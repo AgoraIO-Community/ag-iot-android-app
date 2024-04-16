@@ -168,10 +168,8 @@ public class PushApplication extends BaseApplication {
     }
 
 
-    public int ThirdAccountMgrInit(final String appId) {
-
+    public int ThirdAccountMgrInit() {
         ThirdAccountMgr.getInstance();
-
         return ErrCode.XOK;
     }
 

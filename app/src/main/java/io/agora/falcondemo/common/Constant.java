@@ -5,7 +5,8 @@ public class Constant {
     public static final String IS_AGREE = "is_agree";
     public static final String ACCOUNT = "account";
     public static final String APP_ID = "app_id";
-
+    public static final String BASIC_AUTH_KEY = "basic_auth_key";
+    public static final String BASIC_AUTH_SECRET = "basic_auth_secret";
 
     /**
      * @brief 显示页面

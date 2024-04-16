@@ -42,10 +42,14 @@ public class ThirdAccountMgr {
         public String mAppId;
         public String mUserId;
         public int mClientType;
+        public String mAuthKey;
+        public String mAuthSecret;
 
         @Override
         public String toString() {
             String infoText = "{ mAppId=" + mAppId
+                    + ", mAuthKey=" + mAuthKey
+                    + ", mAuthSecret=" + mAuthSecret
                     + ", mUserId=" + mUserId
                     + ", mClientType=" + mClientType  + " }";
             return infoText;
@@ -93,10 +97,14 @@ public class ThirdAccountMgr {
         public String mUserId;
         public int mClientType;
         public String mPusherId;
+        public String mAuthKey;
+        public String mAuthSecret;
 
         @Override
         public String toString() {
             String infoText = "{ mAppId=" + mAppId
+                    + ", mAuthKey=" + mAuthKey
+                    + ", mAuthSecret=" + mAuthSecret
                     + ", mUserId=" + mUserId
                     + ", mClientType=" + mClientType
                     + ", mPusherId=" + mPusherId + " }";
@@ -147,9 +155,7 @@ public class ThirdAccountMgr {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/ThridAccountMgr";
     private static final int HTTP_TIMEOUT = 8000;
-    private static final String BASE_URL = "http://api-test-huzhou1.agora.io/cn/iot/link";
-    private static final String BASIC_AUTH_KEY = "59a44ef2b37745fe93c6c660f0700184";
-    private static final String BASIC_AUTH_SECRET = "65825d8c98b5461291f91726ef9cfb85";
+    private static final String BASE_URL = "http://api.sd-rtn.com/cn/iot/link";
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
@@ -217,20 +223,6 @@ public class ThirdAccountMgr {
      */
     public String getRequestBaseUrl() {
         return BASE_URL;
-    }
-
-    /**
-     * @brief 获取HTTP请求的认证Key
-     */
-    public String getRequestKey() {
-        return BASIC_AUTH_KEY;
-    }
-
-    /**
-     * @brief 获取HTTP请求的认证Key
-     */
-    public String getRequestSecret() {
-        return BASIC_AUTH_SECRET;
     }
 
 
@@ -327,7 +319,7 @@ public class ThirdAccountMgr {
             return result;
         }
 
-        String basicAuth = generateBasicAuth(BASIC_AUTH_KEY, BASIC_AUTH_SECRET);
+        String basicAuth = generateBasicAuth(createParam.mAuthKey, createParam.mAuthSecret);
         ResponseObj responseObj = requestToServer(requestUrl, basicAuth, null, body);
         if (responseObj == null) {
             Log.e(TAG, "<userAccountCreate> [EXIT] failure with no response!");
@@ -398,7 +390,7 @@ public class ThirdAccountMgr {
             return result;
         }
 
-        String basicAuth = generateBasicAuth(BASIC_AUTH_KEY, BASIC_AUTH_SECRET);
+        String basicAuth = generateBasicAuth(activeParam.mAuthKey, activeParam.mAuthSecret);
         ResponseObj responseObj = requestToServer(requestUrl, basicAuth, null, body);
         if (responseObj == null) {
             Log.e(TAG, "<userAccountActive> [EXIT] failure with no response!");
