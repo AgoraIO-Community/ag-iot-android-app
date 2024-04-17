@@ -118,12 +118,10 @@ public class AccountRegisterActivity extends BaseViewBindingActivity<ActivityReg
                     @Override
                     public void run() {
                         hideLoadingView();
-                        if (createResult.mErrCode != ErrCode.XOK) {
-                            popupMessage("Fail to register account, errCode=" + createResult.mErrCode
-                                    + ", errMessage=" + createResult.mMessage);
+                        if ((createResult.mErrCode != ErrCode.XOK) || (createResult.mRespCode != ErrCode.XOK)) {
+                            popupMessage("Account create failure, errMsg=" + createResult.mMessage);
                             return;
                         }
-
                         popupMessageLongTime("Register account successful, nodeId=" + createResult.mNodeId
                                 + ", region=" + createResult.mRegion);
 

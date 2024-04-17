@@ -121,8 +121,8 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
                     @Override
                     public void run() {
                         hideLoadingView();
-                        if (activeResult.mErrCode != ErrCode.XOK) {
-                            popupMessage("appId is empty, please clear application cache and input appId!");
+                        if ((activeResult.mErrCode != ErrCode.XOK) || (activeResult.mRespCode != ErrCode.XOK)) {
+                            popupMessage("Account login failure, errMsg=" + activeResult.mMessage);
                             return;
                         }
 

@@ -316,16 +316,12 @@ public class ThirdAccountMgr {
             e.printStackTrace();
             Log.e(TAG, "<userAccountCreate> [Exit] failure with JSON exp!");
             result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            result.mMessage = "Fail_JSON_request";
             return result;
         }
 
         String basicAuth = generateBasicAuth(createParam.mAuthKey, createParam.mAuthSecret);
         ResponseObj responseObj = requestToServer(requestUrl, basicAuth, null, body);
-        if (responseObj == null) {
-            Log.e(TAG, "<userAccountCreate> [EXIT] failure with no response!");
-            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return result;
-        }
         if (responseObj.mRespCode != ErrCode.XOK) {
             Log.e(TAG, "<userAccountCreate> [EXIT] failure, mRespCode=" + responseObj.mRespCode);
             result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
@@ -350,11 +346,13 @@ public class ThirdAccountMgr {
 
             result.mRespCode = ErrCode.XOK;
             result.mErrCode = ErrCode.XOK;
+            result.mMessage = responseObj.mTip;
 
         } catch (JSONException jsonExp) {
             jsonExp.printStackTrace();
             Log.e(TAG, "<userAccountCreate> [JSON_EXP] jsonExp=" + jsonExp);
             result.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
+            result.mMessage = "Invalid_JSON_response";
             return result;
         }
 
@@ -387,16 +385,12 @@ public class ThirdAccountMgr {
             e.printStackTrace();
             Log.e(TAG, "<userAccountActive> [Exit] failure with JSON exp!");
             result.mErrCode = ErrCode.XERR_HTTP_JSON_WRITE;
+            result.mMessage = "Fail_JSON_request";
             return result;
         }
 
         String basicAuth = generateBasicAuth(activeParam.mAuthKey, activeParam.mAuthSecret);
         ResponseObj responseObj = requestToServer(requestUrl, basicAuth, null, body);
-        if (responseObj == null) {
-            Log.e(TAG, "<userAccountActive> [EXIT] failure with no response!");
-            result.mErrCode = ErrCode.XERR_HTTP_NO_RESPONSE;
-            return result;
-        }
         if (responseObj.mRespCode != ErrCode.XOK) {
             Log.e(TAG, "<userAccountActive> [EXIT] failure, mRespCode=" + responseObj.mRespCode);
             result.mErrCode = ErrCode.XERR_HTTP_RESP_CODE;
@@ -424,11 +418,13 @@ public class ThirdAccountMgr {
 
             result.mRespCode = ErrCode.XOK;
             result.mErrCode = ErrCode.XOK;
+            result.mMessage = responseObj.mTip;
 
         } catch (JSONException jsonExp) {
             jsonExp.printStackTrace();
             Log.e(TAG, "<userAccountActive> [JSON_EXP] jsonExp=" + jsonExp);
             result.mErrCode =  ErrCode.XERR_HTTP_JSON_PARSE;
+            result.mMessage = "Invalid_JSON_response";
             return result;
         }
 
@@ -459,6 +455,7 @@ public class ThirdAccountMgr {
 
         if ((!baseUrl.startsWith("http://")) && (!baseUrl.startsWith("https://"))) {
             responseObj.mErrorCode = ErrCode.XERR_HTTP_URL;
+            responseObj.mTip = "Invalid_URL";
             ALog.getInstance().e(TAG, "<requestToServer> Invalid url=" + baseUrl);
             return responseObj;
         }
@@ -510,6 +507,10 @@ public class ThirdAccountMgr {
             responseObj.mRespCode = connection.getResponseCode();
             if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
                 responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;
+                responseObj.mTip = connection.getResponseMessage();
+                if (responseObj.mRespCode == HttpURLConnection.HTTP_BAD_REQUEST) {
+                    responseObj.mTip = "Invalid_appId";
+                }
                 ALog.getInstance().e(TAG, "<requestToServer> Error response code="
                         + responseObj.mRespCode + ", errMessage=" + connection.getResponseMessage());
                 return responseObj;
@@ -533,6 +534,7 @@ public class ThirdAccountMgr {
                 e.printStackTrace();
                 ALog.getInstance().e(TAG, "<requestToServer> Invalied json=" + response);
                 responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_DATA;
+                responseObj.mTip = "Invalid_JSON_response";
                 responseObj.mRespJsonObj = null;
             }
 
@@ -542,6 +544,7 @@ public class ThirdAccountMgr {
         } catch (Exception e) {
             e.printStackTrace();
             responseObj.mErrorCode = ErrCode.XERR_HTTP_CONNECT;
+            responseObj.mTip = "Fail_to_connect_server";
             return responseObj;
 
         } finally {
@@ -558,169 +561,6 @@ public class ThirdAccountMgr {
         }
     }
 
-    /*
-     * @brief 发送HTTP请求上传文件处理，并且等待接收回应数据
-     *        该函数是阻塞等待调用，因此最好是在工作线程中执行
-     */
-    private synchronized ThirdAccountMgr.ResponseObj requestFileToServer(String baseUrl,
-                                                                      String token,
-                                                                      String fileName,
-                                                                      String fileDir,
-                                                                      boolean rename,
-                                                                      byte[] fileContent ) {
-
-        ThirdAccountMgr.ResponseObj responseObj = new ThirdAccountMgr.ResponseObj();
-
-        if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-            responseObj.mErrorCode = ErrCode.XERR_HTTP_URL;
-            Log.e(TAG, "<requestFileToServer> Invalid url=" + baseUrl);
-            return responseObj;
-        }
-
-        // 拼接URL和请求参数生成最终URL
-        String realURL = baseUrl;
-        Log.d(TAG, "<requestFileToServer> requestUrl=" + realURL);
-
-
-        //开启子线程来发起网络请求
-        HttpURLConnection connection = null;
-        BufferedReader reader = null;
-        StringBuilder response = new StringBuilder();
-
-        //同步方式请求HTTP，因此请求操作最好放在工作线程中进行
-        try {
-            java.net.URL url = new URL(realURL);
-            connection = (HttpURLConnection) url.openConnection();
-            // 设置token
-            if ((token != null) && (!token.isEmpty())) {
-                connection.setRequestProperty("authorization", "Bearer " + token);
-            }
-
-
-            final String NEWLINE = "\r\n";
-            final String PREFIX = "--";
-            final String BOUNDARY = "########";
-
-
-            // 调用HttpURLConnection对象setDoOutput(true)、setDoInput(true)、setRequestMethod("POST")；
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setRequestMethod("POST");
-
-            // 设置Http请求头信息；（Accept、Connection、Accept-Encoding、Cache-Control、Content-Type、User-Agent）
-            connection.setRequestProperty("Connection", "Keep-Alive");
-            connection.setRequestProperty("Accept", "*/*");
-            connection.setRequestProperty("Accept-Encoding", "gzip, deflate");
-            connection.setRequestProperty("Cache-Control", "no-cache");
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + BOUNDARY);
-
-            // 调用HttpURLConnection对象的connect()方法，建立与服务器的真实连接；
-            connection.connect();
-
-            // 调用HttpURLConnection对象的getOutputStream()方法构建输出流对象；
-            DataOutputStream os = new DataOutputStream(connection.getOutputStream());
-
-            //
-            // 写入文件头的键值信息
-            //
-            String fileKey = "file";
-            String fileContentType = "image/jpeg";
-            String fileHeader = "Content-Disposition: form-data; name=\"" + fileKey
-                                + "\"; filename=\"" + fileName + "\"" + NEWLINE;
-            String contentType = "Content-Type: " + fileContentType + NEWLINE;
-            String encodingType = "Content-Transfer-Encoding: binary" + NEWLINE;
-            os.writeBytes(PREFIX + BOUNDARY + NEWLINE);
-            os.writeBytes(fileHeader);
-            os.writeBytes(contentType);
-            os.writeBytes(encodingType);
-            os.writeBytes(NEWLINE);
-
-            //
-            // 写入文件内容
-            //
-            os.write(fileContent);
-            os.writeBytes(NEWLINE);
-
-            //
-            // 写入其他参数数据
-            //
-            Map<String, String> params = new HashMap<String, String>();
-            params.put("fileName", fileName);
-            params.put("fileDir", fileDir);
-            params.put("renameFile", (rename ? "true" : "false"));
-
-            for (Map.Entry<String, String> entry : params.entrySet()) {
-                String key = entry.getKey();
-                String value = params.get(key);
-
-                os.writeBytes(PREFIX + BOUNDARY + NEWLINE);
-                os.writeBytes("Content-Disposition: form-data; name=\"" + key + "\"" + NEWLINE);
-                os.writeBytes(NEWLINE);
-
-                os.write(value.getBytes());
-                os.writeBytes(NEWLINE);
-            }
-
-            //
-            // 写入整体结束所有的数据
-            //
-            os.writeBytes(PREFIX + BOUNDARY + PREFIX + NEWLINE);
-            os.flush();
-            os.close();
-
-            connection.setReadTimeout(HTTP_TIMEOUT);
-            connection.setConnectTimeout(HTTP_TIMEOUT);
-            responseObj.mRespCode = connection.getResponseCode();
-            if (responseObj.mRespCode != HttpURLConnection.HTTP_OK) {
-                responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_CODE + responseObj.mRespCode;
-                Log.e(TAG, "<requestFileToServer> Error response code="
-                        + responseObj.mRespCode + ", errMessage=" + connection.getResponseMessage());
-                return responseObj;
-            }
-
-            // 读取回应数据包
-            InputStream inputStream = connection.getInputStream();
-            reader = new BufferedReader(new InputStreamReader(inputStream));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-
-            JSONObject data = null;
-            try {
-                responseObj.mRespJsonObj = new JSONObject(response.toString());
-                responseObj.mRespCode = responseObj.mRespJsonObj.getInt("code");
-                responseObj.mTip = responseObj.mRespJsonObj.getString("timestamp");
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-                Log.e(TAG, "<requestFileToServer> Invalied json=" + response);
-                responseObj.mErrorCode = ErrCode.XERR_HTTP_RESP_DATA;
-                responseObj.mRespJsonObj = null;
-            }
-
-            Log.d(TAG, "<requestFileToServer> finished, response="  + response.toString());
-            return responseObj;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            responseObj.mErrorCode = ErrCode.XERR_HTTP_CONNECT;
-            return responseObj;
-
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
 
     int parseJsonIntValue(JSONObject jsonState, String fieldName, int defVal) {
         try {
