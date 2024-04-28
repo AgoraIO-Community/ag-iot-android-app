@@ -236,7 +236,7 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
             connectState = connectInfo.mState;
             audioPublishing = connectInfo.mAudioPublishing;
 
-            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
             subscribed = streamStatus.mSubscribed;
             muteAudio = streamStatus.mAudioMute;
             recording = streamStatus.mRecording;
@@ -246,7 +246,7 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         deviceInfo.mVideoView = deviceInfo.mViewHolder.getView(R.id.svDeviceView);
         if (subscribed) {
             deviceInfo.mVideoView.setVisibility(View.VISIBLE);
-            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, deviceInfo.mVideoView);
         } else {
             deviceInfo.mVideoView.setVisibility(View.INVISIBLE);
         }
@@ -335,7 +335,7 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
             connectState = connectInfo.mState;
             audioPublishing = connectInfo.mAudioPublishing;
 
-            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
             subscribed = streamStatus.mSubscribed;
             muteAudio = streamStatus.mAudioMute;
             recording = streamStatus.mRecording;
@@ -345,7 +345,7 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         deviceInfo.mVideoView = holder.getView(R.id.svDeviceView);
         if (subscribed) {
             deviceInfo.mVideoView.setVisibility(View.VISIBLE);
-            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+            deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, deviceInfo.mVideoView);
         } else {
             deviceInfo.mVideoView.setVisibility(View.INVISIBLE);
         }

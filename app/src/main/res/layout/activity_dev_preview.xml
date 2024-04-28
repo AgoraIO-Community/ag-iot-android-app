@@ -40,7 +40,6 @@
             android:text="视频质量"
             android:textColor="@color/black"
             android:textSize="16sp"
-            android:visibility="invisible"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="parent" />
 
@@ -53,7 +52,6 @@
             android:text="开始传输"
             android:textColor="@color/black"
             android:textSize="16sp"
-            android:visibility="invisible"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="parent" />
 
@@ -64,7 +62,6 @@
             android:layout_marginStart="260dp"
             android:layout_marginTop="50dp"
             android:text="清除记录"
-            android:visibility="invisible"
             android:textColor="@color/black"
             android:textSize="16sp"
             app:layout_constraintTop_toTopOf="parent"
@@ -72,8 +69,8 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvTransStatusList"
-            android:layout_width="600dp"
-            android:layout_height="240dp"
+            android:layout_width="800dp"
+            android:layout_height="260dp"
             android:layout_marginStart="20dp"
             android:layout_marginTop="100dp"
             android:elevation="3dp"

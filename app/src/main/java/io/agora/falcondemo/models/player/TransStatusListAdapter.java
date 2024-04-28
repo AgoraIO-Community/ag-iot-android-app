@@ -118,10 +118,10 @@ public class TransStatusListAdapter extends BaseAdapter<FileTransStatus> {
 
         switch (transStatus.mType) {
             case FileTransStatus.TYPE_START:
-                displayText = transStatus.mTimestamp + " [START] " + transStatus.mInfo;
+                displayText = transStatus.mTimestamp + " [SEND_CMD_START] " + transStatus.mInfo;
                 break;
             case FileTransStatus.TYPE_STOP:
-                displayText = transStatus.mTimestamp + " [STOP] " + transStatus.mInfo;
+                displayText = transStatus.mTimestamp + " [SEND_CMD_STOP] " + transStatus.mInfo;
                 break;
             case FileTransStatus.TYPE_FILE_BEGIN:
                 displayText = transStatus.mTimestamp + " [ONE_FILE_BEGIN] " + transStatus.mInfo;
@@ -130,8 +130,10 @@ public class TransStatusListAdapter extends BaseAdapter<FileTransStatus> {
                 displayText = transStatus.mTimestamp + " [ONE_FILE_DATA] size=" + transStatus.mDataSize;
                 break;
             case FileTransStatus.TYPE_FILE_END:
-                String eofText = transStatus.mEOF ? " EOF" : "";
-                displayText = transStatus.mTimestamp + " [ONE_FILE_END] " + transStatus.mInfo + eofText;
+                String eofText = transStatus.mEOF ? " [EOF] " : " ";
+                String recvText = (transStatus.mRecvSuccess) ? " [SUCCESS]" : " [FAILURE]";
+                displayText = transStatus.mTimestamp + " [ONE_FILE_END] " + transStatus.mInfo
+                        + eofText + recvText;
                 break;
         }
 

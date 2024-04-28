@@ -35,8 +35,10 @@ import java.util.UUID;
 import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.dialog.DialogInputCommand;
 import io.agora.falcondemo.models.devstream.DevStreamActivity;
+import io.agora.falcondemo.models.player.FileTransStatus;
 import io.agora.falcondemo.thirdpartyaccount.ThirdAccountMgr;
 import io.agora.falcondemo.utils.DevStreamUtils;
+import io.agora.falcondemo.utils.FileTransferMgr;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.iotlink.IAgoraIotAppSdk;
@@ -65,6 +67,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     // message Id
     //
     private static final int MSGID_HOMEPAGE_CONNECTALL = 0x2001;       ///< 连接所有设备
+    private static final int MSGID_HOMEPAGE_REFRESH = 0x2002;          ///< 刷新所有UI状态显示
 
 
 
@@ -126,6 +129,10 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
                     case MSGID_HOMEPAGE_CONNECTALL:
                         onMsgConnectAll(msg);
                         break;
+
+                    case MSGID_HOMEPAGE_REFRESH:
+                        onMsgRefreshAll(msg);
+                        break;
                 }
             }
         };
@@ -146,6 +153,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             mMsgHandler.sendEmptyMessage(MSGID_HOMEPAGE_CONNECTALL);
         }
 
+        FileTransferMgr.getInstance();
         Log.d(TAG, "<initView> done");
     }
 
@@ -233,6 +241,9 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             if (connectObj != null) {
                 resetDeviceDisplayView(connectObj);
             }
+
+            // 刷新所有设备界面显示
+            mMsgHandler.sendEmptyMessage(MSGID_HOMEPAGE_REFRESH);
         }
     }
 
@@ -312,6 +323,43 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             deviceInfo.mConnectObj = connectObj;
             mDevListAdapter.setItem(i, deviceInfo);
         }
+    }
+
+    /**
+     * @brief 刷新所有设备状态显示
+     */
+    void onMsgRefreshAll(Message msg) {
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        List<IConnectionObj> connectList = connectMgr.getConnectionList();
+
+        List<DeviceInfo> deviceList = mDevListAdapter.getDatas();
+        int i;
+        for (i = 0; i < deviceList.size(); i++) {
+            DeviceInfo deviceInfo = deviceList.get(i);
+            IConnectionObj connectObj = findConnectObjByDevNodeId(connectList, deviceInfo.mNodeId);
+            if (connectObj != deviceInfo.mConnectObj) {
+                Log.d(TAG, "<onMsgRefreshAll> devNodeId=" + deviceInfo.mNodeId
+                    + ", oldConnectObj=" + deviceInfo.mConnectObj + ", newConnectObj" + connectObj);
+                deviceInfo.mConnectObj = connectObj;
+                mDevListAdapter.setItem(i, deviceInfo);
+            }
+        }
+    }
+
+    /**
+     * @brief 根据设备 NodeId，找到相应的链接对象
+     */
+    IConnectionObj findConnectObjByDevNodeId(final List<IConnectionObj> connectList,
+                                             final String devNodeId) {
+        for (int i = 0; i < connectList.size(); i++) {
+            IConnectionObj connectObj = connectList.get(i);
+
+            String peerNodeId = connectObj.getInfo().mPeerNodeId;
+            if (devNodeId.compareToIgnoreCase(peerNodeId) == 0) {
+                return connectObj;
+            }
+        }
+        return null;
     }
 
 
@@ -601,26 +649,26 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             Log.d(TAG, "<onDevItemPreviewClick> not connected, state=" + connectInfo.mState);
             return;
         }
-        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
         int errCode;
 
         if (!streamStatus.mSubscribed) {
             // 订阅流 PUBLIC_1
             ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] subscribe device: " + deviceInfo
                     + ", position=" + position);
-            errCode = deviceInfo.mConnectObj.streamSubscribeStart(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, "xxxx");
+            errCode = deviceInfo.mConnectObj.streamSubscribeStart(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, "xxxx");
             if (errCode != ErrCode.XOK) {
                 popupMessage("Subscribe PUB_1 stream of: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
                 return;
             }
 
-            errCode = deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, deviceInfo.mVideoView);
+            errCode = deviceInfo.mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, deviceInfo.mVideoView);
 
         } else {
             // 取消 流 PUBLIC_1的订阅
             ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] unsubscribe device: " + deviceInfo
                     + ", position=" + position);
-            errCode = deviceInfo.mConnectObj.streamSubscribeStop(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            errCode = deviceInfo.mConnectObj.streamSubscribeStop(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Unsubscribe PUB_1 stream of: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
                 return;
@@ -646,14 +694,14 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             return;
         }
 
-        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
         if (!streamStatus.mSubscribed) {
             popupMessage("The stream have NOT subscribed, please subscribe firstly");
             return;
         }
 
         boolean audioMute = streamStatus.mAudioMute;
-        int errCode = deviceInfo.mConnectObj.muteAudioPlayback(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, (!audioMute));
+        int errCode = deviceInfo.mConnectObj.muteAudioPlayback(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, (!audioMute));
         if (errCode != ErrCode.XOK) {
             popupMessage("Mute or unmute device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
             return;
@@ -677,16 +725,16 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             Log.d(TAG, "<onDevItemRecordClick> not connected, state=" + connectInfo.mState);
             return;
         }
-        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
         if (!streamStatus.mSubscribed) {
             popupMessage("The stream have NOT subscribed, please subscribe firstly");
             return;
         }
 
-        boolean recording = deviceInfo.mConnectObj.isStreamRecording(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        boolean recording = deviceInfo.mConnectObj.isStreamRecording(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
         if (recording) {
             // 停止录像
-            int errCode = deviceInfo.mConnectObj.streamRecordStop(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+            int errCode = deviceInfo.mConnectObj.streamRecordStop(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Device: " + deviceInfo.mNodeId + " stop recording failure, errCode=" + errCode);
                 return;
@@ -697,8 +745,8 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
         } else {
             // 启动录像
-            String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, false);
-            int errCode = deviceInfo.mConnectObj.streamRecordStart(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, strSavePath);
+            String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, false);
+            int errCode = deviceInfo.mConnectObj.streamRecordStart(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, strSavePath);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Device: " + deviceInfo.mNodeId + " start recording failure, errCode=" + errCode);
                 return;
@@ -772,14 +820,14 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             Log.d(TAG, "<onDevItemShotCaptureClick> not connected, state=" + connectInfo.mState);
             return;
         }
-        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1);
+        IConnectionObj.StreamStatus streamStatus = deviceInfo.mConnectObj.getStreamStatus(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1);
         if (!streamStatus.mSubscribed) {
             popupMessage("The stream have NOT subscribed, please subscribe firstly");
             return;
         }
 
-        String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, true);
-        int errCode = deviceInfo.mConnectObj.streamVideoFrameShot(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, strSavePath);
+        String strSavePath = FileUtils.getFileSavePath(deviceInfo.mNodeId, IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, true);
+        int errCode = deviceInfo.mConnectObj.streamVideoFrameShot(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, strSavePath);
         if (errCode != ErrCode.XOK) {
             popupMessage("Device: " + deviceInfo.mNodeId + " shot capture failure, errCode=" + errCode);
             return;
@@ -976,7 +1024,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
     @Override
     public void onPeerDisconnected(final IConnectionObj connectObj, int errCode) {
         String peerNodeId = connectObj.getInfo().mPeerNodeId;
-        Log.d(TAG, "<onPeerDisconnected> [IOTSDK/] connectObj=" + connectObj
+        ALog.getInstance().d(TAG, "<onPeerDisconnected> [IOTSDK/] connectObj=" + connectObj
                 + ", peerNodeId=" + connectObj.getInfo().mPeerNodeId + ", errCode=" + errCode);
 
         getActivity().runOnUiThread(new Runnable() {
@@ -1095,12 +1143,50 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
                     return;
                 }
 
-                popupMessage("Recv message: " + recvedMsgData + " from devNodeId=" + findResult.mDevInfo.mNodeId);
+                String recvText = new String(recvedMsgData, StandardCharsets.UTF_8);
+                popupMessageLongTime("Recv message: " + recvText + " from devNodeId=" + findResult.mDevInfo.mNodeId);
             }
         });
     }
 
 
+    public void onFileTransRecvStart(final IConnectionObj connectObj, final byte[] startDescrption) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onFileTransRecvStart> [IOTSDK/] connectObj=" + connectObj
+                + ", startDescrption.length=" + startDescrption.length);
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                FileTransferMgr.getInstance().onFileTransRecvStart(connectObj, startDescrption);
+            }
+        });
+    }
+
+    public void onFileTransRecvData(final IConnectionObj connectObj, final byte[] recvedData) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+        Log.d(TAG, "<onFileTransRecvData> [IOTSDK/] peerNodeId=" + peerNodeId
+                + ", recvedData.length=" + recvedData.length);
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                FileTransferMgr.getInstance().onFileTransRecvData(connectObj, recvedData);
+            }
+        });
+    }
+
+    public void onFileTransRecvDone(final IConnectionObj connectObj, boolean transferEnd,
+                                    final byte[] doneDescrption) {
+        String peerNodeId = connectObj.getInfo().mPeerNodeId;
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                FileTransferMgr.getInstance().onFileTransRecvDone(connectObj, transferEnd, doneDescrption);
+            }
+        });
+    }
 
 
 

@@ -27,7 +27,8 @@ public class FileTransStatus {
     public String       mInfo;                          ///< 状态的信息: START STOP BEGIN END 类型用到
     public int          mDataSize;                      ///< 数据大小
     public boolean      mEOF;                           ///< 是否整体结束
-
+    public String       mMd5Text;                       ///< 单个文件的Md5值
+    public boolean      mRecvSuccess;                   ///< 接收是否成功
 
     @Override
     public String toString() {
@@ -35,7 +36,8 @@ public class FileTransStatus {
                 + ", mTimestamp=" + mTimestamp
                 + ", mInfo=" + mInfo
                 + ", mDataSize=" + mDataSize
-                + ", mEOF=" + mEOF + " }";
+                + ", mEOF=" + mEOF
+                + ", mMd5Text=" + mMd5Text + " }";
         return infoText;
     }
 

@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.agora.baselibrary.utils.ScreenUtils;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -27,6 +29,8 @@ import io.agora.falcondemo.common.Constant;
 import io.agora.falcondemo.models.home.DeviceInfo;
 import io.agora.falcondemo.models.home.DeviceListAdapter;
 import io.agora.falcondemo.utils.DevStreamUtils;
+import io.agora.falcondemo.utils.FileTransferMgr;
+import io.agora.falcondemo.utils.FileUtils;
 import io.agora.iotlink.AIotAppSdkFactory;
 import io.agora.iotlink.ErrCode;
 import io.agora.falcondemo.R;
@@ -35,10 +39,11 @@ import io.agora.falcondemo.base.PushApplication;
 import io.agora.falcondemo.databinding.ActivityDevPreviewBinding;
 import io.agora.iotlink.IConnectionMgr;
 import io.agora.iotlink.IConnectionObj;
+import io.agora.iotlink.logger.ALog;
 
 
 public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPreviewBinding>
-    implements IConnectionMgr.ICallback, IConnectionObj.ICallback {
+    implements IConnectionMgr.ICallback, IConnectionObj.ICallback, FileTransferMgr.ICallback {
     private static final String TAG = "IOTLINK/DevPrevAct";
 
 
@@ -73,7 +78,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         IConnectionObj.ConnectionInfo connectInfo = mConnectObj.getInfo();
         mDeviceNodeId = connectInfo.mPeerNodeId;
 
-        mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, getBinding().svDeviceView);
+        mConnectObj.setVideoDisplayView(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, getBinding().svDeviceView);
         getBinding().tvNodeId.setText(connectInfo.mPeerNodeId);
 
 
@@ -100,7 +105,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
             mStatusListAdapter.setOwner(this);
             getBinding().rvTransStatusList.setLayoutManager(new LinearLayoutManager(this));
             getBinding().rvTransStatusList.setAdapter(mStatusListAdapter);
-            getBinding().rvTransStatusList.setItemViewCacheSize(15);
+            getBinding().rvTransStatusList.setItemViewCacheSize(1024);
             mStatusListAdapter.setMRVItemClickListener((view, position, data) -> {
             });
         }
@@ -110,6 +115,9 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         } else {
             getBinding().btnTransfer.setText("开始传输");
         }
+
+
+
 
         Log.d(TAG, "<initView> ");
     }
@@ -134,6 +142,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
             mConnectObj.registerListener(this);
         }
 
+        FileTransferMgr.getInstance().registerListener(this);
         Log.d(TAG, "<onStart> mConnectObj=" + mConnectObj);
     }
 
@@ -141,6 +150,8 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "<onStop> ");
+
+        FileTransferMgr.getInstance().unregisterListener(this);
 
         // 注销回调
         AIotAppSdkFactory.getInstance().getConnectionMgr().unregisterListener(this);
@@ -153,6 +164,32 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "<onResume> ");
+
+        if (!isConnectExist()) {
+            ALog.getInstance().d(TAG, "<onResume> device disconnected!");
+            PushApplication.getInstance().setUiPage(Constant.UI_PAGE_HOME); // 切换回主界面
+            PushApplication.getInstance().setFullscrnConnectionObj(null);
+            finish();
+        }
+
+    }
+
+    /**
+     * @brief 判断当前连接是否还存在
+     */
+    boolean isConnectExist() {
+        if (mConnectObj == null) {
+            return false;
+        }
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        List<IConnectionObj> connectList = connectMgr.getConnectionList();
+        for (int i = 0; i < connectList.size(); i++) {
+            IConnectionObj connectObj = connectList.get(i);
+            if (connectObj == mConnectObj) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -256,7 +293,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //        }
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_DEFAULT;
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to defalut successful!");
 //        } else {
@@ -273,7 +310,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SR;
 //        mVideoQuality.mSiDegree = IConnectionObj.SR_DEGREE_100;
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SR_1X successful!");
 //        } else {
@@ -290,7 +327,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SR;
 //        mVideoQuality.mSiDegree = IConnectionObj.SR_DEGREE_133;
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SR_1.33X successful!");
 //        } else {
@@ -307,7 +344,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SR;
 //        mVideoQuality.mSiDegree = IConnectionObj.SR_DEGREE_150;
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SR_1.5X successful!");
 //        } else {
@@ -324,7 +361,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SR;
 //        mVideoQuality.mSiDegree = IConnectionObj.SR_DEGREE_200;
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SR_2X successful!");
 //        } else {
@@ -341,7 +378,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SI;
 //        mVideoQuality.mSiDegree = mSbSiDegree.getProgress();
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " successful!");
 //        } else {
@@ -361,7 +398,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
 //
 //        mVideoQuality.mQualityType = IConnectionObj.VIDEOQUALITY_TYPE_SI;
 //        mVideoQuality.mSiDegree = mSbSiDegree.getProgress();
-//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, mVideoQuality);
+//        int errCode = connectObj.setPreviewVideoQuality(IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, mVideoQuality);
 //        if (errCode == ErrCode.XOK) {
 //            popupMessage("Set video quality to SI " + mVideoQuality.mSiDegree + " successful!");
 //        } else {
@@ -374,20 +411,21 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
     ///////////////////////////////////////////////////////////////////////////
     void onBtnTransfer(View parentView) {
         if (mConnectObj.isFileTransfering()) {
-            String stopMessage = "stop file transfer";
-            mConnectObj.fileTransferStop(stopMessage);
+            // mConnectObj.fileTransferStop();
+            FileTransferMgr.getInstance().transferStop(mConnectObj);
             popupMessage("File transfering stopped!");
             getBinding().btnTransfer.setText("开始传输");
 
             FileTransStatus newStatus = new FileTransStatus();
             newStatus.mType = FileTransStatus.TYPE_STOP;
-            newStatus.mInfo = stopMessage;
+            newStatus.mInfo = "";
             newStatus.mTimestamp = getTimestamp();
             mStatusListAdapter.addNewItem(newStatus);
 
         } else {
-            String startMessage = "file1; file2; file3; file4";
-            int errCode = mConnectObj.fileTransferStart(startMessage);
+            String startMessage = "file1;file2;file3;";
+            //int errCode = mConnectObj.fileTransferStart(startMessage);
+            int errCode = FileTransferMgr.getInstance().transferStart(mConnectObj, startMessage);
             if (errCode != ErrCode.XOK) {
                 popupMessage("Start file transfering failure, it is ongoing!");
                 return;
@@ -426,7 +464,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
     @Override
     public void onPeerDisconnected(final IConnectionObj connectObj, int errCode) {
         String peerDevNodeId = connectObj.getInfo().mPeerNodeId;
-        Log.d(TAG, "<onPeerDisconnected> [IOTSDK/] connectObj=" + connectObj
+        ALog.getInstance().d(TAG, "<onPeerDisconnected> [IOTSDK/] connectObj=" + connectObj
                 + ", peerDevNodeId=" + peerDevNodeId + ", errCode=" + errCode);
         if (mDeviceNodeId.compareTo(peerDevNodeId) != 0) {
             return;
@@ -435,6 +473,8 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                ALog.getInstance().d(TAG, "<onPeerDisconnected> device disconnected!");
+                PushApplication.getInstance().setUiPage(Constant.UI_PAGE_HOME); // 切换回主界面
                 PushApplication.getInstance().setFullscrnConnectionObj(null);
                 finish();
             }
@@ -447,6 +487,9 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
     @Override
     public void onStreamError(final IConnectionObj connectObj, final IConnectionObj.STREAM_ID subStreamId,
                               int errCode) {
+        if (connectObj != mConnectObj) {  // 不是当前链接的
+            return;
+        }
         Log.d(TAG, "<onStreamError> [IOTSDK/] connectObj=" + connectObj
                 + ", subStreamId=" + DevStreamUtils.getStreamName(subStreamId)
                 + ", errCode=" + errCode);
@@ -460,10 +503,16 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         });
     }
 
-    public void onFileTransRecvStart(final IConnectionObj connectObj, final byte[] startDescrption) {
+    ///////////////////////////////////////////////////////////////////////////////////
+    //////////////// Override Methods of FileTransferMgr.ICallback  ////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    public void onTransMgrRecvStart(final IConnectionObj connectObj, final byte[] startDescrption) {
+        if (connectObj != mConnectObj) {  // 不是当前链接的
+            return;
+        }
         String peerNodeId = connectObj.getInfo().mPeerNodeId;
-        Log.d(TAG, "<onFileTransRecvStart> [IOTSDK/] connectObj=" + connectObj
-                + ", startDescrption=" + startDescrption);
+        Log.d(TAG, "<onTransMgrRecvStart> [IOTSDK/] peerNodeId=" + peerNodeId
+                + ", startDescrption=" + new String(startDescrption));
 
         runOnUiThread(new Runnable() {
             @Override
@@ -477,38 +526,58 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         });
     }
 
-    public void onFileTransRecvData(final IConnectionObj connectObj, final byte[] recvedData) {
+    public void onTransMgrRecvData(final IConnectionObj connectObj, final byte[] recvedData) {
+        if (connectObj != mConnectObj) {  // 不是当前链接的
+            return;
+        }
         String peerNodeId = connectObj.getInfo().mPeerNodeId;
-        Log.d(TAG, "<onFileTransRecvData> [IOTSDK/] connectObj=" + connectObj
-                + ", recvedData=" + recvedData);
+        Log.d(TAG, "<onTransMgrRecvData> [IOTSDK/] peerNodeId=" + peerNodeId
+                + ", recvedData.length=" + recvedData.length);
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                FileTransStatus newStatus = new FileTransStatus();
-                newStatus.mType = FileTransStatus.TYPE_FILE_DATA;
-                newStatus.mDataSize = recvedData.length;
-                newStatus.mTimestamp = getTimestamp();
-                mStatusListAdapter.addNewItem(newStatus);
+//                FileTransStatus newStatus = new FileTransStatus();
+//                newStatus.mType = FileTransStatus.TYPE_FILE_DATA;
+//                newStatus.mDataSize = recvedData.length;
+//                newStatus.mTimestamp = getTimestamp();
+//                mStatusListAdapter.addNewItem(newStatus);
             }
         });
     }
 
-    public void onFileTransRecvDone(final IConnectionObj connectObj, boolean transferEnd,
-                                    final byte[] doneDescrption) {
+    public void onTransMgrRecvDone(final IConnectionObj connectObj, boolean transferEnd,
+                                    final byte[] doneDescrption, final byte[] md5Value) {
+        if (connectObj != mConnectObj) {  // 不是当前链接的
+            return;
+        }
         String peerNodeId = connectObj.getInfo().mPeerNodeId;
-        Log.d(TAG, "<onFileTransRecvDone> [IOTSDK/] connectObj=" + connectObj
-                + ", doneDescrption=" + doneDescrption);
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // 计算MD5值
+                String doneInfo = new String(doneDescrption);
+                String md5Text = FileUtils.bytesToHexString(md5Value).toLowerCase();
+                boolean recvSuccess = true;
+                int subStrIdx = doneInfo.indexOf(md5Text);
+                if (subStrIdx < 0) {
+                    recvSuccess = false;
+                }
+
                 FileTransStatus newStatus = new FileTransStatus();
                 newStatus.mType = FileTransStatus.TYPE_FILE_END;
-                newStatus.mInfo = new String(doneDescrption);
+                newStatus.mInfo = doneInfo;
                 newStatus.mTimestamp = getTimestamp();
                 newStatus.mEOF = transferEnd;
+                newStatus.mMd5Text = md5Text;
+                newStatus.mRecvSuccess = recvSuccess;
                 mStatusListAdapter.addNewItem(newStatus);
+
+                String recvText = (recvSuccess) ? "[RECV_FILE_SUCCESS]" : "[RECV_FILE_FAILURE]";
+                Log.d(TAG, "<onTransMgrRecvDone> [IOTSDK/] peerNodeId=" + peerNodeId
+                        + ", doneDescrption=" + new String(doneDescrption)
+                        + ", md5=" + newStatus.mMd5Text + ", " + recvText);
 
                 if (transferEnd) {  // 整个传输完成了
                     popupMessage("File transfering is done!");
@@ -516,7 +585,5 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
                 }
             }
         });
-
-
     }
 }

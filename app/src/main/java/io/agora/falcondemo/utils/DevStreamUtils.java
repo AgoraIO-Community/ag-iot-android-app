@@ -23,60 +23,60 @@ public class DevStreamUtils {
         String streamName = "UNKOWN_STREAM";
 
         switch (streamId) {
-            case PUBLIC_STREAM_1:
-                streamName = "PUBLIC_STREAM_1";
+            case BROADCAST_STREAM_1:
+                streamName = "BROADCAST_STREAM_1";
                 break;
-            case PUBLIC_STREAM_2:
-                streamName = "PUBLIC_STREAM_2";
+            case BROADCAST_STREAM_2:
+                streamName = "BROADCAST_STREAM_2";
                 break;
-            case PUBLIC_STREAM_3:
-                streamName = "PUBLIC_STREAM_3";
+            case BROADCAST_STREAM_3:
+                streamName = "BROADCAST_STREAM_3";
                 break;
-            case PUBLIC_STREAM_4:
-                streamName = "PUBLIC_STREAM_4";
+            case BROADCAST_STREAM_4:
+                streamName = "BROADCAST_STREAM_4";
                 break;
-            case PUBLIC_STREAM_5:
-                streamName = "PUBLIC_STREAM_5";
+            case BROADCAST_STREAM_5:
+                streamName = "BROADCAST_STREAM_5";
                 break;
-            case PUBLIC_STREAM_6:
-                streamName = "PUBLIC_STREAM_6";
+            case BROADCAST_STREAM_6:
+                streamName = "BROADCAST_STREAM_6";
                 break;
-            case PUBLIC_STREAM_7:
-                streamName = "PUBLIC_STREAM_7";
+            case BROADCAST_STREAM_7:
+                streamName = "BROADCAST_STREAM_7";
                 break;
-            case PUBLIC_STREAM_8:
-                streamName = "PUBLIC_STREAM_8";
+            case BROADCAST_STREAM_8:
+                streamName = "BROADCAST_STREAM_8";
                 break;
-            case PUBLIC_STREAM_9:
-                streamName = "PUBLIC_STREAM_9";
+            case BROADCAST_STREAM_9:
+                streamName = "BROADCAST_STREAM_9";
                 break;
 
-            case PRIVATE_STREAM_1:
-                streamName = "PRIVATE_STREAM_1";
+            case UNICAST_STREAM_1:
+                streamName = "UNICAST_STREAM_1";
                 break;
-            case PRIVATE_STREAM_2:
-                streamName = "PRIVATE_STREAM_2";
+            case UNICAST_STREAM_2:
+                streamName = "UNICAST_STREAM_2";
                 break;
-            case PRIVATE_STREAM_3:
-                streamName = "PRIVATE_STREAM_3";
+            case UNICAST_STREAM_3:
+                streamName = "UNICAST_STREAM_3";
                 break;
-            case PRIVATE_STREAM_4:
-                streamName = "PRIVATE_STREAM_4";
+            case UNICAST_STREAM_4:
+                streamName = "UNICAST_STREAM_4";
                 break;
-            case PRIVATE_STREAM_5:
-                streamName = "PRIVATE_STREAM_5";
+            case UNICAST_STREAM_5:
+                streamName = "UNICAST_STREAM_5";
                 break;
-            case PRIVATE_STREAM_6:
-                streamName = "PRIVATE_STREAM_6";
+            case UNICAST_STREAM_6:
+                streamName = "UNICAST_STREAM_6";
                 break;
-            case PRIVATE_STREAM_7:
-                streamName = "PRIVATE_STREAM_7";
+            case UNICAST_STREAM_7:
+                streamName = "UNICAST_STREAM_7";
                 break;
-            case PRIVATE_STREAM_8:
-                streamName = "PRIVATE_STREAM_8";
+            case UNICAST_STREAM_8:
+                streamName = "UNICAST_STREAM_8";
                 break;
-            case PRIVATE_STREAM_9:
-                streamName = "PRIVATE_STREAM_9";
+            case UNICAST_STREAM_9:
+                streamName = "UNICAST_STREAM_9";
                 break;
         }
 

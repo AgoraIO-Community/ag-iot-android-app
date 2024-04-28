@@ -39,6 +39,7 @@ import io.agora.falcondemo.databinding.ActivityDevPreviewBinding;
 import io.agora.iotlink.IAgoraIotAppSdk;
 import io.agora.iotlink.IConnectionMgr;
 import io.agora.iotlink.IConnectionObj;
+import io.agora.iotlink.logger.ALog;
 
 
 public class DevStreamActivity extends BaseViewBindingActivity<ActivityDevStreammgrBinding>
@@ -69,19 +70,19 @@ public class DevStreamActivity extends BaseViewBindingActivity<ActivityDevStream
 
         // 添加固定的17个Stream，第一个必须是 PUBLIC_STREAM_1，交错添加剩余的 Private 和 Public
         IConnectionObj.STREAM_ID[] streamIdArray = {
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_1, IConnectionObj.STREAM_ID.PRIVATE_STREAM_1,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_2, IConnectionObj.STREAM_ID.PRIVATE_STREAM_2,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_3, IConnectionObj.STREAM_ID.PRIVATE_STREAM_3,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_4, IConnectionObj.STREAM_ID.PRIVATE_STREAM_4,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_5, IConnectionObj.STREAM_ID.PRIVATE_STREAM_5,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_6, IConnectionObj.STREAM_ID.PRIVATE_STREAM_6,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_7, IConnectionObj.STREAM_ID.PRIVATE_STREAM_7,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_8, IConnectionObj.STREAM_ID.PRIVATE_STREAM_8,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_9, IConnectionObj.STREAM_ID.PRIVATE_STREAM_9
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_1, IConnectionObj.STREAM_ID.UNICAST_STREAM_1,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_2, IConnectionObj.STREAM_ID.UNICAST_STREAM_2,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_3, IConnectionObj.STREAM_ID.UNICAST_STREAM_3,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_4, IConnectionObj.STREAM_ID.UNICAST_STREAM_4,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_5, IConnectionObj.STREAM_ID.UNICAST_STREAM_5,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_6, IConnectionObj.STREAM_ID.UNICAST_STREAM_6,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_7, IConnectionObj.STREAM_ID.UNICAST_STREAM_7,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_8, IConnectionObj.STREAM_ID.UNICAST_STREAM_8,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_9, IConnectionObj.STREAM_ID.UNICAST_STREAM_9
         };
         List<DevStreamInfo> devStreamList = new ArrayList<>();
         for (int i = 0; i < 18; i++) {
-            if ((streamIdArray[i]) == IConnectionObj.STREAM_ID.PRIVATE_STREAM_1) { // 跳过 PRIVATE_1
+            if ((streamIdArray[i]) == IConnectionObj.STREAM_ID.UNICAST_STREAM_1) { // 跳过 PRIVATE_1
                 continue;
             }
             DevStreamInfo devStream = new DevStreamInfo();
@@ -158,6 +159,31 @@ public class DevStreamActivity extends BaseViewBindingActivity<ActivityDevStream
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "<onResume> ");
+
+        if (!isConnectExist()) {
+            ALog.getInstance().d(TAG, "<onResume> device disconnected!");
+            PushApplication.getInstance().setUiPage(Constant.UI_PAGE_HOME); // 切换回主界面
+            PushApplication.getInstance().setFullscrnConnectionObj(null);
+            finish();
+        }
+    }
+
+    /**
+     * @brief 判断当前连接是否还存在
+     */
+    boolean isConnectExist() {
+        if (mConnectObj == null) {
+            return false;
+        }
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        List<IConnectionObj> connectList = connectMgr.getConnectionList();
+        for (int i = 0; i < connectList.size(); i++) {
+            IConnectionObj connectObj = connectList.get(i);
+            if (connectObj == mConnectObj) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -198,15 +224,15 @@ public class DevStreamActivity extends BaseViewBindingActivity<ActivityDevStream
 
         // 当前流的处理
         IConnectionObj.STREAM_ID[] streamIdArray = {
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_1,  IConnectionObj.STREAM_ID.PUBLIC_STREAM_2,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_3,  IConnectionObj.STREAM_ID.PUBLIC_STREAM_4,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_5,  IConnectionObj.STREAM_ID.PUBLIC_STREAM_6,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_7,  IConnectionObj.STREAM_ID.PUBLIC_STREAM_8,
-            IConnectionObj.STREAM_ID.PUBLIC_STREAM_9,
-            IConnectionObj.STREAM_ID.PRIVATE_STREAM_2, IConnectionObj.STREAM_ID.PRIVATE_STREAM_3,
-            IConnectionObj.STREAM_ID.PRIVATE_STREAM_4, IConnectionObj.STREAM_ID.PRIVATE_STREAM_5,
-            IConnectionObj.STREAM_ID.PRIVATE_STREAM_6, IConnectionObj.STREAM_ID.PRIVATE_STREAM_7,
-            IConnectionObj.STREAM_ID.PRIVATE_STREAM_8, IConnectionObj.STREAM_ID.PRIVATE_STREAM_9
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_1,  IConnectionObj.STREAM_ID.BROADCAST_STREAM_2,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_3,  IConnectionObj.STREAM_ID.BROADCAST_STREAM_4,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_5,  IConnectionObj.STREAM_ID.BROADCAST_STREAM_6,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_7,  IConnectionObj.STREAM_ID.BROADCAST_STREAM_8,
+            IConnectionObj.STREAM_ID.BROADCAST_STREAM_9,
+            IConnectionObj.STREAM_ID.UNICAST_STREAM_2, IConnectionObj.STREAM_ID.UNICAST_STREAM_3,
+            IConnectionObj.STREAM_ID.UNICAST_STREAM_4, IConnectionObj.STREAM_ID.UNICAST_STREAM_5,
+            IConnectionObj.STREAM_ID.UNICAST_STREAM_6, IConnectionObj.STREAM_ID.UNICAST_STREAM_7,
+            IConnectionObj.STREAM_ID.UNICAST_STREAM_8, IConnectionObj.STREAM_ID.UNICAST_STREAM_9
         };
         int i;
         for (i =0; i < 17; i++) {
