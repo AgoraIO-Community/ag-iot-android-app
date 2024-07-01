@@ -311,6 +311,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             IConnectionMgr.ConnectCreateParam createParam = new IConnectionMgr.ConnectCreateParam();
             createParam.mPeerNodeId = deviceInfo.mNodeId;
             createParam.mAttachMsg = attachMsg;
+            createParam.mEncrypt = true;
             IConnectionObj connectObj = connectMgr.connectionCreate(createParam);
             if (connectObj == null) {
                 popupMessage("Connect device: " + deviceInfo.mNodeId + " failure!");
@@ -590,6 +591,17 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
      * @brief 连接断开 按钮点击事件
      */
     void onDevItemDialHangupClick(View view, int position, DeviceInfo deviceInfo) {
+        if (mDevListAdapter.isInSelectMode()) {
+            return;
+        }
+        if (deviceInfo.mConnectObj == null) {
+            handelDevItemDialEncryptChoice(view,position,deviceInfo);
+        } else {
+            handelDevItemHangupAction(view,position,deviceInfo);
+        }
+
+
+        /*
         IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
         if (mDevListAdapter.isInSelectMode()) {
             return;
@@ -631,8 +643,73 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
             mDevListAdapter.setItem(position, deviceInfo);
             popupMessage("Disconnect device: " + deviceInfo.mNodeId + " successful!");
         }
+         */
     }
 
+    void handelDevItemDialEncryptChoice(View view, int position, DeviceInfo deviceInfo) {
+        new AlertDialog.Builder(getContext())
+        .setTitle("是否加密？")
+        .setMessage("")
+        .setPositiveButton("加密", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                handelDevItemDialAction(view,position,deviceInfo,true);
+                Log.d(TAG, "<handelItemDialHangupClick> encrypt is true");
+            }
+        })
+        .setNegativeButton("不加密", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                handelDevItemDialAction(view,position,deviceInfo,false);
+                Log.d(TAG, "<handelItemDialHangupClick> encrypt is false");
+            }
+        })
+        .show();
+    }
+
+    void handelDevItemDialAction(View view, int position, DeviceInfo deviceInfo,boolean mEncrypt) {
+
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        if (mDevListAdapter.isInSelectMode()) {
+            return;
+        }
+        // 连接操作
+        String attachMsg = "Call_" + deviceInfo.mNodeId + "_at_" + getTimestamp();
+        IConnectionMgr.ConnectCreateParam createParam = new IConnectionMgr.ConnectCreateParam();
+        createParam.mPeerNodeId = deviceInfo.mNodeId;
+        createParam.mAttachMsg = attachMsg;
+        createParam.mEncrypt = mEncrypt;
+        ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] connect device: " + deviceInfo
+                + ", position=" + position);
+        IConnectionObj connectObj = connectMgr.connectionCreate(createParam);
+        if (connectObj == null) {
+            popupMessage("Connect device: " + deviceInfo.mNodeId + " failure!");
+            return;
+        }
+
+        // 注册回调函数
+        connectObj.registerListener(mHomeFragment);
+
+        // 更新 sessionId 和 提示信息
+        deviceInfo.mConnectObj = connectObj;
+        mDevListAdapter.setItem(position, deviceInfo);
+
+    }
+
+    void handelDevItemHangupAction(View view, int position, DeviceInfo deviceInfo) {
+        IConnectionMgr connectMgr = AIotAppSdkFactory.getInstance().getConnectionMgr();
+        // 断开操作
+        ALog.getInstance().d(TAG, "<onDevItemDialHangupClick> [IOTSDK] disconnect device: " + deviceInfo
+                + ", position=" + position);
+        int errCode = connectMgr.connectionDestroy(deviceInfo.mConnectObj);
+        if (errCode != ErrCode.XOK) {
+            popupMessage("Disconnect device: " + deviceInfo.mNodeId + " failure, errCode=" + errCode);
+            return;
+        }
+
+        // 更新设备状态信息
+        deviceInfo.clear();
+        mDevListAdapter.setItem(position, deviceInfo);
+        popupMessage("Disconnect device: " + deviceInfo.mNodeId + " successful!");
+    }
 
     /**
      * @brief 订阅 按钮点击事件
