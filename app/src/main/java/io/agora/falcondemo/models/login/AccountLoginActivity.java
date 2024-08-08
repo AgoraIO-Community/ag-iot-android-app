@@ -88,7 +88,6 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
             popupMessage("Please input valid account!");
             return;
         }
-
         String appId = AppStorageUtil.safeGetString(this, Constant.APP_ID, null);
         String authKey = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_KEY, null);
         String authSecret = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_SECRET, null);
@@ -109,6 +108,34 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
             popupMessage("region is empty, please clear application cache and select region!");
             return;
         }
+
+        // 第三方账号系统登录
+        ThirdAccountMgr.UserActiveParam activeParam = new ThirdAccountMgr.UserActiveParam();
+        activeParam.mAppId = appId;
+        activeParam.mAuthKey = authKey;
+        activeParam.mAuthSecret = authSecret;
+        activeParam.mUserId = account;
+        activeParam.mClientType = 2;
+        activeParam.mRegion = region;
+        showLoadingView();
+        ThirdAccountMgr.getInstance().userActive(activeParam, new ThirdAccountMgr.IUserActiveCallback() {
+            @Override
+            public void onThirdAccountUserActiveDone(ThirdAccountMgr.UserActiveParam activeParam,
+                                                     ThirdAccountMgr.UserActiveResult activeResult) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        hideLoadingView();
+                        if ((activeResult.mErrCode != ErrCode.XOK) || (activeResult.mRespCode != ErrCode.XOK)) {
+                            popupMessage("Account login failure, errMsg=" + activeResult.mMessage);
+                            return;
+                        }
+
+                        doAIotSdkInitialize(appId, authKey, authSecret, account, activeResult.mNodeId, activeResult.mNodeToken, activeResult.mNodeRegion);
+                    }
+                });
+            }
+        });
 
     }
 
