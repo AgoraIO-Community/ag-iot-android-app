@@ -73,7 +73,7 @@
             android:id="@+id/tvAccountSecrutiy"
             style="@style/tv_mine_style"
             android:layout_marginTop="1dp"
-            android:text="@string/account_security"
+            android:text="@string/account_safety"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="MissingConstraints" />
 
@@ -90,7 +90,7 @@
             android:id="@+id/tvClearAppData"
             style="@style/tv_mine_style"
             android:layout_marginTop="1dp"
-            android:text="清除应用配置"
+            android:text="@string/clear_application_config"
             app:layout_constraintTop_toBottomOf="@+id/tvAccountSecrutiy"
             tools:ignore="MissingConstraints" />
 

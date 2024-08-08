@@ -44,6 +44,7 @@ public class ThirdAccountMgr {
         public int mClientType;
         public String mAuthKey;
         public String mAuthSecret;
+        public  String mRegion;
 
         @Override
         public String toString() {
@@ -51,7 +52,8 @@ public class ThirdAccountMgr {
                     + ", mAuthKey=" + mAuthKey
                     + ", mAuthSecret=" + mAuthSecret
                     + ", mUserId=" + mUserId
-                    + ", mClientType=" + mClientType  + " }";
+                    + ", mClientType=" + mClientType
+                    + ", mRegion=" + mRegion  + " }";
             return infoText;
         }
     }
@@ -99,6 +101,7 @@ public class ThirdAccountMgr {
         public String mPusherId;
         public String mAuthKey;
         public String mAuthSecret;
+        public  String mRegion;
 
         @Override
         public String toString() {
@@ -107,7 +110,8 @@ public class ThirdAccountMgr {
                     + ", mAuthSecret=" + mAuthSecret
                     + ", mUserId=" + mUserId
                     + ", mClientType=" + mClientType
-                    + ", mPusherId=" + mPusherId + " }";
+                    + ", mPusherId=" + mPusherId
+                    + ", mRegion=" + mRegion  + " }";
             return infoText;
         }
     }
@@ -155,7 +159,12 @@ public class ThirdAccountMgr {
     ////////////////////////////////////////////////////////////////////////
     private static final String TAG = "IOTSDK/ThridAccountMgr";
     private static final int HTTP_TIMEOUT = 8000;
+    /*
     private static final String BASE_URL = "http://api.sd-rtn.com/cn/iot/link";
+    private static final String BASE_URL = "http://api-test-huzhou1.agora.io/cn/iot/link";
+     */
+    private static final String BASE_URL_HEAD = "http://api.sd-rtn.com/";
+    private static final String BASE_URL_TAIL = "/iot/link";
 
     ////////////////////////////////////////////////////////////////////////
     //////////////////////// Variable Definition ///////////////////////////
@@ -221,9 +230,9 @@ public class ThirdAccountMgr {
     /**
      * @brief 获取HTTP请求的基本URL
      */
-    public String getRequestBaseUrl() {
-        return BASE_URL;
-    }
+//    public String getRequestBaseUrl() {
+//        return BASE_URL;
+//    }
 
 
 
@@ -292,7 +301,6 @@ public class ThirdAccountMgr {
         }
     }
 
-
     /**
      * @brief 创建用户操作
      * @param createParam : 要创建的信息
@@ -302,8 +310,9 @@ public class ThirdAccountMgr {
         UserCreateResult result = new UserCreateResult();
         ALog.getInstance().d(TAG, "<userAccountCreate> [Enter] createParam=" + createParam);
 
+        String serverUrl = BASE_URL_HEAD + getRegionText(createParam.mRegion) + BASE_URL_TAIL;
         // 请求URL
-        String requestUrl = BASE_URL + "/open-api/v2/iot-core/secret-node/user/create";
+        String requestUrl = serverUrl + "/open-api/v2/iot-core/secret-node/user/create";
 
         // body内容
         JSONObject body = new JSONObject();
@@ -370,8 +379,9 @@ public class ThirdAccountMgr {
         UserActiveResult result = new UserActiveResult();
         ALog.getInstance().d(TAG, "<userAccountActive> [Enter] activeParam=" + activeParam);
 
+        String serverUrl = BASE_URL_HEAD + getRegionText(activeParam.mRegion) + BASE_URL_TAIL;
         // 请求URL
-        String requestUrl = BASE_URL + "/open-api/v2/iot-core/secret-node/user/activate";
+        String requestUrl = serverUrl + "/open-api/v2/iot-core/secret-node/user/activate";
 
         // body内容
         JSONObject body = new JSONObject();
@@ -442,6 +452,25 @@ public class ThirdAccountMgr {
         byte[] authBytes = auth.getBytes(Charset.forName("UTF-8"));
         String authHeader = "Basic " + Base64.encodeToString(authBytes, Base64.NO_WRAP);
         return authHeader;
+    }
+
+    private String getRegionText(String mRegion){
+        String textRegion = "";
+        switch (mRegion) {
+            case "CN": // 中国大陆
+                textRegion = "cn";
+                break;
+            case "NA": // 北美
+                textRegion = "na";
+                break;
+            case "AP": // 亚太
+                textRegion = "ap";
+                break;
+            case "EU": // 欧洲
+                textRegion = "eu";
+                break;
+        }
+        return  textRegion;
     }
 
 

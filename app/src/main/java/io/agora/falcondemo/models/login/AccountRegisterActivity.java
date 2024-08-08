@@ -88,6 +88,7 @@ public class AccountRegisterActivity extends BaseViewBindingActivity<ActivityReg
         String appId = AppStorageUtil.safeGetString(this, Constant.APP_ID, null);
         String authKey = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_KEY, null);
         String authSecret = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_SECRET, null);
+        String region = AppStorageUtil.safeGetString(this, Constant.REGION, null);
         if (TextUtils.isEmpty(appId)) {
             popupMessage("Fail to get appId!");
             return;
@@ -100,6 +101,10 @@ public class AccountRegisterActivity extends BaseViewBindingActivity<ActivityReg
             popupMessage("Fail to get Basic Auth Secret!");
             return;
         }
+        if (TextUtils.isEmpty(region)) {
+            popupMessage("Fail to get region!");
+            return;
+        }
 
         showLoadingView();
 
@@ -107,6 +112,7 @@ public class AccountRegisterActivity extends BaseViewBindingActivity<ActivityReg
         createParam.mAppId = appId;
         createParam.mAuthKey = authKey;
         createParam.mAuthSecret = authSecret;
+        createParam.mRegion = region;
         createParam.mUserId = userId;
         createParam.mClientType = 2;
         ThirdAccountMgr.getInstance().userCreate(createParam, new ThirdAccountMgr.IUserCreateCallback() {

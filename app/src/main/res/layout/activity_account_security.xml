@@ -8,7 +8,7 @@
     <io.agora.falcondemo.widget.CommonTitleView
         android:id="@+id/title_view"
         style="@style/title_view"
-        app:ctv_centerText="@string/account_security"
+        app:ctv_centerText="@string/account_safety"
         tools:ignore="MissingConstraints" />
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -34,7 +34,7 @@
         android:id="@+id/tvLogOff"
         style="@style/tv_mine_style"
         android:layout_height="59dp"
-        android:text="@string/logoff"
+        android:text="@string/cancel_Account"
         android:textSize="16sp"
         app:layout_constraintTop_toBottomOf="@id/tvNodeId"
         tools:ignore="MissingConstraints" />
@@ -53,7 +53,7 @@
         style="@style/def_btn_empty"
         android:layout_width="120dp"
         android:layout_marginBottom="50dp"
-        android:text="@string/logout"
+        android:text="@string/log_out"
         android:textSize="16sp"
         android:textStyle="normal"
         app:layout_constraintBottom_toBottomOf="parent"

@@ -70,7 +70,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
     public void accountLogout() {
         if (commonDialog == null) {
             commonDialog = new CommonDialog(this);
-            commonDialog.setDialogTitle("确定要登出帐号吗？");
+            commonDialog.setDialogTitle(getString(R.string.you_want_to_log_out));
             commonDialog.setDialogBtnText(getString(R.string.cancel), getString(R.string.confirm));
             commonDialog.setOnButtonClickListener(new BaseDialog.OnButtonClickListener() {
                 @Override
@@ -102,7 +102,7 @@ public class AccountSecurityActivity extends BaseViewBindingActivity<ActivityAcc
      * @brief 注销账号
      */
     public void accountUnregister() {
-        popupMessage("当前不支持注销操作!");
+        popupMessage(getString(R.string.current_does_not_support_logout));
     }
 
 

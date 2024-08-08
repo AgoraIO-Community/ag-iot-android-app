@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="agree">agree</string>
+    <string name="disagree">disagree</string>
+    <string name="userAgreementAndPrivacyPolicy">UserAgreementAndPrivacyPolicy</string>>
+    <string name="privacy_protection_tip">We attach great importance to the protection of user privacy, so we have formulated this Privacy Policy covering how to collect, use, disclose, share and store user information. When users use our services, we may collect and use your relevant information. We hope to use this Privacy Policy to explain to you how we collect, use, store and share this information when using our services, and how we provide you with access, update, control and protect this information.</string>
+    <string name="user_agreement">PrivacyPolicy</string>
+    <string name="privacy_policy">UserAgreement</string>
+    <string name="and">and</string>
+
+    <string name="please_input_account">Please enter your account</string>
+    <string name="login">login</string>
+    <string name="finish">finish</string>
+    <string name="register_account">register account</string>
+    <string name="define">confirm</string>
+    <string name="cancel">cancel</string>
+
+    <string name="app_name">Agora Link 2.0</string>
+    <string name="app_name_en">Agora Link</string>
+    <string name="title_home">home</string>
+    <string name="title_mine">mine</string>
+
+    <string name="please_enter_nodeId">please enter nodeId</string>
+    <string name="add_device">add devices</string>
+    <string name="delete_device">delete devices</string>
+    <string name="sound_effects">sound effects</string>
+    <string name="my_devices">my devices</string>
+    <string name="device_manager">device mgr</string>
+    <string name="all_select">all select</string>
+    <string name="delete">delete</string>
+
+    <string name="voice_orignal">orignal</string>
+    <string name="voice_oldman">oldman</string>
+    <string name="voice_uncle">uncle</string>
+    <string name="voice_boy">boy</string>
+    <string name="voice_girl">girl</string>
+    <string name="voice_ktv">ktv</string>
+    <string name="voice_phonograph">phonograph</string>
+    <string name="voice_Recordingstudio">recording studio</string>
+    <string name="voice_stereo">stereo</string>
+    <string name="voice_ethereal">ethereal</string>
+    <string name="voice_open">ethereal</string>
+    <string name="voice_3D">3D</string>
+    <string name="voice_concert">concert</string>
+
+
+    <string name="connect">connect</string>
+    <string name="disconnect">disconnect</string>
+    <string name="mute">mute</string>
+    <string name="unmute">unmute</string>
+    <string name="record">record</string>
+    <string name="stop_record">stop</string>
+    <string name="converse">converse</string>
+    <string name="preview">preview</string>
+    <string name="stream_media">streammedia</string>
+    <string name="screenShot">screenShot</string>
+    <string name="fullScreen">fullScreen</string>
+    <string name="message">message</string>
+    <string name="forbidmic">forbidmic</string>
+
+    <string name="Please_enter_project_information">Please enter project infor</string>
+    <string name="please_enter_appId">Please enter AppId</string>
+    <string name="Please_enter_CustomerKey">Please enter CustomerKey</string>
+    <string name="Please_enter_CustomerSecret">Please enter CustomerSecret</string>
+    <string name="Please_select_a_region">Please select a region:</string>
+    <string name="confirm">confirm</string>
+
+    <string name="stream_media_mgr">stream media mgr</string>
+    <string name="back">back</string>
+
+    <string name="Encrypt_or_not">Encrypt or not?</string>
+    <string name="encry">encry</string>
+    <string name="noEncry">noEncry</string>
+
+    <string name="video_quality">video quality</string>
+    <string name="start_transfer">start transfer</string>
+    <string name="end_transfer">end transfer</string>
+    <string name="clear_recored">clear recored</string>
+
+    <string name="account_safety">account safety</string>
+    <string name="clear_application_config">clear application config</string>
+    <string name="about">about</string>
+    <string name="cancel_Account">cancel account</string>
+    <string name="log_out">log out</string>
+    <string name="clear_application_tip">The process exits after clearing the application configuration. You need to reconfigure the appid next time you enter. Are you sure to clear it?</string>
+    <string name="current_does_not_support_logout">currently does not support logout operation</string>
+    <string name="you_want_to_log_out">Are you sure you want to log out of your account?</string>
+    <string name="used_agree">by using this app you agree</string>
+    <string name="version_number">version number：2.1.2.0</string>
+    <string name="version_is">version number：%s</string>
+
+
+
+
+</resources>

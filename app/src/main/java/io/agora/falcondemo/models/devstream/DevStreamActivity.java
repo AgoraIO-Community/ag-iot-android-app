@@ -92,7 +92,7 @@ public class DevStreamActivity extends BaseViewBindingActivity<ActivityDevStream
 
 
         // 设置列表显示控件
-        mStreamListAdapter = new DevStreamListAdapter(devStreamList, mConnectObj);
+        mStreamListAdapter = new DevStreamListAdapter(this, devStreamList, mConnectObj);
         mStreamListAdapter.setOwner(this);
         mStreamListAdapter.setPublishAudio(false);
         getBinding().rvDevStreamList.setLayoutManager(new LinearLayoutManager(this));

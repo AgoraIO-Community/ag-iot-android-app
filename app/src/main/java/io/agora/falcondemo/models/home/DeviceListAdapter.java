@@ -1,5 +1,6 @@
 package io.agora.falcondemo.models.home;
 
+import android.content.Context;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -24,11 +25,14 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
     private RecyclerView mRecycleView;
     private boolean mSelectMode = false;            ///< 是否选择模式下
 
+    private Context context;
+
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// Public Methods /////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
-    public DeviceListAdapter(List<DeviceInfo> deviceList) {
+    public DeviceListAdapter(Context context,List<DeviceInfo> deviceList) {
         super(deviceList);
+        this.context = context;
         mSelectMode = false;
     }
 
@@ -269,26 +273,26 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         // 呼叫挂断按钮
         Button btnDialHangup = deviceInfo.mViewHolder.getView(R.id.btn_dial_hangup);
         if (deviceInfo.mConnectObj == null) {
-            btnDialHangup.setText("连接");
+            btnDialHangup.setText(context.getString(R.string.connect));
         } else {
-            btnDialHangup.setText("断开");
+            btnDialHangup.setText(context.getString(R.string.disconnect));
         }
 
         // 预览按钮
         Button btnPreview = deviceInfo.mViewHolder.getView(R.id.btn_preview);
-        btnPreview.setText(subscribed ? "停止" : "预览");
+        btnPreview.setText(subscribed ? context.getString(R.string.stop_record) : context.getString(R.string.preview));
 
         // 静音播音按钮
         Button btnMute = deviceInfo.mViewHolder.getView(R.id.btn_mute_audio);
-        btnMute.setText(muteAudio ? "音放" : "静音");
+        btnMute.setText(muteAudio ? context.getString(R.string.unmute) : context.getString(R.string.mute));
 
         // 录像按钮
         Button btnRecord = deviceInfo.mViewHolder.getView(R.id.btn_record);
-        btnRecord.setText(recording ? "停录" : "录像");
+        btnRecord.setText(recording ? context.getString(R.string.stop_record) : context.getString(R.string.record));
 
         // 通话禁音按钮
         Button btnMic = deviceInfo.mViewHolder.getView(R.id.btn_mic);
-        btnMic.setText(audioPublishing ? "禁麦" : "通话");
+        btnMic.setText(audioPublishing ? context.getString(R.string.forbidmic) : context.getString(R.string.converse));
     }
 
     /**
@@ -368,9 +372,9 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
         // 呼叫挂断按钮
         Button btnDialHangup = holder.getView(R.id.btn_dial_hangup);
         if (deviceInfo.mConnectObj == null) {
-            btnDialHangup.setText("连接");
+            btnDialHangup.setText(context.getString(R.string.connect));
         } else {
-            btnDialHangup.setText("断开");
+            btnDialHangup.setText(context.getString(R.string.disconnect));
         }
         btnDialHangup.setOnClickListener(view -> {
             mOwner.onDevItemDialHangupClick(view, position, deviceInfo);
@@ -379,28 +383,28 @@ public class DeviceListAdapter extends BaseAdapter<DeviceInfo> {
 
         // 预览按钮
         Button btnPreview = holder.getView(R.id.btn_preview);
-        btnPreview.setText(subscribed ? "停止" : "预览");
+        btnPreview.setText(subscribed ? context.getString(R.string.stop_record) : context.getString(R.string.preview));
         btnPreview.setOnClickListener(view -> {
             mOwner.onDevItemPreviewClick(view, position, deviceInfo);
         });
 
         // 静音播音按钮
         Button btnMute = holder.getView(R.id.btn_mute_audio);
-        btnMute.setText(muteAudio ? "音放" : "静音");
+        btnMute.setText(muteAudio ? context.getString(R.string.unmute) : context.getString(R.string.mute));
         btnMute.setOnClickListener(view -> {
             mOwner.onDevItemMuteAudioClick(view, position, deviceInfo);
         });
 
         // 录像按钮
         Button btnRecord = holder.getView(R.id.btn_record);
-        btnRecord.setText(recording ? "停录" : "录像");
+        btnRecord.setText(recording ? context.getString(R.string.stop_record) : context.getString(R.string.record));
         btnRecord.setOnClickListener(view -> {
             mOwner.onDevItemRecordClick(view, position, deviceInfo);
         });
 
         // 通话禁音按钮
         Button btnMic = holder.getView(R.id.btn_mic);
-        btnMic.setText(audioPublishing ? "禁麦" : "通话");
+        btnMic.setText(audioPublishing ? context.getString(R.string.forbidmic) : context.getString(R.string.converse));
         btnMic.setOnClickListener(view -> {
             mOwner.onDevItemMicClick(view, position, deviceInfo);
         });

@@ -11,8 +11,8 @@
     <io.agora.falcondemo.widget.CommonTitleView
         android:id="@+id/title_view"
         style="@style/title_view"
-        app:ctv_centerText="设备流管理"
-        app:ctv_rightText="返回"
+        app:ctv_centerText="@string/stream_media_mgr"
+        app:ctv_rightText="@string/back"
         tools:ignore="MissingConstraints" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout

@@ -185,10 +185,12 @@ public class WelcomeActivity extends BaseViewBindingActivity<ActivityWelcomeBind
                 String inputAppId = params[0];
                 String inputKey = params[1];
                 String inputSecret = params[2];
+                String inputRegion = params[3];
 
                 AppStorageUtil.safePutString(this, Constant.APP_ID, inputAppId);
                 AppStorageUtil.safePutString(this, Constant.BASIC_AUTH_KEY, inputKey);
                 AppStorageUtil.safePutString(this, Constant.BASIC_AUTH_SECRET, inputSecret);
+                AppStorageUtil.safePutString(this,Constant.REGION,inputRegion);
                 doAccountMgrInitialize();
             };
             inAppIdDlg.setCanceledOnTouchOutside(false);

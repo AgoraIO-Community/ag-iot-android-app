@@ -1,5 +1,6 @@
 package io.agora.falcondemo.models.devstream;
 
+import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -26,11 +27,14 @@ public class DevStreamListAdapter extends BaseAdapter<DevStreamInfo> {
     public IConnectionObj mConnectObj;      ///< 当前链接实例，null表示当前无通话
     public boolean      mPubAudio = false;  ///< 是否正在推送APP端音频
 
+    private Context context;
+
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// Public Methods /////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
-    public DevStreamListAdapter(List<DevStreamInfo> deviceList, IConnectionObj connectObj) {
+    public DevStreamListAdapter(Context context, List<DevStreamInfo> deviceList, IConnectionObj connectObj) {
         super(deviceList);
+        this.context = context;
         mConnectObj = connectObj;
     }
 
@@ -77,9 +81,9 @@ public class DevStreamListAdapter extends BaseAdapter<DevStreamInfo> {
 
         if (mConnectObj == null) {  // 连接已经断开
             devStream.mViewHolder.setText(R.id.tvStreamTips, "Disconnected");
-            btnPreview.setText("预览");
-            btnMute.setText("音放");
-            btnRecord.setText("录像");
+            btnPreview.setText(context.getString(R.string.preview));
+            btnMute.setText(context.getString(R.string.unmute));
+            btnRecord.setText(context.getString(R.string.record));
             View displayView = devStream.mViewHolder.getView(R.id.svStreamView);
             displayView.setVisibility(View.INVISIBLE);
             return;
@@ -126,13 +130,13 @@ public class DevStreamListAdapter extends BaseAdapter<DevStreamInfo> {
         }
 
         // 预览停止
-        btnPreview.setText(subscribed ? "停止" : "预览");
+        btnPreview.setText(subscribed ? context.getString(R.string.stop_record)  : context.getString(R.string.preview) );
 
         // 静音播音按钮
-        btnMute.setText(muteAudio? "音放" : "静音");
+        btnMute.setText(muteAudio? context.getString(R.string.unmute)  : context.getString(R.string.mute) );
 
         // 录像按钮
-        btnRecord.setText(recording ? "停录" : "录像");
+        btnRecord.setText(recording ? context.getString(R.string.stop_record)  : context.getString(R.string.record) );
     }
 
     /**
@@ -175,9 +179,9 @@ public class DevStreamListAdapter extends BaseAdapter<DevStreamInfo> {
 
         if (mConnectObj == null) {  // 连接已经断开
             devStream.mViewHolder.setText(R.id.tvStreamTips, "Disconnected");
-            btnPreview.setText("预览");
-            btnMute.setText("音放");
-            btnRecord.setText("录像");
+            btnPreview.setText(context.getString(R.string.preview));
+            btnMute.setText(context.getString(R.string.unmute));
+            btnRecord.setText(context.getString(R.string.record));
             View displayView = devStream.mViewHolder.getView(R.id.svStreamView);
             displayView.setVisibility(View.INVISIBLE);
             return;
@@ -224,19 +228,19 @@ public class DevStreamListAdapter extends BaseAdapter<DevStreamInfo> {
         }
 
         // 预览停止
-        btnPreview.setText(subscribed ? "停止" : "预览");
+        btnPreview.setText(subscribed ? context.getString(R.string.stop_record)  : context.getString(R.string.preview) );
         btnPreview.setOnClickListener(view -> {
             mOwner.onDevItemPreviewClick(view, position, devStream);
         });
 
         // 静音播音按钮
-        btnMute.setText(muteAudio ? "音放" : "静音");
+        btnMute.setText(muteAudio ? context.getString(R.string.unmute)  : context.getString(R.string.mute) );
         btnMute.setOnClickListener(view -> {
             mOwner.onDevItemMuteAudioClick(view, position, devStream);
         });
 
         // 录像按钮
-        btnRecord.setText(recording ? "停录" : "录像");
+        btnRecord.setText(recording ? context.getString(R.string.stop_record)  : context.getString(R.string.record) );
         btnRecord.setOnClickListener(view -> {
             mOwner.onDevItemRecordClick(view, position, devStream);
         });

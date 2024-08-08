@@ -2,8 +2,8 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="300dp"
-    android:layout_height="400dp"
+    android:layout_width="320dp"
+    android:layout_height="420dp"
     android:background="@drawable/bg_full_radius_white_7">
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="输入项目信息"
+        android:text="@string/Please_enter_project_information"
         android:textColor="@color/def_text_color"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -21,12 +21,14 @@
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/etAppId"
         style="@style/def_et_input"
-        android:layout_width="254dp"
-        android:layout_height="60dp"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
         android:layout_marginTop="25dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
         android:maxLength="100"
         android:drawableStart="@null"
-        android:hint="请输入 appId"
+        android:hint= "@string/please_enter_appId"
         android:textSize="16sp"
         android:inputType="textMultiLine"
         android:lines="2"
@@ -51,12 +53,14 @@
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/etKey"
         style="@style/def_et_input"
-        android:layout_width="254dp"
-        android:layout_height="60dp"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
         android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
         android:maxLength="100"
         android:drawableStart="@null"
-        android:hint="请输入 Basic Auth Key"
+        android:hint="@string/Please_enter_CustomerKey"
         android:textSize="16sp"
         android:inputType="textMultiLine"
         android:lines="2"
@@ -81,12 +85,14 @@
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/etSecret"
         style="@style/def_et_input"
-        android:layout_width="254dp"
-        android:layout_height="60dp"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
         android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
         android:maxLength="100"
         android:drawableStart="@null"
-        android:hint="请输入 Basic Auth Secret"
+        android:hint="@string/Please_enter_CustomerSecret"
         android:textSize="16sp"
         android:inputType="textMultiLine"
         android:lines="2"
@@ -108,15 +114,92 @@
         app:layout_constraintTop_toTopOf="@id/etSecret"
         tools:visibility="visible" />
 
+    <!-- 区域选择 -->
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvSelectRegion"
+        android:layout_width="0dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:text="@string/Please_select_a_region"
+        android:textColor="@color/def_text_color"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etSecret" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clRegions"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSelectRegion">
+
+        <Button
+            android:id="@+id/btnCn"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:text="CN"
+            android:background="@drawable/selected_button"
+            android:textColor="@color/white"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnNa"
+            tools:ignore="MissingConstraints" />
+
+        <Button
+            android:id="@+id/btnNa"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:text="NA"
+            android:background="@drawable/unselected_button"
+            android:textColor="@color/def_text_color"
+            app:layout_constraintStart_toEndOf="@id/btnCn"
+            app:layout_constraintEnd_toStartOf="@id/btnAp"
+            tools:ignore="MissingConstraints" />
+
+        <Button
+            android:id="@+id/btnAp"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:text="AP"
+            android:background="@drawable/unselected_button"
+            android:textColor="@color/def_text_color"
+            app:layout_constraintStart_toEndOf="@id/btnNa"
+            app:layout_constraintEnd_toStartOf="@id/btnEu"
+            tools:ignore="MissingConstraints" />
+
+        <Button
+            android:id="@+id/btnEu"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:text="EU"
+            android:background="@drawable/unselected_button"
+            android:textColor="@color/def_text_color"
+            app:layout_constraintStart_toEndOf="@id/btnAp"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:ignore="MissingConstraints" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnConfirm"
         style="@style/def_btn_full"
-        android:layout_marginTop="40dp"
-        android:text="@string/define"
+        android:layout_marginTop="30dp"
+        android:text="@string/confirm"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="normal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/etSecret" />
+        app:layout_constraintTop_toBottomOf="@id/clRegions" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -105,7 +105,7 @@ public class MineFragment extends BaseViewBindingFragment<FragmentHomeMineBindin
     void onBtnClearAppData() {
 
         CommonDialog commonDlg = new CommonDialog(mOwnerActivity);
-        commonDlg.setDialogTitle("清除应用配置后进程退出,下次进入需要重新配置appId, 确定清除？");
+        commonDlg.setDialogTitle(getContext().getString(R.string.clear_application_tip));
         commonDlg.setDialogBtnText(getString(R.string.cancel), getString(R.string.confirm));
         commonDlg.setOnButtonClickListener(new BaseDialog.OnButtonClickListener() {
             @Override

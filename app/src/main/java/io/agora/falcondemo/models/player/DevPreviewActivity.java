@@ -111,9 +111,9 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
         }
 
         if (mConnectObj.isFileTransfering()) {
-            getBinding().btnTransfer.setText("停止传输");
+            getBinding().btnTransfer.setText(this.getString(R.string.end_transfer));
         } else {
-            getBinding().btnTransfer.setText("开始传输");
+            getBinding().btnTransfer.setText(this.getString(R.string.start_transfer));
         }
 
 
@@ -414,7 +414,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
             // mConnectObj.fileTransferStop();
             FileTransferMgr.getInstance().transferStop(mConnectObj);
             popupMessage("File transfering stopped!");
-            getBinding().btnTransfer.setText("开始传输");
+            getBinding().btnTransfer.setText(this.getString(R.string.start_transfer));
 
             FileTransStatus newStatus = new FileTransStatus();
             newStatus.mType = FileTransStatus.TYPE_STOP;
@@ -431,7 +431,7 @@ public class DevPreviewActivity extends BaseViewBindingActivity<ActivityDevPrevi
                 return;
             }
             popupMessage("File transfering started...");
-            getBinding().btnTransfer.setText("停止传输");
+            getBinding().btnTransfer.setText(this.getString(R.string.end_transfer));
 
             FileTransStatus newStatus = new FileTransStatus();
             newStatus.mType = FileTransStatus.TYPE_START;

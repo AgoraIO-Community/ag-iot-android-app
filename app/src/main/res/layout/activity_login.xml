@@ -36,6 +36,7 @@
         android:drawableStart="@mipmap/user"
         android:enabled="true"
         android:hint="@string/please_input_account"
+        android:textSize="15sp"
         android:inputType="text"
         android:paddingEnd="40dp"
         app:layout_constraintEnd_toEndOf="@id/tvAppName"

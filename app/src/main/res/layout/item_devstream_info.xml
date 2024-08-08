@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginTop="28dp"
-            android:text="流停止"
+            android:text="@string/stop_record"
             android:textColor="@color/green"
             android:textSize="14sp"
             app:layout_constraintStart_toEndOf="parent"
@@ -55,7 +55,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="预览"
+            android:text="@string/preview"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -66,7 +66,7 @@
             android:layout_marginStart="100dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="静音"
+            android:text="@string/mute"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -78,7 +78,7 @@
             android:layout_marginStart="190dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="录像"
+            android:text="@string/record"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -90,7 +90,7 @@
             android:layout_marginStart="280dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="截图"
+            android:text="@string/screenShot"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 

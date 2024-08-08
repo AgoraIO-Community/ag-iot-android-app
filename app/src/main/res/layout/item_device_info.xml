@@ -55,7 +55,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="连接"
+            android:text="@string/connect"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -66,7 +66,7 @@
             android:layout_marginStart="100dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="静音"
+            android:text="@string/mute"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -78,7 +78,7 @@
             android:layout_marginStart="190dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="录像"
+            android:text="@string/record"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -89,7 +89,7 @@
             android:layout_marginStart="280dp"
             android:layout_marginTop="200dp"
             android:background="#80D6D6D6"
-            android:text="通话"
+            android:text="@string/converse"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -100,7 +100,7 @@
             android:layout_marginStart="280dp"
             android:layout_marginTop="60dp"
             android:background="#80D6D6D6"
-            android:text="全屏"
+            android:text="@string/fullScreen"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -111,7 +111,7 @@
             android:layout_marginStart="280dp"
             android:layout_marginTop="120dp"
             android:background="#80D6D6D6"
-            android:text="截图"
+            android:text="@string/screenShot"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -134,7 +134,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="120dp"
             android:background="#80D6D6D6"
-            android:text="命令"
+            android:text="@string/message"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -145,8 +145,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="60dp"
             android:background="#80D6D6D6"
-            android:text="流管理"
-            android:visibility="invisible"
+            android:text="@string/stream_media"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -157,7 +156,7 @@
             android:layout_marginStart="140dp"
             android:layout_marginTop="140dp"
             android:background="#80D6D6D6"
-            android:text="预览"
+            android:text="@string/preview"
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 

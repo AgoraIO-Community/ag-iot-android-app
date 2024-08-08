@@ -104,7 +104,7 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
         List<DeviceInfo> deviceList = deviceListLoad();
 
         if (mDevListAdapter == null) {
-            mDevListAdapter = new DeviceListAdapter(deviceList);
+            mDevListAdapter = new DeviceListAdapter(getContext(),deviceList);
             mDevListAdapter.setOwner(this);
             mDevListAdapter.setRecycleView(getBinding().rvDeviceList);
             getBinding().rvDeviceList.setLayoutManager(new LinearLayoutManager(getActivity()));
@@ -554,24 +554,6 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
                     case R.id.m_audeffect_sister: {
                         onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.SISTER);
                     } break;
-                    case R.id.m_audeffect_girl: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.GIRL);
-                    } break;
-                    case R.id.m_audeffect_pigking: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PIGKING);
-                    } break;
-                    case R.id.m_audeffect_hulk: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.HULK);
-                    } break;
-                    case R.id.m_audeffect_rnb: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.RNB);
-                    } break;
-                    case R.id.m_audeffect_popular: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.POPULAR);
-                    } break;
-                    case R.id.m_audeffect_pitchcorrection: {
-                        onMenuAudioEffect(IAgoraIotAppSdk.AUDIO_EFFECT_TYPE.PITCHCORRECTION);
-                    } break;
                 }
                 return true;
             }
@@ -648,15 +630,15 @@ public class HomePageFragment extends BaseViewBindingFragment<FragmentHomePageBi
 
     void handelDevItemDialEncryptChoice(View view, int position, DeviceInfo deviceInfo) {
         new AlertDialog.Builder(getContext())
-        .setTitle("是否加密？")
+        .setTitle(getContext().getString(R.string.Encrypt_or_not))
         .setMessage("")
-        .setPositiveButton("加密", new DialogInterface.OnClickListener() {
+        .setPositiveButton(getContext().getString(R.string.encry), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 handelDevItemDialAction(view,position,deviceInfo,true);
                 Log.d(TAG, "<handelItemDialHangupClick> encrypt is true");
             }
         })
-        .setNegativeButton("不加密", new DialogInterface.OnClickListener() {
+        .setNegativeButton(getContext().getString(R.string.noEncry), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 handelDevItemDialAction(view,position,deviceInfo,false);
                 Log.d(TAG, "<handelItemDialHangupClick> encrypt is false");

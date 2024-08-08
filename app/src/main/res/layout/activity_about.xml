@@ -30,7 +30,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ivLogo"
-        tools:text="版本号：1.0.0.9087" />
+        tools:text="@string/version_number" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvPrivacyPolicy"

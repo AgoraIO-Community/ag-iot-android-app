@@ -1,9 +1,76 @@
 <resources>
+
+    <string name="please_enter_nodeId">请输入设备nodeId</string>
+    <string name="sound_effects">通话音效</string>
+    <string name="device_manager">设备管理</string>
+    <string name="delete_device">删除设备</string>
+
+    <string name="voice_ktv">ktv</string>
+    <string name="voice_phonograph">留声机</string>
+    <string name="voice_Recordingstudio">录音棚</string>
+    <string name="voice_stereo">立体声</string>
+    <string name="voice_open">空旷</string>
+    <string name="voice_3D">3D</string>
+    <string name="voice_concert">演唱会</string>
+    <string name="voice_uncle">大叔</string>
+
+    <string name="connect">连接</string>
+    <string name="disconnect">断开</string>
+    <string name="mute">静音</string>
+    <string name="unmute">音放</string>
+    <string name="record">录像</string>
+    <string name="stop_record">停止</string>
+    <string name="converse">通话</string>
+    <string name="preview">预览</string>
+    <string name="stream_media">流媒体</string>
+    <string name="screenShot">截图</string>
+    <string name="fullScreen">全屏</string>
+    <string name="forbidmic">禁麦</string>
+
+    <string name="Please_enter_project_information">请输入项目信息</string>
+    <string name="please_enter_appId">请输入 AppId</string>
+    <string name="Please_enter_CustomerKey">请输入 CustomerKey</string>
+    <string name="Please_enter_CustomerSecret">请输入 CustomerSecret</string>
+    <string name="Please_select_a_region">请选择区域:</string>
+    <string name="confirm">确定</string>
+
+    <string name="agree">同意</string>
+    <string name="disagree">不同意</string>
+
+    <string name="stream_media_mgr">流媒体管理</string>
+    <string name="back">返回</string>
+
+    <string name="Encrypt_or_not">是否加密?</string>
+    <string name="encry">加密</string>
+    <string name="noEncry">不加密</string>
+
+    <string name="video_quality">视频质量</string>
+    <string name="start_transfer">开始传输</string>
+    <string name="end_transfer">停止传输</string>
+    <string name="clear_recored">清除记录</string>
+
+    <string name="account_safety">帐号安全</string>
+    <string name="clear_application_config">清除应用配置</string>
+    <string name="about">关于</string>
+    <string name="cancel_Account">注销</string>
+    <string name="log_out">退出登录</string>
+    <string name="clear_application_tip">清除应用配置后进程退出，下次进入需重新配置appid,确定清除？</string>
+    <string name="current_does_not_support_logout">当前不支持注销操作</string>
+    <string name="you_want_to_log_out">确定要登出帐号吗?</string>
+    <string name="version_number">版本号：2.1.2.0</string>
+    <string name="version_is">版本号：%s</string>
+
+
+
+
+
+
     <string name="app_name">灵隼2.0</string>
     <string name="app_name_en">Agora Link</string>
     <string name="title_home">首页</string>
     <string name="title_mine">我的</string>
     <string name="try_again_to_exit">再按一次退出应用</string>
+    <string name="userAgreementAndPrivacyPolicy">用户协议与隐私政策</string>>
     <string name="privacy_protection_tip">我们非常重视用户的隐私保护，因此制定了本涵盖如何收集、使用、披露、分享以及存储用户的信息的《隐私条款》。用户在使用我们的服务时，我们可能会收集和使用您的相关信息。我们希望通过本《隐私条款》向您说明，在使用我们的服务时，我们如何收集、使用、储存和分享这些信息，以及我们为您提供的访问、更新、控制和保护这些信息的方式。</string>
     <string name="user_agreement">用户协议</string>
     <string name="privacy_policy">隐私政策</string>
@@ -11,8 +78,6 @@
     <string name="cancel">取消</string>
     <string name="close">关闭</string>
     <string name="auto">自动</string>
-    <string name="agree">同意</string>
-    <string name="disagree">不同意</string>
     <string name="please_select_country">请选择国家/地区</string>
     <string name="country_area">国家/地区</string>
     <string name="please_input_account">请输入用户账号</string>
@@ -108,7 +173,6 @@
     <string name="start_download">开始下载</string>
     <string name="stop_download">下载完成</string>
     <string name="edit">编辑</string>
-    <string name="confirm">确认</string>
     <string name="confirm_deletion">确认删除？</string>
     <string name="call_button">呼叫按钮</string>
     <string name="human_infrared_detection">人体红外侦测</string>
@@ -121,7 +185,6 @@
     <string name="message_push">消息推送</string>
     <string name="app_update">应用更新</string>
     <string name="update">更新</string>
-    <string name="about">关于</string>
     <string name="user_info">个人资料</string>
     <string name="avatar">头像</string>
     <string name="nickname">昵称</string>
@@ -139,7 +202,6 @@
     <string name="message_alarm">告警消息</string>
     <string name="message_notification">通知消息</string>
     <string name="change_password">修改密码</string>
-    <string name="logoff">注销</string>
     <string name="please_input_old_pwd">请输入旧密码</string>
     <string name="please_input_new_pwd">请输入新密码</string>
     <string name="error_pwd_tip">8-20个字符，包含大、小写字母和数字</string>
@@ -156,7 +218,6 @@
     <string name="device_name_is">设备名称：</string>
     <string name="ring_off">挂断</string>
     <string name="answer">接听</string>
-    <string name="version_is">版本号：%s</string>
     <string name="device_code_scanning">设备扫码</string>
     <string name="scanner_tips1">将二维码正对摄像头，保持15-20cm距</string>
     <string name="scanner_tips2">保持静止几秒钟，随后会听到提示音</string>
@@ -172,7 +233,6 @@
     <string name="device_adding">正在添加设备</string>
     <string name="please_device_has_power">请确保设备处于通电状态</string>
     <string name="has_create_connect">正在建立连接</string>
-    <string name="connect">连接</string>
     <string name="device_info">设备信息</string>
     <string name="base_setting">基本功能设置</string>
     <string name="detection_alarm_setting">侦测告警设置</string>

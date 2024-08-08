@@ -92,6 +92,7 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
         String appId = AppStorageUtil.safeGetString(this, Constant.APP_ID, null);
         String authKey = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_KEY, null);
         String authSecret = AppStorageUtil.safeGetString(this, Constant.BASIC_AUTH_SECRET, null);
+        String region = AppStorageUtil.safeGetString(this, Constant.REGION, null);
         if (TextUtils.isEmpty(appId)) {
             popupMessage("appId is empty, please clear application cache and input appId!");
             return;
@@ -104,47 +105,25 @@ public class AccountLoginActivity extends BaseViewBindingActivity<ActivityLoginB
             popupMessage("Basic Auth Secret is empty, please clear application cache and input secret!");
             return;
         }
+        if (TextUtils.isEmpty(region)) {
+            popupMessage("region is empty, please clear application cache and select region!");
+            return;
+        }
 
-        // 第三方账号系统登录
-        ThirdAccountMgr.UserActiveParam activeParam = new ThirdAccountMgr.UserActiveParam();
-        activeParam.mAppId = appId;
-        activeParam.mAuthKey = authKey;
-        activeParam.mAuthSecret = authSecret;
-        activeParam.mUserId = account;
-        activeParam.mClientType = 2;
-        showLoadingView();
-        ThirdAccountMgr.getInstance().userActive(activeParam, new ThirdAccountMgr.IUserActiveCallback() {
-            @Override
-            public void onThirdAccountUserActiveDone(ThirdAccountMgr.UserActiveParam activeParam,
-                                                     ThirdAccountMgr.UserActiveResult activeResult) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        hideLoadingView();
-                        if ((activeResult.mErrCode != ErrCode.XOK) || (activeResult.mRespCode != ErrCode.XOK)) {
-                            popupMessage("Account login failure, errMsg=" + activeResult.mMessage);
-                            return;
-                        }
-
-                        doAIotSdkInitialize(appId, authKey, authSecret, account, activeResult.mNodeId, activeResult.mNodeToken);
-                    }
-                });
-            }
-        });
     }
 
     /**
      * @brief 根据第三方账号登录信息，初始化 AIotSdk 引擎
      */
     void doAIotSdkInitialize(final String appId, final String authKey, final String authSecret,
-                             final String userId, final String localNodeId, final String localNodeToken) {
+                             final String userId, final String localNodeId, final String localNodeToken,int mRegion) {
 
         IAgoraIotAppSdk.InitParam initParam = new IAgoraIotAppSdk.InitParam();
         initParam.mContext = this;
         initParam.mAppId = appId;
         initParam.mLocalNodeId = localNodeId;
         initParam.mLocalNodeToken = localNodeToken;
-        initParam.mRegion = 1;
+        initParam.mRegion = mRegion;
         initParam.mCustomerKey = authKey;
         initParam.mCustomerSecret = authSecret;
         initParam.mLogFileName = "aiotsdk.log";

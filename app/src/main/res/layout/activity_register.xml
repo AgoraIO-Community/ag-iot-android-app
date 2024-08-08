@@ -29,7 +29,7 @@
         android:layout_marginTop="13dp"
         android:text="@string/please_input_accounts"
         android:textColor="@color/black_50_percent"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="@id/tvRegister"
         app:layout_constraintTop_toBottomOf="@id/tvRegister" />
@@ -42,6 +42,7 @@
         android:drawableStart="@mipmap/user"
         android:enabled="true"
         android:hint="@string/please_input_account"
+        android:textSize="15sp"
         android:inputType="text"
         app:layout_constraintStart_toStartOf="@id/tvInputTips"
         app:layout_constraintTop_toBottomOf="@id/tvInputTips" />

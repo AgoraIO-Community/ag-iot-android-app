@@ -8,6 +8,8 @@ public class Constant {
     public static final String BASIC_AUTH_KEY = "basic_auth_key";
     public static final String BASIC_AUTH_SECRET = "basic_auth_secret";
 
+    public static final String REGION = "region";
+
     /**
      * @brief 显示页面
      */
